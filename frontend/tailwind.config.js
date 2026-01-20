@@ -1,42 +1,57 @@
+/** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Core Colors from UI Specification
-        app: {
-          bg: "#0B1F33",
-          surface: "#111827",
-          dark: "#081625",
-          darker: "#0F172A",
-        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#38BDF8",
-          hover: "#0EA5E9",
-          light: "#7DD3FC",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
-        success: "#22C55E",
-        warning: "#F59E0B",
-        error: "#EF4444",
-        text: {
-          primary: "#E5E7EB",
-          muted: "#9CA3AF",
-          subtle: "#6B7280",
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
-      backgroundImage: {
-        "gradient-primary": "linear-gradient(90deg, #38BDF8 0%, #0EA5E9 100%)",
-        "gradient-app": "linear-gradient(180deg, #0B1F33 0%, #081625 100%)",
-        "gradient-card": "linear-gradient(180deg, #111827 0%, #0F172A 100%)",
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
-      spacing: {
-        "safe-top": "env(safe-area-inset-top)",
-        "safe-bottom": "env(safe-area-inset-bottom)",
+      fontFamily: {
+        sans: ["var(--font-sans)", "sans-serif"],
       },
     },
   },
+  plugins: [],
 };

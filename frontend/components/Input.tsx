@@ -1,6 +1,7 @@
 "use client";
 
 import React, { InputHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -18,28 +19,27 @@ export default function Input({
   ...props
 }: InputProps) {
   return (
-    <div className={fullWidth ? "w-full" : ""}>
+    <div className={cn("flex flex-col", fullWidth && "w-full")}>
       {label && (
-        <label className="block text-sm font-medium text-text-primary mb-2.5">
+        <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">
           {label}
-          {props.required && <span className="text-error ml-1">*</span>}
+          {props.required && <span className="text-red-400 ml-1">*</span>}
         </label>
       )}
       <input
-        className={`
-          w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg
-          text-text-primary placeholder-text-muted
-          focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-          transition-all duration-200
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${error ? "border-error focus:ring-error" : ""}
-          ${className}
-        `}
+        className={cn(
+          "w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600",
+          "focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500",
+          "transition-all duration-200",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          error && "border-red-500/50 focus:ring-red-500/50 focus:border-red-500",
+          className
+        )}
         {...props}
       />
-      {error && <p className="mt-2 text-sm text-error">{error}</p>}
+      {error && <p className="mt-1.5 text-sm text-red-400 ml-1">{error}</p>}
       {helperText && !error && (
-        <p className="mt-2 text-sm text-text-muted">{helperText}</p>
+        <p className="mt-1.5 text-sm text-slate-500 ml-1">{helperText}</p>
       )}
     </div>
   );

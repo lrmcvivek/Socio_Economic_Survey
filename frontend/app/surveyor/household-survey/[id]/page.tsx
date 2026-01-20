@@ -302,43 +302,48 @@ export default function HouseholdSurveyPage() {
 
   return (
     <SurveyorLayout fullScreen>
-      {/* Header */}
-      <Card className="mb-6 border-0 bg-gradient-primary text-white">
-        <button
-          onClick={() => router.back()}
-          className="mb-3 text-sm hover:opacity-80"
-        >
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold">Household Survey</h1>
-        <p className="text-sm opacity-90">
-          {slum.name} - Assignment #{assignmentId}
-        </p>
-      </Card>
+      <div className="max-w-3xl mx-auto w-full pb-12">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <button
+              onClick={() => router.back()}
+              className="mb-2 text-sm text-slate-400 hover:text-white flex items-center transition-colors"
+            >
+              <span className="mr-1">←</span> Back to Assignment
+            </button>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Household Survey</h1>
+            <p className="text-slate-400 mt-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              {slum?.name} - Assignment #{assignmentId}
+            </p>
+          </div>
+        </div>
 
-      {/* Accordion Sections */}
-      <div className="space-y-3 mb-6">
-        {SECTIONS.map((section) => (
-          <Card
-            key={section.id}
-            className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
-            onClick={() => toggleSection(section.id)}
-          >
-            {/* Section Header */}
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">{section.icon}</span>
-                <h3 className="font-bold text-text-primary">{section.title}</h3>
+        {/* Accordion Sections */}
+        <div className="space-y-4 mb-6">
+          {SECTIONS.map((section) => (
+            <Card
+              key={section.id}
+              className="overflow-hidden cursor-pointer transition-colors"
+              onClick={() => toggleSection(section.id)}
+              padding="none"
+            >
+              {/* Section Header */}
+              <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl p-2 bg-slate-800 rounded-lg">{section.icon}</span>
+                  <h3 className="font-bold text-slate-200">{section.title}</h3>
+                </div>
+                <span
+                  className={`
+                    text-slate-500 transform transition-transform duration-200
+                    ${expandedSections.has(section.id) ? 'rotate-180' : ''}
+                  `}
+                >
+                  ▼
+                </span>
               </div>
-              <span
-                className={`
-                  transform transition-transform
-                  ${expandedSections.has(section.id) ? 'rotate-180' : ''}
-                `}
-              >
-                ▼
-              </span>
-            </div>
 
             {/* Section Content */}
             {expandedSections.has(section.id) && (
@@ -1097,6 +1102,7 @@ export default function HouseholdSurveyPage() {
       >
         Submit Household Survey
       </Button>
+      </div>
     </SurveyorLayout>
   );
 }

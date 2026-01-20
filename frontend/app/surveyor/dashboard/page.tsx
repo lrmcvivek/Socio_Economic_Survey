@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SurveyorLayout from "@/components/SurveyorLayout";
+import DashboardStats from "@/components/DashboardStats";
 import apiService from "@/services/api";
 import { MapPin, Users, CheckCircle, Clock, ArrowRight } from "lucide-react";
 
@@ -105,46 +106,35 @@ export default function SurveyorDashboard() {
         </button>
       </div>
 
-      {/* KPI Cards Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {/* Total Assignments */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 transition-all hover:bg-slate-800/80">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-4">
-            <Users className="w-5 h-5 text-blue-500" />
-          </div>
-          <p className="text-slate-400 text-sm font-medium mb-1">
-            Total Assignments
-          </p>
-          <h3 className="text-3xl font-bold text-white">{totalAssignments}</h3>
-        </div>
-
-        {/* Completed */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 transition-all hover:bg-slate-800/80">
-          <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-4">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-          </div>
-          <p className="text-slate-400 text-sm font-medium mb-1">Completed</p>
-          <h3 className="text-3xl font-bold text-white">{completedSurveys}</h3>
-        </div>
-
-        {/* In Progress */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 transition-all hover:bg-slate-800/80">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-4">
-            <Clock className="w-5 h-5 text-amber-500" />
-          </div>
-          <p className="text-slate-400 text-sm font-medium mb-1">In Progress</p>
-          <h3 className="text-3xl font-bold text-white">{inProgressSurveys}</h3>
-        </div>
-
-        {/* Pending */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 transition-all hover:bg-slate-800/80">
-          <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center mb-4">
-            <Clock className="w-5 h-5 text-red-500" />
-          </div>
-          <p className="text-slate-400 text-sm font-medium mb-1">Pending</p>
-          <h3 className="text-3xl font-bold text-white">{pendingSurveys}</h3>
-        </div>
-      </div>
+      <DashboardStats
+        stats={[
+          {
+            label: "Total Assignments",
+            value: totalAssignments,
+            icon: <Users className="w-5 h-5" />,
+            colorClass: "text-blue-500 bg-blue-500/20",
+          },
+          {
+            label: "Completed",
+            value: completedSurveys,
+            icon: <CheckCircle className="w-5 h-5" />,
+            colorClass: "text-green-500 bg-green-500/20",
+          },
+          {
+            label: "In Progress",
+            value: inProgressSurveys,
+            icon: <Clock className="w-5 h-5" />,
+            colorClass: "text-amber-500 bg-amber-500/20",
+          },
+          {
+            label: "Pending",
+            value: pendingSurveys,
+            icon: <Clock className="w-5 h-5" />,
+            colorClass: "text-red-500 bg-red-500/20",
+          },
+        ]}
+      />
+      <div className="mb-10"></div>
 
       {/* Content Area */}
       {assignments.length === 0 ? (

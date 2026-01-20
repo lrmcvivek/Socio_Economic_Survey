@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 
 interface StepperProps {
   steps: string[];
   currentStep: number;
-  onStepChange: (step: number) => void;
+  onStepChange?: (step: number) => void; 
 }
 
 export default function Stepper({
@@ -13,42 +14,35 @@ export default function Stepper({
   currentStep,
   onStepChange,
 }: StepperProps) {
+  const progressPercentage = ((currentStep + 1) / steps.length) * 100;
+  const currentTitle = steps[currentStep];
+
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between mb-2">
-        {steps.map((step, index) => (
-          <React.Fragment key={index}>
-            <button
-              onClick={() => onStepChange(index)}
-              className={`
-                flex items-center justify-center w-10 h-10 rounded-full font-medium
-                transition-all duration-200
-                ${
-                  index === currentStep
-                    ? "bg-gradient-primary text-white shadow-lg"
-                    : index < currentStep
-                      ? "bg-success text-white"
-                      : "bg-slate-700 text-text-muted"
-                }
-              `}
-            >
-              {index < currentStep ? "✓" : index + 1}
-            </button>
-            {index < steps.length - 1 && (
-              <div
-                className={`flex-1 h-1 mx-2 rounded-full ${
-                  index < currentStep ? "bg-success" : "bg-slate-700"
-                }`}
-              />
-            )}
-          </React.Fragment>
-        ))}
+    <div className="w-full mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-3 gap-2">
+        <div>
+           <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+            {currentTitle}
+          </h2>
+           <p className="text-sm text-slate-400 mt-1">Section {currentStep + 1} of {steps.length}</p>
+        </div>
+        <div className="text-right hidden sm:block">
+           <span className="text-sm font-medium text-blue-500">{Math.round(progressPercentage)}% Complete</span>
+        </div>
       </div>
-      <div className="text-center">
-        <p className="text-sm text-text-primary font-medium">
-          {currentStep + 1} of {steps.length}
-        </p>
-        <p className="text-xs text-text-muted mt-1">{steps[currentStep]}</p>
+      
+      {/* Progress Bar Track */}
+      <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden relative">
+        {/* Animated Progress Fill */}
+        <div 
+            className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPercentage}%` }}
+        />
+      </div>
+      
+      {/* Mobile percentage text */}
+      <div className="mt-2 text-right sm:hidden">
+         <span className="text-xs font-medium text-blue-500">{Math.round(progressPercentage)}% Complete</span>
       </div>
     </div>
   );

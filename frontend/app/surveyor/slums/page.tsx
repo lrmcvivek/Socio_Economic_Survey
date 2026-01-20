@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SurveyorLayout from "@/components/SurveyorLayout";
-import Card from "@/components/Card";
-import Input from "@/components/Input";
+import ModernTable from "@/components/ModernTable";
 import apiService from "@/services/api";
 import { useToast } from "@/components/Toast";
 
@@ -18,10 +17,9 @@ interface Slum {
 
 export default function SlumsPage() {
   const { showToast } = useToast();
+  const router = useRouter();
   const [slums, setSlums] = useState<Slum[]>([]);
-  const [filteredSlums, setFilteredSlums] = useState<Slum[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -38,7 +36,6 @@ export default function SlumsPage() {
         const response = await apiService.getSlums();
         if (response.success) {
           setSlums(response.data || []);
-          setFilteredSlums(response.data || []);
         } else {
           showToast("Failed to load slums", "error");
         }
@@ -53,23 +50,33 @@ export default function SlumsPage() {
     loadSlums();
   }, []);
 
-  useEffect(() => {
-    const filtered = slums.filter(
-      (slum) =>
-        slum.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        slum.location.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-    setFilteredSlums(filtered);
-  }, [searchTerm, slums]);
+  const columns = [
+    {
+      header: "Name",
+      accessorKey: "name" as keyof Slum,
+      sortable: true,
+      className: "font-medium text-white",
+    },
+    {
+      header: "Location",
+      accessorKey: "location" as keyof Slum,
+      sortable: true,
+    },
+    {
+      header: "Population",
+      accessorKey: (row: Slum) => row.population?.toLocaleString() || "-",
+    },
+    {
+      header: "Area",
+      accessorKey: (row: Slum) => row.area || "-",
+    },
+  ];
 
   if (loading) {
     return (
       <SurveyorLayout username={user?.name || user?.username}>
         <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-text-muted">Loading slums...</p>
-          </div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
       </SurveyorLayout>
     );
@@ -77,46 +84,20 @@ export default function SlumsPage() {
 
   return (
     <SurveyorLayout username={user?.name || user?.username}>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-text-primary mb-4">
-          Available Slums
-        </h2>
-        <Input
-          type="search"
-          placeholder="Search by name or location..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="mb-8">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Available Slums</h1>
+            <p className="text-slate-400 mt-1">Select a slum to conduct surveys</p>
+        </div>
+
+        <ModernTable
+            data={slums}
+            columns={columns}
+            keyField="_id"
+            searchPlaceholder="Search slums..."
+            onRowClick={(row) => router.push(`/surveyor/slums/${row._id}`)}
         />
       </div>
-
-      {filteredSlums.length === 0 ? (
-        <Card className="text-center py-8">
-          <p className="text-text-muted">
-            {slums.length === 0
-              ? "No slums available"
-              : "No slums match your search"}
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filteredSlums.map((slum) => (
-            <Link key={slum._id} href={`/surveyor/slums/${slum._id}`}>
-              <Card hover>
-                <h3 className="font-bold text-text-primary mb-1">
-                  {slum.name}
-                </h3>
-                <p className="text-xs text-text-muted mb-3">{slum.location}</p>
-                <div className="flex justify-between text-xs text-text-muted">
-                  {slum.population && (
-                    <span>Population: {slum.population.toLocaleString()}</span>
-                  )}
-                  {slum.area && <span>Area: {slum.area}</span>}
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
     </SurveyorLayout>
   );
 }

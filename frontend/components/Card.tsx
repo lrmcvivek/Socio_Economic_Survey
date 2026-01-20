@@ -1,11 +1,12 @@
 "use client";
 
 import React, { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface CardProps {
   children: ReactNode;
   className?: string;
-  padding?: "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg";
   hover?: boolean;
   onClick?: () => void;
 }
@@ -18,19 +19,20 @@ export default function Card({
   onClick,
 }: CardProps) {
   const paddingClasses = {
-    sm: "p-3",
-    md: "p-4",
-    lg: "p-6",
+    none: "",
+    sm: "p-3 sm:p-4",
+    md: "p-4 sm:p-6",
+    lg: "p-6 sm:p-8",
   };
 
   return (
     <div
-      className={`
-        bg-gradient-card border border-slate-700 rounded-xl
-        ${paddingClasses[padding]}
-        ${hover || onClick ? "hover:border-slate-600 transition-all cursor-pointer" : ""}
-        ${className}
-      `}
+      className={cn(
+        "bg-slate-900 border border-slate-800 rounded-xl shadow-sm",
+        paddingClasses[padding],
+        (hover || onClick) && "hover:border-slate-700 transition-all duration-200 cursor-pointer hover:shadow-md",
+        className
+      )}
       onClick={onClick}
     >
       {children}

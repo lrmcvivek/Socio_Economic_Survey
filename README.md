@@ -1,12 +1,12 @@
 # Socio-Economic Survey (SES) System
 
-A comprehensive full-stack web application for conducting and managing socio-economic surveys in slum areas. The system enables administrators, supervisors, and surveyors to collaborate in collecting, tracking, and analyzing household survey data.
+A comprehensive full-stack web application for conducting and managing socio-economic surveys in slum areas. The system enables administrators, supervisors, and surveyors to collaborate in collecting, tracking, and analyzing household survey data. The application features a modern, responsive UI with Progressive Web App (PWA) capabilities.
 
 ## 📋 Table of Contents
 
 - [Project Overview](#project-overview)
+- [Current Features](#current-features)
 - [Tech Stack](#tech-stack)
-- [Features](#features)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Setup & Installation](#setup--installation)
@@ -15,7 +15,8 @@ A comprehensive full-stack web application for conducting and managing socio-eco
 - [API Endpoints](#api-endpoints)
 - [User Roles & Permissions](#user-roles--permissions)
 - [Survey Workflow](#survey-workflow)
-- [File Descriptions](#file-descriptions)
+- [PWA Implementation](#pwa-implementation)
+- [Future Enhancements](#future-enhancements)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
@@ -126,6 +127,25 @@ The system maintains data integrity through role-based access control and ensure
 - Geographical organization of survey areas
 - Cascading selection in forms
 
+### 8. **Progressive Web App (PWA)**
+
+- Installable on mobile devices and desktops
+- Works offline with cached content
+- Push notification support
+- Native-like experience
+- Fast loading and smooth interactions
+- Install prompt for better user engagement
+- Online/offline status indicators
+
+### 9. **Enhanced UI/UX**
+
+- Modern, responsive design with Tailwind CSS
+- Consistent layout across all pages
+- Intuitive navigation with role-based access
+- Mobile-first approach for field surveyors
+- Loading states and error handling
+- Toast notifications for user feedback
+
 ---
 
 ## 📁 Project Structure
@@ -182,18 +202,24 @@ Socio_Economic_Survey/
 │   ├── README.md
 │   ├── app/
 │   │   ├── globals.css                   # Global styles
-│   │   ├── layout.tsx                    # Root layout
+│   │   ├── layout.tsx                    # Root layout with PWA integration
+│   │   ├── loading.tsx                   # Loading component
 │   │   ├── page.tsx                      # Home/login page
 │   │   ├── admin/
-│   │   │   └── dashboard/page.tsx        # Admin dashboard
+│   │   │   ├── dashboard/page.tsx        # Admin dashboard
+│   │   │   ├── slums/page.tsx            # Admin slum management
+│   │   │   └── users/page.tsx            # Admin user management
 │   │   ├── supervisor/
 │   │   │   ├── dashboard/page.tsx        # Supervisor dashboard
 │   │   │   ├── slums/page.tsx            # Slum management CRUD
-│   │   │   └── assignments/page.tsx      # Create slum assignments
-│   │   └── surveyor/
-│   │       ├── dashboard/page.tsx        # Surveyor dashboard (assigned slums)
-│   │       ├── slum-survey/[id]/page.tsx # Slum survey form (full-screen)
-│   │       └── household-survey/[id]/page.tsx # Household survey form (full-screen)
+│   │   │   ├── assignments/page.tsx      # Create slum assignments
+│   │   │   └── progress/page.tsx         # Progress tracking
+│   │   ├── surveyor/
+│   │   │   ├── dashboard/page.tsx        # Surveyor dashboard (assigned slums)
+│   │   │   ├── slums/page.tsx            # Surveyor slum list
+│   │   │   ├── slum-survey/[id]/page.tsx # Slum survey form (full-screen)
+│   │   │   └── household-survey/[id]/page.tsx # Household survey form (full-screen)
+│   │   └── login/page.tsx                # Login page
 │   ├── components/
 │   │   ├── Accordion.tsx                 # Collapsible sections
 │   │   ├── BottomNav.tsx                 # Mobile bottom navigation
@@ -209,9 +235,16 @@ Socio_Economic_Survey/
 │   │   ├── Stepper.tsx                   # Multi-step progress indicator
 │   │   ├── SupervisorAdminLayout.tsx     # Layout for supervisor/admin
 │   │   ├── SurveyorLayout.tsx            # Layout for surveyor (can be full-screen)
+│   │   ├── InstallPrompt.tsx             # PWA install prompt
+│   │   ├── PWAStatusIndicator.tsx        # Online/offline status indicator
+│   │   ├── LayoutSkeleton.tsx            # Loading skeleton
+│   │   ├── LoadingSpinner.tsx            # Loading spinner
+│   │   ├── ModernTable.tsx               # Data table component
+│   │   ├── DashboardStats.tsx            # Dashboard statistics cards
 │   │   └── Toast.tsx                     # Notification system
 │   ├── contexts/
-│   │   └── SidebarContext.tsx            # Global sidebar state
+│   │   ├── SidebarContext.tsx            # Global sidebar state
+│   │   └── PWAContext.tsx                # PWA functionality context
 │   ├── services/
 │   │   └── api.ts                        # Centralized API client (Axios wrapper)
 │   ├── types/
@@ -220,15 +253,21 @@ Socio_Economic_Survey/
 │   │   ├── colors.ts                     # Color constants
 │   │   ├── constants.ts                  # App constants
 │   │   └── navigationConfig.ts           # Navigation structure
+│   ├── lib/
+│   │   └── utils.ts                      # Utility functions
 │   └── public/                           # Static assets
-│
+│       ├── SES_logo.png                  # Application logo
+│       ├── manifest.json                 # PWA manifest
+│       ├── sw.js                         # Service worker
+│       ├── offline.html                  # Offline fallback page
+│       ├── icons/                        # PWA icons
+│       └── screenshots/                  # App screenshots
 ├── DOCS/
-│   ├── README.md                         # Documentation index
 │   ├── API_ENDPOINTS.md                  # Complete API reference
-│   ├── IMPLEMENTATION_GUIDE.md           # Implementation details
+│   ├── PWA_IMPLEMENTATION_GUIDE.md       # PWA setup guide
 │   ├── QUICK_START_GUIDE.md              # Quick start instructions
 │   ├── SLUM_MANAGEMENT_CRUD_GUIDE.md     # Slum CRUD operations
-│   └── [20+ other documentation files]   # Detailed guides
+│   └── [remaining documentation files]   # Detailed guides
 │
 └── README.md                             # This file
 ```
@@ -542,64 +581,61 @@ npm start
 
 ### Authentication
 
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login user
-- `POST /auth/logout` - Logout user
-- `GET /auth/me` - Get current user profile
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user profile
+- `POST /api/auth/logout` - Logout user
 
 ### Locations (State & District)
 
-- `GET /locations/states` - Get all states
-- `GET /locations/states/:id` - Get specific state
-- `GET /locations/districts/:stateId` - Get districts by state
-- `POST /locations/states` - Create state (ADMIN)
-- `POST /locations/districts` - Create district (ADMIN)
+- `GET /api/locations/states` - Get all states
+- `GET /api/locations/states/:id` - Get specific state
+- `GET /api/locations/districts/:stateId` - Get districts by state
 
 ### Slums
 
-- `GET /slums` - Get all slums (with pagination)
-- `GET /slums/:id` - Get specific slum
-- `POST /slums` - Create slum (SUPERVISOR)
-- `PUT /slums/:id` - Update slum (SUPERVISOR)
-- `DELETE /slums/:id` - Delete slum (SUPERVISOR)
+- `GET /api/surveys/slums` - Get all slums (with pagination)
+- `GET /api/surveys/slums/:id` - Get specific slum
+- `POST /api/surveys/slums` - Create slum (SUPERVISOR)
+- `PUT /api/surveys/slums/:id` - Update slum (SUPERVISOR)
+- `DELETE /api/surveys/slums/:id` - Delete slum (SUPERVISOR)
 
 ### Assignments
 
-- `GET /surveys/assignments` - Get all assignments (SUPERVISOR)
-- `GET /surveys/assignments/my-assigned-slums` - Get surveyor's assignments (SURVEYOR)
-- `GET /surveys/assignments/:id` - Get specific assignment (returns populated assignment with slum data)
-- `POST /surveys/assignments` - Create assignment (SUPERVISOR)
-- `PUT /surveys/assignments/:id` - Update assignment (SUPERVISOR)
-- `DELETE /surveys/assignments/:id` - Delete assignment (SUPERVISOR)
-- `GET /surveys/assignments/surveyor/:userId` - Get assignments for specific surveyor (SUPERVISOR)
+- `GET /api/surveys/assignments` - Get all assignments (SUPERVISOR)
+- `GET /api/surveys/assignments/my-assigned-slums` - Get surveyor's assignments (SURVEYOR)
+- `GET /api/surveys/assignments/:id` - Get specific assignment (returns populated assignment with slum data)
+- `POST /api/surveys/assignments` - Create assignment (SUPERVISOR)
+- `PUT /api/surveys/assignments/:id` - Update assignment (SUPERVISOR)
+- `DELETE /api/surveys/assignments/:id` - Delete assignment (SUPERVISOR)
+- `GET /api/surveys/assignments/surveyor/:userId` - Get assignments for specific surveyor (SUPERVISOR)
 
 ### Slum Surveys
 
-- `POST /surveys/slum-surveys` - Create slum survey (SURVEYOR)
-- `GET /surveys/slum-surveys/:assignmentId` - Get slum survey (SURVEYOR)
-- `PUT /surveys/slum-surveys/:id` - Update slum survey (SURVEYOR)
-- `GET /surveys/slum-surveys/status/:slumId` - Get slum survey status
+- `POST /api/surveys/slum-surveys` - Create slum survey (SURVEYOR)
+- `GET /api/surveys/slum-surveys/:assignmentId` - Get slum survey (SURVEYOR)
+- `PUT /api/surveys/slum-surveys/:id` - Update slum survey (SURVEYOR)
+- `GET /api/surveys/slum-surveys/status/:slumId` - Get slum survey status
 
 ### Household Surveys
 
-- `POST /surveys/household-surveys` - Create household survey (SURVEYOR)
-- `GET /surveys/household-surveys/:householdId` - Get household survey (SURVEYOR)
-- `PUT /surveys/household-surveys/:id` - Update household survey (SURVEYOR)
-- `GET /surveys/household-surveys/slum/:slumId` - Get all household surveys for slum
+- `POST /api/surveys/household-surveys` - Create household survey (SURVEYOR)
+- `GET /api/surveys/household-surveys/:householdId` - Get household survey (SURVEYOR)
+- `PUT /api/surveys/household-surveys/:id` - Update household survey (SURVEYOR)
+- `GET /api/surveys/household-surveys/slum/:slumId` - Get all household surveys for slum
 
 ### Users (Admin)
 
-- `GET /users` - Get all users (ADMIN)
-- `GET /users/:id` - Get specific user (ADMIN)
-- `POST /users` - Create user (ADMIN)
-- `PUT /users/:id` - Update user (ADMIN)
-- `DELETE /users/:id` - Delete user (ADMIN)
+- `GET /api/admin/users` - Get all users (ADMIN)
+- `GET /api/admin/users/:id` - Get specific user (ADMIN)
+- `POST /api/admin/users` - Create user (ADMIN)
+- `PUT /api/admin/users/:id` - Update user (ADMIN)
+- `DELETE /api/admin/users/:id` - Delete user (ADMIN)
 
 ### Reports/Export
 
-- `GET /export/slums` - Export slums data (SUPERVISOR/ADMIN)
-- `GET /export/surveys` - Export survey data (SUPERVISOR/ADMIN)
-- `GET /export/assignments` - Export assignments (SUPERVISOR/ADMIN)
+- `GET /api/export/slums` - Export slums data (SUPERVISOR/ADMIN)
+- `GET /api/export/surveys` - Export survey data (SUPERVISOR/ADMIN)
+- `GET /api/export/assignments` - Export assignments (SUPERVISOR/ADMIN)
 
 ---
 
@@ -793,6 +829,34 @@ npm start
 
 ---
 
+## 📱 PWA Implementation
+
+The application now includes full Progressive Web App capabilities:
+
+### Core PWA Features
+- **Web App Manifest**: Defines how the app appears when installed
+- **Service Worker**: Enables offline functionality and caching
+- **Install Prompt**: Guides users to install the app
+- **Status Indicator**: Shows online/offline status and installation state
+
+### PWA Components
+- **Install Prompt** (`/components/InstallPrompt.tsx`): Smart install banner
+- **Status Indicator** (`/components/PWAStatusIndicator.tsx`): Online/offline status
+- **PWA Context** (`/contexts/PWAContext.tsx`): Manages PWA state
+- **Offline Page** (`/public/offline.html`): Dedicated offline experience
+- **Service Worker** (`/public/sw.js`): Handles caching and offline requests
+- **Manifest** (`/public/manifest.json`): App metadata and icons
+
+### PWA Functionality
+- Installable on mobile devices and desktops
+- Works offline with cached content
+- Push notification support (future enhancement)
+- Native-like experience with standalone mode
+- Fast loading with asset caching
+- Online/offline status awareness
+
+---
+
 ## 🔧 Troubleshooting
 
 ### Backend Issues
@@ -892,6 +956,18 @@ Page must:
   3. Then fetch slum details with actual slumId
 ```
 
+#### 5. PWA Installation Issues
+
+```
+Install prompt not showing
+```
+
+**Solution**:
+
+- Ensure all manifest icons exist in `/public/icons/`
+- Check that the app meets installability criteria
+- Verify service worker is properly registered
+
 ---
 
 ## 📝 Contributing
@@ -947,6 +1023,7 @@ Closes #123
 - [ ] Database backups configured
 - [ ] Error logging configured
 - [ ] Performance monitoring setup
+- [ ] PWA manifest and service worker configured for production
 
 ### Production Commands
 
@@ -963,6 +1040,50 @@ npm install --production
 npm run build
 npm start
 ```
+
+---
+
+## 🔮 Future Enhancements
+
+### Phase 1: Advanced PWA Features
+- [ ] Push notifications for survey reminders
+- [ ] Background sync for offline data submission
+- [ ] Enhanced offline data storage with IndexedDB
+- [ ] Improved install experience with guided tours
+- [ ] Performance optimizations for faster loading
+
+### Phase 2: Advanced Analytics
+- [ ] Real-time dashboard with WebSocket updates
+- [ ] Advanced reporting and visualization
+- [ ] Survey data analytics and insights
+- [ ] Predictive modeling for survey completion
+
+### Phase 3: Enhanced User Experience
+- [ ] Multi-language support
+- [ ] Advanced form validation and error handling
+- [ ] Survey templates and customization
+- [ ] Photo and document upload capabilities
+- [ ] QR code generation for survey identification
+
+### Phase 4: Scalability & Performance
+- [ ] Caching layer (Redis)
+- [ ] Database optimization and indexing
+- [ ] API rate limiting and security enhancements
+- [ ] Load balancing for high availability
+- [ ] Automated testing and CI/CD pipeline
+
+### Phase 5: Mobile App Integration
+- [ ] React Native mobile app
+- [ ] GPS integration for location tracking
+- [ ] Offline-first architecture
+- [ ] Biometric authentication
+- [ ] Advanced survey synchronization
+
+### Phase 6: AI & Machine Learning
+- [ ] Predictive analytics for survey completion
+- [ ] Automated data validation and anomaly detection
+- [ ] Natural language processing for notes analysis
+- [ ] Intelligent survey routing and assignment
 
 ---
 
@@ -991,9 +1112,10 @@ This project is proprietary and confidential. Unauthorized copying or distributi
 - [Mongoose Documentation](https://mongoosejs.com/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [TailwindCSS Documentation](https://tailwindcss.com/docs)
+- [PWA Best Practices](https://web.dev/progressive-web-apps/)
 
 ---
 
 **Last Updated**: January 20, 2026  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Active Development

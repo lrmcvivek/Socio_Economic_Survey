@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import apiService from "@/services/api";
 import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
+import ModernTable from "@/components/ModernTable";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import Card from "@/components/Card";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
@@ -122,8 +124,8 @@ export default function SupervisorAssignmentsPage() {
   if (loading) {
     return (
       <SupervisorAdminLayout role="SUPERVISOR">
-        <div className="flex items-center justify-center min-h-96">
-          <div className="text-2xl font-semibold">Loading assignments...</div>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner size="lg" text="Loading assignments..." />
         </div>
       </SupervisorAdminLayout>
     );
@@ -218,66 +220,62 @@ export default function SupervisorAssignmentsPage() {
         </Card>
 
         {/* Assignments List */}
-        <Card>
-          <h2 className="text-lg font-bold text-primary mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4">
             Current Assignments
           </h2>
-          <div className="overflow-x-auto">
-            {assignments.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <p>
-                  No assignments created yet. Create one using the form above.
-                </p>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left py-3 px-4">Surveyor</th>
-                    <th className="text-left py-3 px-4">Slum</th>
-                    <th className="text-left py-3 px-4">Type</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Created</th>
-                    <th className="text-left py-3 px-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.map((assignment) => (
-                    <tr
-                      key={assignment._id}
-                      className="border-b border-slate-800 last:border-b-0"
+          <ModernTable
+            data={assignments}
+            keyField="_id"
+            searchPlaceholder="Search assignments..."
+            columns={[
+              {
+                header: "Surveyor",
+                accessorKey: (row) => row.surveyor?.name || "Unknown",
+                sortable: true,
+                className: "font-medium text-white",
+              },
+              {
+                header: "Slum",
+                accessorKey: (row) => row.slum?.name || "Unknown",
+                sortable: true,
+              },
+              {
+                header: "Type",
+                accessorKey: "assignmentType",
+              },
+              {
+                header: "Status",
+                accessorKey: (row) => (
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        row.status === "COMPLETED"
+                          ? "bg-green-500/20 text-green-400"
+                          : row.status === "IN_PROGRESS"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-yellow-500/20 text-yellow-400"
+                      }`}
                     >
-                      <td className="py-3 px-4">{assignment.surveyor.name}</td>
-                      <td className="py-3 px-4">{assignment.slum.name}</td>
-                      <td className="py-3 px-4">{assignment.assignmentType}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            assignment.status === "COMPLETED"
-                              ? "bg-green-500/20 text-green-400"
-                              : assignment.status === "IN_PROGRESS"
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-yellow-500/20 text-yellow-400"
-                          }`}
-                        >
-                          {assignment.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {new Date(assignment.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Button variant="secondary" size="sm">
-                          View
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </Card>
+                      {row.status?.replace('_', ' ')}
+                    </span>
+                ),
+              },
+              {
+                header: "Created",
+                accessorKey: (row) => new Date(row.createdAt).toLocaleDateString(),
+                sortable: true,
+              },
+              {
+                header: "Actions",
+                accessorKey: (row) => (
+                    <Button variant="secondary" size="sm" onClick={() => {}}>
+                      View
+                    </Button>
+                ),
+              }
+            ]}
+          />
+        </div>
       </div>
     </SupervisorAdminLayout>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
-import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import Sidebar from "@/components/Sidebar";
 
 interface SupervisorAdminLayoutProps {
@@ -29,43 +29,33 @@ const LayoutContent = ({
   role,
   username,
 }: SupervisorAdminLayoutProps) => {
-  const { isSidebarOpen } = useSidebar();
 
   return (
-    <div className="flex bg-[#0B1F33] min-h-screen text-[#E5E7EB] overflow-hidden">
-      {/* Sidebar - Flex Item */}
+    <div className="flex h-screen w-full bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      {/* Sidebar */}
       <Sidebar role={role} username={username} />
 
-      {/* Main Content Area - Flex Item */}
-      <div
-        className="flex-1 flex flex-col h-screen overflow-hidden relative w-0 min-w-0"
-      >
-        {/* Header - Clean structure with proper spacing */}
-        <header className="sticky top-0 z-20 bg-[#111827] border-b border-slate-800">
-          <div className="px-6 md:px-8 py-4 md:py-5 flex items-center justify-between">
-            <div>
-              <h1 className="text-lg md:text-2xl font-bold text-[#38BDF8]">
-                {role === "ADMIN" ? "Admin Dashboard" : "Supervisor Dashboard"}
-              </h1>
-              <p className="text-xs md:text-sm text-[#9CA3AF] mt-1">
-                {role === "ADMIN"
-                  ? "Manage users, slums, and monitor system activity"
-                  : "Manage your team and track survey progress"}
-              </p>
-            </div>
-            <div className="text-xs md:text-sm text-[#9CA3AF]">
-              {username || "User"}
-            </div>
-          </div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-950">
+         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 md:px-8 bg-slate-950/80 backdrop-blur-md sticky top-0 z-20">
+             <div className="ml-10 md:ml-0 flex flex-col justify-center">
+               <h1 className="text-lg font-bold text-white tracking-tight leading-tight">
+                 {role === "ADMIN" ? "Admin Dashboard" : "Supervisor Dashboard"}
+               </h1>
+             </div>
+             <div className="hidden md:flex items-center gap-2 text-sm text-slate-400 font-medium">
+                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] block"></span>
+                System Operational
+             </div>
         </header>
 
-        {/* Page Content - Structured with proper padding */}
-        <main className="flex-1 overflow-y-auto bg-[#0B1F33]">
-          <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8 max-w-7xl mx-auto w-full">
+        {/* Scrollable Content Canvas */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-10 scrollbar-none">
+          <div className="max-w-7xl mx-auto space-y-10 animate-fade-in">
             {children}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

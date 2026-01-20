@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import apiService from "@/services/api";
 import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
-import Card from "@/components/Card";
+import ModernTable from "@/components/ModernTable";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import Button from "@/components/Button";
 import SlumForm from "@/components/SlumForm";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
@@ -119,10 +120,8 @@ export default function SupervisorSlumsPage() {
   if (loading) {
     return (
       <SupervisorAdminLayout role="SUPERVISOR">
-        <div className="flex items-center justify-center min-h-96">
-          <div className="text-2xl font-semibold text-slate-400">
-            Loading slums...
-          </div>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner size="lg" text="Loading slums data..." />
         </div>
       </SupervisorAdminLayout>
     );
@@ -155,139 +154,76 @@ export default function SupervisorSlumsPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {slums.length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <div className="text-slate-400 mb-4">
-                <svg
-                  className="w-16 h-16 mx-auto opacity-50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+        <ModernTable
+          data={slums}
+          keyField="_id"
+          searchPlaceholder="Search slums by name, location..."
+          onRowClick={(row) => handleViewSlum(row._id)}
+          columns={[
+            {
+              header: "Name",
+              accessorKey: "name",
+              sortable: true,
+              className: "font-medium text-white",
+            },
+            {
+              header: "Location",
+              accessorKey: "location",
+              sortable: true,
+            },
+            {
+              header: "State",
+              accessorKey: (row: Slum) => row.state?.name || "N/A",
+              sortable: true,
+            },
+            {
+              header: "District",
+              accessorKey: (row: Slum) => row.district?.name || "N/A",
+            },
+            {
+              header: "Type",
+              accessorKey: (row) => (
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    row.slumType === "NOTIFIED"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-yellow-500/20 text-yellow-400"
+                  }`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 7v5m0 0v3m0-3h3m-3 0H9"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                No Slums Found
-              </h3>
-              <p className="text-slate-400 mb-4">
-                Get started by creating your first slum
-              </p>
-              <Button
-                onClick={handleCreateSlum}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create First Slum
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-700/50">
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Name
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Location
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      State
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      District
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Type
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Households
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slums.map((slum) => (
-                    <tr
-                      key={slum._id}
-                      className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors last:border-b-0"
-                    >
-                      <td className="py-4 px-4 font-medium text-white">
-                        {slum.name}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.location}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.state?.name || slum.state}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.district?.name || slum.district}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            slum.slumType === "NOTIFIED"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-yellow-500/20 text-yellow-400"
-                          }`}
-                        >
-                          {slum.slumType}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.totalHouseholds}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleViewSlum(slum._id)}
-                            className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
-                            title="View"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEditSlum(slum)}
-                            className="p-2 text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(slum)}
-                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+                  {row.slumType}
+                </span>
+              ),
+            },
+            {
+              header: "Households",
+              accessorKey: (row) => row.totalHouseholds,
+              sortable: true,
+              className: "text-right",
+            },
+            {
+              header: "Actions",
+              accessorKey: (row) => (
+                <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleEditSlum(row)}
+                    className="p-2 text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(row)}
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
+              className: "text-right",
+            },
+          ]}
+        />
 
         {/* Modals */}
         <SlumForm

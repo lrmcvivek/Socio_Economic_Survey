@@ -1,25 +1,37 @@
 # Socio-Economic Survey System - Backend
 
-This is the backend API for the Socio-Economic Survey System built with Node.js, Express, and MongoDB.
+This is the backend API for the Socio-Economic Survey System built with Node.js, Express, and MongoDB. The system manages user authentication, survey data, and provides RESTful APIs for the frontend application.
 
-## Features
+## 🚀 Features
 
-- User authentication with JWT tokens
-- Role-based access control (ADMIN, SUPERVISOR, SURVEYOR)
-- State and district management
-- Slum creation and management
-- Survey assignment system
-- Household survey data collection
-- Data export functionality (CSV)
-- RESTful API design
+- **JWT-based Authentication**: Secure user authentication with token-based sessions
+- **Role-based Access Control**: ADMIN, SUPERVISOR, and SURVEYOR roles with fine-grained permissions
+- **State and District Management**: Hierarchical location data management
+- **Slum Management**: Create, update, and manage slum information
+- **Survey Assignment System**: Assign slums to surveyors with validation
+- **Survey Data Collection**: Store and manage slum and household survey data
+- **Data Export**: CSV export functionality for reporting
+- **RESTful API Design**: Consistent and predictable API endpoints
+- **Data Validation**: Comprehensive input validation and sanitization
+- **Error Handling**: Structured error responses for better debugging
 
-## Prerequisites
+## 🛠 Tech Stack
+
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JSON Web Tokens (JWT)
+- **Password Hashing**: bcrypt
+- **Environment Management**: dotenv
+- **Development**: nodemon (for auto-restart during development)
+
+## 📋 Prerequisites
 
 - Node.js 18+
-- MongoDB (local or Atlas)
-- npm or yarn
+- MongoDB (local installation or MongoDB Atlas)
+- npm or yarn package manager
 
-## Installation
+## 📦 Installation
 
 1. Navigate to the backend directory:
 ```bash
@@ -38,26 +50,43 @@ cp .env.example .env
 
 4. Update the `.env` file with your configuration:
 ```env
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_secure_jwt_secret
+# Server Configuration
 PORT=5000
-FRONTEND_URL=http://localhost:3000
+NODE_ENV=development
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017/ses-system
+
+# JWT Configuration
+JWT_SECRET=your_secure_jwt_secret_here_change_in_production
+JWT_EXPIRE=7d
+
+# Security
+CORS_ORIGIN=http://localhost:3000
+
+# Logging
+LOG_LEVEL=info
 ```
 
-## Database Setup
+## 🗄️ Database Setup
 
-1. Start MongoDB service on your system
+1. Ensure MongoDB service is running on your system
 
-2. Seed the database with default data:
+2. Seed the database with initial data:
 ```bash
 # Seed default users (admin, supervisor, surveyor)
-npm run seed
+npm run seed:users
 
 # Seed states and districts
-node scripts/seed-states-districts.js
+npm run seed:locations
 ```
 
-## Running the Application
+Default seeded users:
+- Admin: username `admin`, password `admin123`
+- Supervisor: username `supervisor`, password `supervisor123`
+- Surveyor: username `surveyor`, password `surveyor123`
+
+## ▶️ Running the Application
 
 ### Development Mode
 ```bash
@@ -66,124 +95,117 @@ npm run dev
 
 ### Production Mode
 ```bash
+npm run build
 npm start
 ```
 
 The server will start on `http://localhost:5000` (or the port specified in your `.env` file).
 
-## API Endpoints
+## 🌐 API Endpoints
 
 ### Authentication
-- `POST /api/auth/signup` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
-- `GET /api/auth/users` - Get users (admin/supervisor only)
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user info
+- `POST /api/auth/logout` - Logout user
 
-### States & Districts
-- `GET /api/admin/states` - Get all states
-- `GET /api/admin/states/:id` - Get state by ID
-- `GET /api/admin/districts` - Get all districts
-- `GET /api/admin/districts/:id` - Get district by ID
-- `GET /api/admin/districts/state/:stateId` - Get districts by state
+### Location Management
+- `GET /api/locations/states` - Get all states
+- `GET /api/locations/districts/:stateId` - Get districts by state
 
-### Slums
-- `POST /api/surveys/slums` - Create slum (supervisor/admin only)
+### User Management (Admin only)
+- `GET /api/admin/users` - Get all users
+- `POST /api/admin/users` - Create user
+- `PUT /api/admin/users/:id` - Update user
+- `DELETE /api/admin/users/:id` - Delete user
+
+### Slum Management (Supervisor/Admin only)
 - `GET /api/surveys/slums` - Get all slums
+- `POST /api/surveys/slums` - Create slum
 - `GET /api/surveys/slums/:id` - Get slum by ID
-- `PUT /api/surveys/slums/:id` - Update slum (supervisor/admin only)
-- `DELETE /api/surveys/slums/:id` - Delete slum (supervisor/admin only)
+- `PUT /api/surveys/slums/:id` - Update slum
+- `DELETE /api/surveys/slums/:id` - Delete slum
 
-### Assignments
-- `POST /api/surveys/assignments/assign-slum` - Assign slum to surveyor (supervisor/admin only)
-- `GET /api/surveys/assignments` - Get all assignments (supervisor/admin only)
+### Assignment Management (Supervisor/Admin only)
+- `GET /api/surveys/assignments` - Get all assignments
+- `POST /api/surveys/assignments` - Create assignment
 - `GET /api/surveys/assignments/:id` - Get assignment by ID
+- `PUT /api/surveys/assignments/:id` - Update assignment
+- `DELETE /api/surveys/assignments/:id` - Delete assignment
 - `GET /api/surveys/assignments/my-assigned-slums` - Get current user's assignments
-- `GET /api/surveys/assignments/surveyor/:userId` - Get assignments for surveyor (supervisor/admin only)
-- `PUT /api/surveys/assignments/:id` - Update assignment (supervisor/admin only)
 
-### Household Surveys
-- `POST /api/surveys/household` - Create household survey
-- `GET /api/surveys/household/:id` - Get household survey by ID
-- `PUT /api/surveys/household/:id` - Update household survey
-- `POST /api/surveys/household/:id/submit` - Submit household survey
-- `GET /api/surveys/households/:slumId` - Get all household surveys for a slum
+### Survey Operations
+- `POST /api/surveys/slum-surveys` - Submit slum survey
+- `GET /api/surveys/slum-surveys/:assignmentId` - Get slum survey
+- `POST /api/surveys/household-surveys` - Submit household survey
+- `GET /api/surveys/household-surveys/:householdId` - Get household survey
+- `GET /api/surveys/household-surveys/slum/:slumId` - Get all household surveys for a slum
 
-### Export
-- `GET /api/export/slum-surveys` - Export slum surveys to CSV
-- `GET /api/export/household-surveys/:slumId` - Export household surveys to CSV
+### Data Export
+- `GET /api/export/slums` - Export slum data to CSV
+- `GET /api/export/surveys` - Export survey data to CSV
+- `GET /api/export/assignments` - Export assignments to CSV
 
-## Default Users (After Seeding)
-
-```bash
-Admin:
-  Username: admin
-  Password: admin123
-
-Supervisor:
-  Username: supervisor
-  Password: supervisor123
-
-Surveyor:
-  Username: surveyor
-  Password: surveyor123
-```
-
-## Project Structure
-
-```
-backend/
-├── scripts/                    # Database seeding scripts
-│   ├── seed-users.js          # Seed default users
-│   └── seed-states-districts.js # Seed states and districts
-├── src/
-│   ├── controllers/           # Business logic controllers
-│   │   ├── authController.js
-│   │   ├── locationController.js
-│   │   └── survey/
-│   │       ├── slumController.js
-│   │       ├── assignmentController.js
-│   │       └── householdSurveyController.js
-│   ├── middlewares/           # Custom middleware
-│   │   └── auth.js            # Authentication middleware
-│   ├── models/                # Mongoose models
-│   │   ├── User.js
-│   │   ├── State.js
-│   │   ├── District.js
-│   │   ├── Slum.js
-│   │   ├── Assignment.js
-│   │   ├── SlumSurvey.js
-│   │   ├── Household.js
-│   │   └── HouseholdSurvey.js
-│   ├── routes/                # API routes
-│   │   ├── authRoutes.js
-│   │   ├── adminRoutes.js
-│   │   ├── exportRoutes.js
-│   │   └── survey/
-│   │       └── surveyRoutes.js
-│   └── app.js                 # Express application setup
-├── .env.example               # Environment variables template
-├── package.json               # Dependencies and scripts
-└── README.md                  # This file
-```
-
-## Authentication
+## 🔐 Authentication
 
 All protected routes require a valid JWT token in the Authorization header:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
-Tokens are generated upon successful login and expire after 7 days (configurable).
+Tokens are generated upon successful login and expire after 7 days by default (configurable via JWT_EXPIRE).
 
-## Role-Based Access Control
+## 👥 Role-Based Access Control
 
-- **ADMIN**: Full access to all features
-- **SUPERVISOR**: Can create slums, assign surveys, view all data
-- **SURVEYOR**: Can conduct surveys assigned to them
+- **ADMIN**: Full system access, user management, view all data
+- **SUPERVISOR**: Slum management, assignment creation, view all survey data
+- **SURVEYOR**: Access to assigned surveys only, submit surveys
 
-## Error Handling
+## 🏗️ Project Structure
 
-API responses follow this structure:
+```
+backend/
+├── scripts/                    # Database seeding scripts
+│   ├── seed-users.js           # Seed default users
+│   └── seed-states-districts.js # Seed states and districts
+├── src/
+│   ├── app.js                  # Express application setup
+│   ├── controllers/            # Business logic controllers
+│   │   ├── authController.js   # Authentication logic
+│   │   ├── locationController.js # State/district management
+│   │   ├── userController.js   # User management
+│   │   ├── slumController.js   # Slum operations
+│   │   └── survey/
+│   │       ├── assignmentController.js      # Assignment management
+│   │       ├── slumSurveyController.js      # Slum survey operations
+│   │       └── householdSurveyController.js # Household survey operations
+│   ├── middlewares/            # Custom middleware
+│   │   └── auth.js             # Authentication middleware
+│   ├── models/                 # Mongoose models
+│   │   ├── User.js             # User schema
+│   │   ├── State.js            # State schema
+│   │   ├── District.js         # District schema
+│   │   ├── Slum.js             # Slum schema
+│   │   ├── Household.js        # Household schema
+│   │   ├── Assignment.js       # Assignment schema
+│   │   ├── SlumSurvey.js       # Slum survey schema
+│   │   └── HouseholdSurvey.js  # Household survey schema
+│   ├── routes/                 # API routes
+│   │   ├── authRoutes.js       # Authentication routes
+│   │   ├── adminRoutes.js      # Admin routes
+│   │   ├── exportRoutes.js     # Export routes
+│   │   └── survey/
+│   │       └── surveyRoutes.js # Survey-related routes
+│   └── utils/                  # Utility functions
+│       └── helpers/
+│           └── responseHelper.js # Response formatting
+├── .env.example               # Environment variables template
+├── package.json               # Dependencies and scripts
+└── README.md                  # This file
+```
+
+## 🛡️ Error Handling
+
+API responses follow this standardized structure:
 ```json
 {
   "success": true/false,
@@ -193,14 +215,30 @@ API responses follow this structure:
 }
 ```
 
-## Contributing
+## 🧪 Testing
+
+Run the backend tests:
+```bash
+npm test
+```
+
+## 🚀 Deployment
+
+1. Set NODE_ENV to 'production'
+2. Update database connection string for production
+3. Change JWT_SECRET to a strong, secure value
+4. Update CORS_ORIGIN to production URL
+5. Build the application: `npm run build`
+6. Start the server: `npm start`
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a pull request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes with descriptive messages
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request with detailed description
 
-## License
+## ©️ License
 
 This project is licensed under the MIT License.

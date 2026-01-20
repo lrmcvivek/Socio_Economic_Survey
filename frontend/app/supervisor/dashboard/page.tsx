@@ -3,18 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
-import { Users, Building2, GitBranch, ArrowRight } from "lucide-react";
-
-interface StatCard {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  color: string;
-}
+import DashboardStats from "@/components/DashboardStats";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Users, CheckCircle, Clock } from "lucide-react";
 
 export default function SupervisorDashboardPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<StatCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
@@ -33,39 +27,17 @@ export default function SupervisorDashboardPage() {
     }
 
     setUser(userData);
-    loadDashboardData();
+    setLoading(false);
   }, [router]);
 
   const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      // For now, we'll set placeholder stats. These will be replaced with API calls
-      setStats([
-        {
-          title: "Active Surveyors",
-          value: 0,
-          icon: <Users className="w-6 h-6" />,
-          color: "from-blue-600 to-blue-700",
-        },
-        {
-          title: "Total Slums",
-          value: 0,
-          icon: <Building2 className="w-6 h-6" />,
-          color: "from-purple-600 to-purple-700",
-        },
-        {
-          title: "Active Assignments",
-          value: 0,
-          icon: <GitBranch className="w-6 h-6" />,
-          color: "from-cyan-600 to-cyan-700",
-        },
-      ]);
-    } catch (error) {
-      console.error("Failed to load dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
+    // Placeholder for refresh functionality
+    console.log("Refreshing data...");
   };
+
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Verifying access..." />;
+  }
 
   return (
     <SupervisorAdminLayout
@@ -73,77 +45,76 @@ export default function SupervisorDashboardPage() {
       username={user?.name || user?.username}
     >
       {/* Dashboard Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-[#E5E7EB] mb-2">
-          Dashboard
-        </h2>
-        <p className="text-[#9CA3AF] text-sm">
-          Overview of your survey assignments and progress
-        </p>
-      </div>
-
-      {/* KPI Cards Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {/* Total Assignments */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-5">
-          <p className="text-[#E5E7EB] text-xs font-medium mb-1">
-            Total Assignments
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+            Dashboard
+          </h2>
+          <p className="text-slate-400 text-base leading-relaxed max-w-2xl">
+            Overview of your survey assignments and progress
           </p>
-          <h3 className="text-3xl font-bold text-white">0</h3>
         </div>
-
-        {/* Completed */}
-        <div className="bg-gradient-to-br from-[#22C55E] to-green-700 rounded-xl p-5">
-          <p className="text-[#E5E7EB] text-xs font-medium mb-1">
-            Completed
-          </p>
-          <h3 className="text-3xl font-bold text-white">0</h3>
-        </div>
-
-        {/* In Progress */}
-        <div className="bg-gradient-to-br from-[#F59E0B] to-amber-700 rounded-xl p-5">
-          <p className="text-[#E5E7EB] text-xs font-medium mb-1">
-            In Progress
-          </p>
-          <h3 className="text-3xl font-bold text-white">0</h3>
-        </div>
-
-        {/* Pending */}
-        <div className="bg-gradient-to-br from-[#38BDF8] to-cyan-700 rounded-xl p-5">
-          <p className="text-[#E5E7EB] text-xs font-medium mb-1">
-            Pending
-          </p>
-          <h3 className="text-3xl font-bold text-white">0</h3>
-        </div>
-      </div>
-
-      {/* Action Section */}
-      <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex gap-3">
           <button
             onClick={() => router.push("/supervisor/slums")}
-            className="p-4 bg-[#111827] border border-slate-700 text-[#E5E7EB] rounded-xl font-medium transition-all hover:bg-slate-700"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
           >
             View Slums
           </button>
           <button
-            onClick={() => router.push("/supervisor/assignments")}
-            className="p-4 bg-[#111827] border border-slate-700 text-[#E5E7EB] rounded-xl font-medium transition-all hover:bg-slate-700"
+            onClick={loadDashboardData}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
           >
             Refresh Data
           </button>
         </div>
       </div>
 
+      {/* KPI Cards Section */}
+      <DashboardStats
+        stats={[
+          {
+            label: "Total Assignments",
+            value: 0,
+            icon: <Users className="w-5 h-5" />,
+            colorClass: "text-blue-500 bg-blue-500/20",
+          },
+          {
+            label: "Completed",
+            value: 0,
+            icon: <CheckCircle className="w-5 h-5" />,
+            colorClass: "text-green-500 bg-green-500/20",
+          },
+          {
+            label: "In Progress",
+            value: 0,
+            icon: <Clock className="w-5 h-5" />,
+            colorClass: "text-amber-500 bg-amber-500/20",
+          },
+          {
+            label: "Pending",
+            value: 0,
+            icon: <Clock className="w-5 h-5" />,
+            colorClass: "text-cyan-500 bg-cyan-500/20",
+          },
+        ]}
+      />
+      <div className="mb-8"></div>
+
       {/* Content Area / Empty State */}
-      <div className="text-center py-12">
-        <div className="text-5xl mb-4">🏠</div>
-        <h3 className="text-xl font-bold text-[#E5E7EB] mb-2">
-          No Assignments Yet
-        </h3>
-        <p className="text-[#9CA3AF] text-sm">
-          Your supervisor has not assigned any surveys yet.
-        </p>
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-12 text-center shadow-2xl backdrop-blur-sm">
+        {/* Decorative background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10"></div>
+        
+        <div className="relative z-10">
+          <div className="text-7xl mb-6 drop-shadow-lg">🏠</div>
+          <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
+            No Assignments Yet
+          </h3>
+          <p className="text-slate-400 max-w-lg mx-auto leading-relaxed text-base">
+            Your supervisor has not assigned any surveys yet. Check tabs for other actions.
+          </p>
+        </div>
       </div>
     </SupervisorAdminLayout>
   );
