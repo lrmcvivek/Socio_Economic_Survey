@@ -18,106 +18,61 @@ interface SlumSurveyForm {
   slumId: string;
   surveyed: boolean;
   completionPercentage?: number;
-  // Part A - General Information - City/Town
-  stateCode?: string;
-  stateName?: string;
-  districtCode?: string;
-  districtName?: string;
-  cityTownCode?: string;
-  cityTownName?: string;
-  cityTownNoHouseholds?: number;
   
-  // Part B - City/Town Slum Profile
-  slumType?: string; // Notified / Non-Notified / New Identified
-  slumIdField?: string;
-  slumName?: string;
-  ownershipLand?: string; // Local Body -01, State Government - 02, Central Government – 03, Private -04, Other - 05
-  areaSqMtrs?: number;
-  slumPopulation?: number;
-  noSlumHouseholds?: number;
-  bplPopulation?: number;
-  noBplHouseholds?: number;
+  // PART-A: I. GENERAL INFORMATION -CITY/TOWN
+  stateCode?: string; // 1(a)
+  stateName?: string; // 1(b)
+  districtCode?: string; // 2(a)
+  districtName?: string; // 2(b)
+  cityTownCode?: string; // 3(a)
+  cityTownName?: string; // 3(b)
+  cityTown?: string; // 4(a)
+  cityTownNoHouseholds?: number; // 4(b)
   
-  // Part C - Particulars of Survey Operation
-  surveyorName?: string;
-  surveyDate?: string;
-  receiptQuestionnaireDate?: string;
-  scrutinyDate?: string;
-  receiptByNodalCellDate?: string;
-  remarksInvestigator?: string;
-  commentsSupervisor?: string;
+  // PART-B: II. CITY/TOWN SLUM PROFILE
+  slumType?: string; // 5 - Notified / Non-Notified / New Identified
+  slumIdField?: string; // 6 - Slum ID
+  slumName?: string; // 7 - Slum Name
+  ownershipLand?: string; // 8 - Local Body -01, State Government - 02, Central Government – 03, Private -04, Other - 05
+  areaSqMtrs?: number; // 9 - Area in sq Mtrs
+  slumPopulation?: number; // 10 - Slum population
+  noSlumHouseholds?: number; // 11 - No. of slum House Holds
+  bplPopulation?: number; // 12 - BPL(Below Poverty Line) population
+  noBplHouseholdsCityTown?: number; // 13 - No. of BPL House Holds
   
-  // Part D - Basic Information on Slum
-  slumCode?: string;
-  locationWard?: string;
-  ageSlumYears?: number;
-  areaSlumSqMtrs?: number;
-  locationCoreOrFringe?: string; // Core City/Town - 01, Fringe Area -02
-  typeAreaSurrounding?: string; // Residential - 01, Industrial - 02, Commercial - 03, Institutional-04, Other-49
-  physicalLocationSlum?: string; // Along Nallah -01, Along Other Drains - 02, etc.
-  isSlumNotified?: string; // Yes-01, No-02
-  yearOfNotification?: number;
+  // PART-C: III. PARTICULARS OF SURVEY OPERATION
+  surveyorName?: string; // 7 - Name
+  surveyDate?: string; // 8(a) - Date(s) of Survey
+  receiptQuestionnaireDate?: string; // 8(b) - Date(s) of Receipt of Questionnaire
+  scrutinyDate?: string; // 8(c) - Date(s) of Scrutiny
+  receiptByNodalCellDate?: string; // 8(d) - Date(s) of Receipt by Nodal Cell in Urban Local Body
+  remarksInvestigator?: string; // 10 - Remarks by Investigator/Surveyor
+  commentsSupervisor?: string; // 11 - Comments by the Supervisor
   
-  // Part E - Land Status
-  ownershipLandDetail?: string; // Public: Local Body -01, State Government - 02, etc.
-  ownershipLandSpecify?: string;
+  // PART-D: I. BASIC INFORMATION ON SLUM
+  slumNameBasicInfo?: string; // 1 - Name of Slum
+  slumCode?: string; // 1a - Slum Code
+  locationWard?: string; // 2 - Location - Ward No/Name
+  ageSlumYears?: number; // 3 - Age of Slum in Years
+  areaSlumSqMtrs?: number; // 4 - Area of Slum (Sq. metres)
+  locationCoreOrFringe?: string; // 5 - Whether located in Core City/Town or Fringe area (Core City/Town - 01, Fringe Area -02)
+  typeAreaSurrounding?: string; // 6 - Type of Area surrounding Slum (Residential - 01, Industrial - 02, Commercial - 03, Institutional-04, Other-49)
+  physicalLocationSlum?: string; // 7 - Physical Location of Slum (Along Nallah -01, Along Other Drains - 02, etc.)
+  isSlumNotified?: string; // 8 - Is the Slum Notified/Declared? (Yes-01, No-02)
+  yearOfNotification?: number; // 9 - If Yes (01) in 8, state Year of Notification
   
-  // Part K - Access to Physical Infrastructure (dropdowns)
-  connectivityCityWaterSupply?: string; // Fully connected 01, Partially connected 02, Not connected 03
-  drainageSewerageFacility?: string; // YES/NO
-  connectivityStormWaterDrainage?: string; // Fully connected 01, Partially connected 02, Not connected 03
-  connectivitySewerageSystem?: string; // Fully connected 01, Partially connected 02, Not connected 03
-  proneToFlooding?: string; // Not prone - 01, Upto 15 days - 02, 15-30 Days - 03, More than a Month - 04
-  latrineFacility?: string[]; // Public Latrine, Shared latrine, own latrine
-  solidWasteManagement?: string;
-  frequencyGarbageDisposal?: string; // Daily -01, Once in 2 days - 02, etc.
-  arrangementGarbageDisposal?: string; // Municipal staff - 01, Municipal Contractor - 02, etc.
-  frequencyClearanceOpenDrains?: string; // Daily-01, Once in 2 days - 02, etc.
-  approachRoadType?: string; // Motorable pucca -01, Motorable katcha -02, etc.
-  distanceNearestMotorableRoad?: string; // Less than 0.5 kms -01, 0.5 to 1.0 km .- 02, etc.
-  internalRoadType?: string; // Motorable pucca-01, Motorable kutcha-02, etc.
-  streetLightAvailable?: string; // Yes-01, No-02
+  // PART-E: II. LAND STATUS
+  ownershipLandDetail?: string; // 10 - Ownership of Land where Slum is located (Public: Local Body -01, State Government - 02, etc.)
+  ownershipLandSpecify?: string; // 11 - Please specify Ownership of Land (To whom land belongs)
   
-  // Water and Sanitation fields
-  sourceDrinkingWater?: {
-    individualTap?: number;
-    tubewellBorewellHandpump?: number;
-    publicTap?: number;
-    openwell?: number;
-    tankPond?: number;
-    riverCanalLakeSpring?: number;
-    waterTanker?: number;
-    others?: number;
-  };
-  waterSupplyDuration?: string;
-  distanceToWaterSource?: string;
-  typeOfToilet?: string;
-  toiletAccessibility?: string;
-  bathingFacility?: string;
-  wastewaterDisposal?: string;
-  drainageSystem?: string;
-  
-  // Part M - Health Facilities (dropdowns)
-  urbanHealthPost?: string;
-  primaryHealthCentre?: string;
-  governmentHospital?: string;
-  maternityCentre?: string;
-  privateClinic?: string;
-  rmp?: string;
-  ayurvedicDoctor?: string;
-  
-  // Part N - Social Development/Welfare (dropdowns)
-  slumDwellersAssociation?: string; // Yes- 01, No- 02
-  
-  // Housing conditions
-  typeOfStructure?: string;
-  
-  // Part F - Population & Health
+  // PART-F: III. DEMOGRAPHIC PROFILE
+  // 12. Population & Health: 
   totalPopulationSlum?: number;
   totalPopulationSlumSC?: number;
   totalPopulationSlumST?: number;
   totalPopulationSlumOBC?: number;
   totalPopulationSlumOthers?: number;
+  totalPopulationSlumTotal?: number;
   totalPopulationSlumMinorities?: number;
   
   bplPopulationSlum?: number;
@@ -125,6 +80,7 @@ interface SlumSurveyForm {
   bplPopulationSlumST?: number;
   bplPopulationSlumOBC?: number;
   bplPopulationSlumOthers?: number;
+  bplPopulationSlumTotal?: number;
   bplPopulationSlumMinorities?: number;
   
   noHouseholdsSlum?: number;
@@ -132,8 +88,10 @@ interface SlumSurveyForm {
   noHouseholdsSlumST?: number;
   noHouseholdsSlumOBC?: number;
   noHouseholdsSlumOthers?: number;
+  noHouseholdsSlumTotal?: number;
   noHouseholdsSlumMinorities?: number;
   
+  noBplHouseholdsSlum?: number;
   noBplHouseholdsSC?: number;
   noBplHouseholdsST?: number;
   noBplHouseholdsOBC?: number;
@@ -213,7 +171,7 @@ interface SlumSurveyForm {
   noPersonsOtherChronicTotal?: number;
   noPersonsOtherChronicMinorities?: number;
   
-  // Part G - Literacy - Education
+  // 13. Literacy - Education
   totalIlliteratePersons?: number;
   totalIlliteratePersonsSC?: number;
   totalIlliteratePersonsST?: number;
@@ -278,7 +236,8 @@ interface SlumSurveyForm {
   schoolDropoutsFemaleTotal?: number;
   schoolDropoutsFemaleMinorities?: number;
   
-  // Part H - Housing Status
+  // PART-G: IV. HOUSING STATUS
+  // 14. Dwelling Units Structure
   dwellingUnitsPucca?: number;
   dwellingUnitsSemiPucca?: number;
   dwellingUnitsKatcha?: number;
@@ -289,6 +248,7 @@ interface SlumSurveyForm {
   dwellingUnitsWithElectricityKatcha?: number;
   dwellingUnitsWithElectricityTotal?: number;
   
+  // 15. Land Tenure Status (Dwelling Unit Nos)
   landTenureWithPatta?: number;
   landTenurePossessionCertificate?: number;
   landTenureEncroachedPrivate?: number;
@@ -297,7 +257,8 @@ interface SlumSurveyForm {
   landTenureOther?: number;
   landTenureTotal?: number;
   
-  // Part I - Economic Status of Households
+  // PART-H: V. ECONOMIC STATUS OF HOUSEHOLDS
+  // 16. Economic Status (Monthly income of HHs)
   economicStatus?: {
     lessThan500?: number;
     rs500to1000?: number;
@@ -307,7 +268,8 @@ interface SlumSurveyForm {
     moreThan3000?: number;
   };
   
-  // Part J - Occupation Status of Households
+  // PART-I: VI. OCCUPATION STATUS OF HOUSEHOLDS
+  // 17. Occupational Status
   occupationalStatus?: {
     selfEmployed?: number;
     salaried?: number;
@@ -316,50 +278,133 @@ interface SlumSurveyForm {
     others?: number;
   };
   
-  // Part K - Access to Physical Infrastructure
+  // PART-J: VII. ACCESS TO PHYSICAL INFRASTRUCTURE
+  // 18a. Source of Drinking Water (No. of HHs covered)
+  sourceDrinkingWater?: {
+    individualTap?: number;
+    tubewellBorewellHandpump?: number;
+    publicTap?: number;
+    openwell?: number;
+    tankPond?: number;
+    riverCanalLakeSpring?: number;
+    waterTanker?: number;
+    others?: number;
+  };
   
-  // Part L - Education Facilities
-  anganwadiUnderIcds?: number;
-  municipalPreschool?: number;
-  privatePreschool?: number;
-  municipalPrimarySchool?: number;
-  stateGovtPrimarySchool?: number;
-  privatePrimarySchool?: number;
-  municipalHighSchool?: number;
-  stateGovtHighSchool?: number;
-  privateHighSchool?: number;
-  adultEducationCentre?: number;
-  nonFormalEducationCentre?: number;
+  // 18b. Connectivity to City-wide Water Supply System
+  connectivityCityWaterSupply?: string; // Fully connected 01, Partially connected 02, Not connected 03
   
-  // Part M - Health Facilities
+  // 19a. Drainage & Sewerage Facility
+  drainageSewerageFacility?: string; // YES/NO
   
-  // Part N - Social Development/Welfare
-  communityHall?: number;
-  livelihoodProductionCentre?: number;
-  vocationalTrainingCentre?: number;
-  streetChildrenRehabilitationCentre?: number;
-  nightShelter?: number;
-  oldAgeHome?: number;
+  // 19b. Connectivity to City-wide Storm-water Drainage System
+  connectivityStormWaterDrainage?: string; // Fully connected 01, Partially connected 02, Not connected 03
   
+  // 19c. Connectivity to City-wide Sewerage System
+  connectivitySewerageSystem?: string; // Fully connected 01, Partially connected 02, Not connected 03
+  
+  // 19d. Whether the Slum is prone to flooding due to rains
+  proneToFlooding?: string; // Not prone - 01, Upto 15 days - 02, 15-30 Days - 03, More than a Month - 04
+  
+  // 20. Latrine facility used by Households
+  latrineFacility?: string; // Public Latrine/ Shared latrine/ own latrine
+  
+  // 21. Solid Waste Management
+  // 21a. Frequency of Garbage Disposal
+  frequencyOfGarbageDisposal?: string; // Daily -01, Once in 2 days - 02, Once in a week - 03, Once in 15 days - 04, No collection- 99
+  
+  // 21b. Arrangement for Garbage Disposal
+  arrangementForGarbageDisposal?: string; // Municipal staff - 01, Municipal Contractor - 02, Residents themselves - 03, Others - 04,No arrangement - 99
+  
+  // 21c. Frequency of Clearance of Open Drains
+  frequencyOfClearanceOfOpenDrains?: string; // Daily-01, Once in 2 days - 02, Once in a week - 03, Once in 15 days - 04, No clearance-99
+  
+  // 22. Approach Road/Lane/Constructed Path to the Slum
+  approachRoadType?: string; // Motorable pucca -01, Motorable katcha -02, Non-motorable pucca -03, Non-motorable kaccha-04
+  
+  // 23. Distance from the nearest Motorable Road
+  distanceToNearestMotorableRoad?: string; // Less than 0.5 kms -01, 0.5 to 1.0 km .- 02, 1.0 km to 2.0 km. -03, 2.0 km to 5.0 km. - 04,more than 5.0 km-05
+  
+  // 24. Internal Road
+  internalRoadType?: string; // Motorable pucca-01, Motorable kutcha-02, Non-motorable pucca-03, Non-motorable katcha-04
+  
+  // 25. Whether Street light facility is available in the Slum
+  streetLightAvailable?: string; // Yes-01, No-02
+  
+  // 26. Pre-primary School
+  anganwadiUnderIcds?: number; // 26a. Anganwadi under ICDS
+  municipalPreschool?: number; // 26b. Municipal pre-school
+  privatePreschool?: number; // 26c. Private pre-school
+  
+  // 27. Primary School
+  municipalPrimarySchool?: number; // 27a. Municipal
+  stateGovtPrimarySchool?: number; // 27b. State Government
+  privatePrimarySchool?: number; // 27c. Private
+  
+  // 28. High School
+  municipalHighSchool?: number; // 28a. Municipal
+  stateGovtHighSchool?: number; // 28b. State Government
+  privateHighSchool?: number; // 28c. Private
+  
+  // 29. Adult Education Centre
+  adultEducationCentre?: number; // If 01, then number
+  
+  // 30. Non-formal Education Centre
+  nonFormalEducationCentre?: number; // If 01, then number
+  
+  // PART-K: IX. Health Facilities
+  // 31. Existence of Health Facilities
+  urbanHealthPost?: string;
+  primaryHealthCentre?: string;
+  governmentHospital?: string;
+  maternityCentre?: string;
+  privateClinic?: string;
+  rmp?: string; // Registered Medical Practitioner (RMP)
+  ayurvedicDoctor?: string; // Ayurvedic Doctor/Vaidya
+  
+  // PART-L: X. Social Development/Welfare
+  // 32. Availability of Facilities within Slum
+  communityHall?: number; // Community Hall
+  livelihoodProductionCentre?: number; // Livelihood/Production Centre
+  vocationalTrainingCentre?: number; // Vocational training/Training-cum-production Centre
+  streetChildrenRehabilitationCentre?: number; // Street Children Rehabilitation Centre
+  nightShelter?: number; // Night Shelter
+  oldAgeHome?: number; // Old Age Home
+  
+  // 33a. Old Age Pensions (No. of Holders)
   oldAgePensionsHolders?: number;
+  // 33b. Widow Pensions (No. of Holders)
   widowPensionsHolders?: number;
+  // 33c. Disabled Pensions (No. of Holders)
   disabledPensionsHolders?: number;
+  // 33d. General Insurance (No. covered)
   generalInsuranceCovered?: number;
+  // 33e. Health Insurance (No. covered)
   healthInsuranceCovered?: number;
   
-  selfHelpGroups?: number;
-  thriftCreditSocieties?: number;
-  youthAssociations?: number;
-  womensAssociations?: number;
+  // 34. Self Help Groups/DWCUA Groups in Slum
+  selfHelpGroups?: number; // Specify Number: 0, 01, 02, 03 ....
   
-  // General fields (some existing)
-  generalPopulationAccess?: string;
-  waterSupply?: string;
-  waterLoggingArea?: string;
-  wastePlacement?: string;
-  sanitationFacilities?: string[];
-  notes?: string;
-}
+  // 35. Thrift and Credit Societies in Slum
+  thriftCreditSocieties?: number; // Specify Number: 0, 01, 02, 03 ....
+  
+  // 36a. Slum-dwellers Association
+  slumDwellersAssociation?: string; // [Yes- 01, No- 02]
+  // 36b. Youth Associations
+  youthAssociations?: number; // Specify Number: 0, 01,02,03
+  // 36c. Women's Associations/ Mahila Samithis
+  womensAssociations?: number; // Specify Number: 0, 01,02,03
+  
+  // Additional fields that may be used
+  waterSupplyDuration?: string;
+  distanceToWaterSource?: string;
+  typeOfToilet?: string;
+  toiletAccessibility?: string;
+  bathingFacility?: string;
+  wastewaterDisposal?: string;
+  drainageSystem?: string;
+  
+};
 
 const SANITATION_OPTIONS = [
   { id: "PUBLIC_TOILETS", label: "Public Toilets" },
@@ -405,13 +450,12 @@ export default function SlumSurveyPage() {
     connectivityStormWaterDrainage: "",
     connectivitySewerageSystem: "",
     proneToFlooding: "",
-    latrineFacility: [],
-    solidWasteManagement: "",
-    frequencyGarbageDisposal: "",
-    arrangementGarbageDisposal: "",
-    frequencyClearanceOpenDrains: "",
+    latrineFacility: "",
+    frequencyOfGarbageDisposal: "",
+    arrangementForGarbageDisposal: "",
+    frequencyOfClearanceOfOpenDrains: "",
     approachRoadType: "",
-    distanceNearestMotorableRoad: "",
+    distanceToNearestMotorableRoad: "",
     internalRoadType: "",
     streetLightAvailable: "",
     urbanHealthPost: "",
@@ -682,8 +726,8 @@ export default function SlumSurveyPage() {
     if (formData.bplPopulation === undefined || formData.bplPopulation === null || isNaN(formData.bplPopulation) || formData.bplPopulation < 0) {
       newErrors.push({ field: 'bplPopulation', message: 'BPL Population is required' });
     }
-    if (formData.noBplHouseholds === undefined || formData.noBplHouseholds === null || isNaN(formData.noBplHouseholds) || formData.noBplHouseholds < 0) {
-      newErrors.push({ field: 'noBplHouseholds', message: 'No. of BPL Households is required' });
+    if (formData.noBplHouseholdsSlum === undefined || formData.noBplHouseholdsSlum === null || isNaN(formData.noBplHouseholdsSlum) || formData.noBplHouseholdsSlum < 0) {
+      newErrors.push({ field: 'noBplHouseholdsSlum', message: 'No. of BPL Households is required' });
     }
     
     // Part C - Particulars of Survey Operation
@@ -801,21 +845,60 @@ export default function SlumSurveyPage() {
       
       // Transform form data to match backend model structure
       const surveyData = {
-        basicInformation: {
-          slumName: formData.slumName || "",
-          slumCode: formData.slumCode || "",
-          locationWardNo: formData.locationWard || "",
-          ageOfSlumYears: formData.ageSlumYears || 0,
-          areaOfSlumSqMeters: formData.areaSlumSqMtrs?.toString() || "",
-          locatedInCoreCityOrFringe: formData.locationCoreOrFringe || "",
-          typeOfAreaSurrounding: formData.typeAreaSurrounding || "",
-          physicalLocationOfSlum: formData.physicalLocationSlum || "",
-          isSlumNotified: formData.isSlumNotified || "",
-          yearOfNotificationIfYes: formData.yearOfNotification?.toString() || ""
+        // PART-A: I. GENERAL INFORMATION -CITY/TOWN
+        generalInformation: {
+          stateCode: formData.stateCode || "",
+          stateName: formData.stateName || "",
+          districtCode: formData.districtCode || "",
+          districtName: formData.districtName || "",
+          cityTownCode: formData.cityTownCode || "",
+          cityTownName: formData.cityTownName || "",
+          cityTown: formData.cityTown || "",
+          cityTownNoHouseholds: formData.cityTownNoHouseholds || 0
         },
+        
+        // PART-B: II. CITY/TOWN SLUM PROFILE
+        cityTownSlumProfile: {
+          slumType: formData.slumType || "",
+          slumIdField: formData.slumIdField || "",
+          slumName: formData.slumName || "",
+          ownershipLand: formData.ownershipLand || "",
+          areaSqMtrs: formData.areaSqMtrs || 0,
+          slumPopulation: formData.slumPopulation || 0,
+          noSlumHouseholds: formData.noSlumHouseholds || 0,
+          bplPopulation: formData.bplPopulation || 0,
+          noBplHouseholdsCityTown: formData.noBplHouseholdsCityTown || 0
+        },
+        
+        // PART-C: III. PARTICULARS OF SURVEY OPERATION
+        surveyOperation: {
+          surveyorName: formData.surveyorName || "",
+          surveyDate: formData.surveyDate || "",
+          receiptQuestionnaireDate: formData.receiptQuestionnaireDate || "",
+          scrutinyDate: formData.scrutinyDate || "",
+          receiptByNodalCellDate: formData.receiptByNodalCellDate || "",
+          remarksInvestigator: formData.remarksInvestigator || "",
+          commentsSupervisor: formData.commentsSupervisor || ""
+        },
+        
+        // PART-D: I. BASIC INFORMATION ON SLUM
+        basicInformation: {
+          slumNameBasicInfo: formData.slumNameBasicInfo || "",
+          slumCode: formData.slumCode || "",
+          locationWard: formData.locationWard || "",
+          ageSlumYears: formData.ageSlumYears || 0,
+          areaSlumSqMtrs: formData.areaSlumSqMtrs || 0,
+          locationCoreOrFringe: formData.locationCoreOrFringe || "",
+          typeAreaSurrounding: formData.typeAreaSurrounding || "",
+          physicalLocationSlum: formData.physicalLocationSlum || "",
+          isSlumNotified: formData.isSlumNotified || "",
+          yearOfNotification: formData.yearOfNotification || 0
+        },
+        
+        // PART-E: II. LAND STATUS
         landStatus: {
-          ownershipOfLand: formData.ownershipLandDetail || "",
-          specifyOwnership: formData.ownershipLandSpecify || ""
+          ownershipLandDetail: formData.ownershipLandDetail || "",
+          ownershipLandSpecify: formData.ownershipLandSpecify || ""
         },
         populationAndHealth: {
           totalPopulation: {
@@ -989,109 +1072,121 @@ export default function SlumSurveyPage() {
             Minorities: formData.schoolDropoutsFemaleMinorities || 0
           }
         },
-        employmentAndOccupation: {
-          mainOccupation: '', // Need to add field for this
-          secondaryOccupation: '', // Need to add field for this
-          percentageEmployment: 0, // Need to add field for this
-          unemploymentRate: 0, // Need to add field for this
-          majorIndustriesPresent: [] // Need to add field for this
+        // PART-I: V. ECONOMIC STATUS OF HOUSEHOLDS
+        economicStatus: {
+          economicStatusData: {
+            lessThan500: formData.economicStatus?.lessThan500 || 0,
+            rs500to1000: formData.economicStatus?.rs500to1000 || 0,
+            rs1000to1500: formData.economicStatus?.rs1000to1500 || 0,
+            rs1500to2000: formData.economicStatus?.rs1500to2000 || 0,
+            rs2000to3000: formData.economicStatus?.rs2000to3000 || 0,
+            moreThan3000: formData.economicStatus?.moreThan3000 || 0
+          }
         },
-        waterAndSanitation: {
-          sourceOfDrinkingWater: formData.sourceDrinkingWater || {},
-          waterSupplyDuration: formData.waterSupplyDuration || '',
-          distanceToWaterSource: formData.distanceToWaterSource || '',
-          typeOfToilet: formData.typeOfToilet || '',
-          toiletAccessibility: formData.toiletAccessibility || '',
-          bathingFacility: formData.bathingFacility || '',
-          wastewaterDisposal: formData.wastewaterDisposal || '',
-          drainageSystem: formData.drainageSystem || '',
-          connectivityToCityWaterSupply: formData.connectivityCityWaterSupply || "",
+        
+        // PART-J: VI. OCCUPATION STATUS OF HOUSEHOLDS
+        occupationStatus: {
+          occupationalStatusData: {
+            selfEmployed: formData.occupationalStatus?.selfEmployed || 0,
+            salaried: formData.occupationalStatus?.salaried || 0,
+            regularWage: formData.occupationalStatus?.regularWage || 0,
+            casualLabour: formData.occupationalStatus?.casualLabour || 0,
+            others: formData.occupationalStatus?.others || 0
+          }
+        },
+        
+        // PART-K: VII. ACCESS TO PHYSICAL INFRASTRUCTURE
+        physicalInfrastructure: {
+          sourceDrinkingWater: {
+            individualTap: formData.sourceDrinkingWater?.individualTap || 0,
+            tubewellBorewellHandpump: formData.sourceDrinkingWater?.tubewellBorewellHandpump || 0,
+            publicTap: formData.sourceDrinkingWater?.publicTap || 0,
+            openwell: formData.sourceDrinkingWater?.openwell || 0,
+            tankPond: formData.sourceDrinkingWater?.tankPond || 0,
+            riverCanalLakeSpring: formData.sourceDrinkingWater?.riverCanalLakeSpring || 0,
+            waterTanker: formData.sourceDrinkingWater?.waterTanker || 0,
+            others: formData.sourceDrinkingWater?.others || 0
+          },
+          connectivityCityWaterSupply: formData.connectivityCityWaterSupply || "",
           drainageSewerageFacility: formData.drainageSewerageFacility || "",
-          connectivityToStormWaterDrainage: formData.connectivityStormWaterDrainage || "",
-          connectivityToSewerageSystem: formData.connectivitySewerageSystem || "",
+          connectivityStormWaterDrainage: formData.connectivityStormWaterDrainage || "",
+          connectivitySewerageSystem: formData.connectivitySewerageSystem || "",
           proneToFlooding: formData.proneToFlooding || "",
-          latrineFacility: formData.latrineFacility || [],
-          solidWasteManagement: formData.solidWasteManagement || "",
-          frequencyGarbageDisposal: formData.frequencyGarbageDisposal || "",
-          arrangementGarbageDisposal: formData.arrangementGarbageDisposal || "",
-          frequencyClearanceOpenDrains: formData.frequencyClearanceOpenDrains || "",
-          streetLightAvailable: formData.streetLightAvailable || "",
-        },
-        housingConditions: {
-          typeOfStructure: formData.typeOfToilet || '', // Using existing field temporarily
-          roofType: '', // Need to add field for this
-          wallType: '', // Need to add field for this
-          floorType: '', // Need to add field for this
-          averageHouseSize: '', // Need to add field for this
-          overcrowding: '', // Need to add field for this
-          damageAssessment: '', // Need to add field for this
-          approachRoadType: formData.approachRoadType || '',
-          distanceNearestMotorableRoad: formData.distanceNearestMotorableRoad || '',
-          internalRoadType: formData.internalRoadType || ''
-        },
-        utilities: {
-          electricityConnection: '', // Need to add field for this
-          electricityType: '', // Need to add field for this
-          gasConnection: '', // Need to add field for this
-          wasteManagement: '', // Need to add field for this
-          publicToilets: 0, // Need to add field for this
-          publicBaths: 0, // Need to add field for this
-          streetLights: '' // Need to add field for this
-        },
-        socialInfrastructure: {
-          schools: {
-            primarySchools: formData.municipalPrimarySchool || 0,
-            middleSchools: formData.municipalHighSchool || 0,
-            secondarySchools: formData.stateGovtHighSchool || 0,
-            anganwadiCenters: formData.anganwadiUnderIcds || 0
+          latrineFacility: formData.latrineFacility || "",
+          solidWasteManagement: {
+            frequencyOfGarbageDisposal: formData.frequencyOfGarbageDisposal || "",
+            arrangementForGarbageDisposal: formData.arrangementForGarbageDisposal || "",
+            frequencyOfClearanceOfOpenDrains: formData.frequencyOfClearanceOfOpenDrains || ""
           },
-          healthFacilities: {
-            healthCenters: formData.urbanHealthPost ? (formData.urbanHealthPost === "YES" ? 1 : 0) : 0,
-            hospitals: formData.governmentHospital ? (formData.governmentHospital === "YES" ? 1 : 0) : 0,
-            primaryHealthCenters: formData.primaryHealthCentre ? (formData.primaryHealthCentre === "YES" ? 1 : 0) : 0,
-            subcenters: 0, // Need to add field for this
-            maternityCentre: formData.maternityCentre || "",
-            privateClinic: formData.privateClinic || "",
-            rmp: formData.rmp || "",
-            ayurvedicDoctor: formData.ayurvedicDoctor || ""
-          },
-          communityHalls: formData.communityHall || 0,
-          playgrounds: 0, // Need to add field for this
-          communityCenter: '' // Need to add field for this
+          approachRoadType: formData.approachRoadType || "",
+          distanceToNearestMotorableRoad: formData.distanceToNearestMotorableRoad || "",
+          internalRoadType: formData.internalRoadType || "",
+          streetLightAvailable: formData.streetLightAvailable || ""
         },
-        // Social development section
-        socialIssuesAndVulnerableGroups: {
+        
+        // PART-H: IV. HOUSING STATUS
+        housingStatus: {
+          dwellingUnitsPucca: formData.dwellingUnitsPucca || 0,
+          dwellingUnitsSemiPucca: formData.dwellingUnitsSemiPucca || 0,
+          dwellingUnitsKatcha: formData.dwellingUnitsKatcha || 0,
+          dwellingUnitsTotal: formData.dwellingUnitsTotal || 0,
+          dwellingUnitsWithElectricityPucca: formData.dwellingUnitsWithElectricityPucca || 0,
+          dwellingUnitsWithElectricitySemiPucca: formData.dwellingUnitsWithElectricitySemiPucca || 0,
+          dwellingUnitsWithElectricityKatcha: formData.dwellingUnitsWithElectricityKatcha || 0,
+          dwellingUnitsWithElectricityTotal: formData.dwellingUnitsWithElectricityTotal || 0,
+          landTenureWithPatta: formData.landTenureWithPatta || 0,
+          landTenurePossessionCertificate: formData.landTenurePossessionCertificate || 0,
+          landTenureEncroachedPrivate: formData.landTenureEncroachedPrivate || 0,
+          landTenureEncroachedPublic: formData.landTenureEncroachedPublic || 0,
+          landTenureOnRent: formData.landTenureOnRent || 0,
+          landTenureOther: formData.landTenureOther || 0,
+          landTenureTotal: formData.landTenureTotal || 0
+        },
+        
+        // PART-L: VIII. Education Facilities
+        educationFacilities: {
+          anganwadiUnderIcds: formData.anganwadiUnderIcds || 0,
+          municipalPreschool: formData.municipalPreschool || 0,
+          privatePreschool: formData.privatePreschool || 0,
+          municipalPrimarySchool: formData.municipalPrimarySchool || 0,
+          stateGovtPrimarySchool: formData.stateGovtPrimarySchool || 0,
+          privatePrimarySchool: formData.privatePrimarySchool || 0,
+          municipalHighSchool: formData.municipalHighSchool || 0,
+          stateGovtHighSchool: formData.stateGovtHighSchool || 0,
+          privateHighSchool: formData.privateHighSchool || 0,
+          adultEducationCentre: formData.adultEducationCentre || 0,
+          nonFormalEducationCentre: formData.nonFormalEducationCentre || 0
+        },
+        
+        // PART-M: IX. Health Facilities
+        healthFacilities: {
+          urbanHealthPost: formData.urbanHealthPost || "",
+          primaryHealthCentre: formData.primaryHealthCentre || "",
+          governmentHospital: formData.governmentHospital || "",
+          maternityCentre: formData.maternityCentre || "",
+          privateClinic: formData.privateClinic || "",
+          rmp: formData.rmp || "",
+          ayurvedicDoctor: formData.ayurvedicDoctor || ""
+        },
+        
+        // PART-N: X. Social Development/Welfare
+        socialDevelopment: {
+          communityHall: formData.communityHall || 0,
+          livelihoodProductionCentre: formData.livelihoodProductionCentre || 0,
+          vocationalTrainingCentre: formData.vocationalTrainingCentre || 0,
+          streetChildrenRehabilitationCentre: formData.streetChildrenRehabilitationCentre || 0,
+          nightShelter: formData.nightShelter || 0,
+          oldAgeHome: formData.oldAgeHome || 0,
+          oldAgePensionsHolders: formData.oldAgePensionsHolders || 0,
+          widowPensionsHolders: formData.widowPensionsHolders || 0,
+          disabledPensionsHolders: formData.disabledPensionsHolders || 0,
+          generalInsuranceCovered: formData.generalInsuranceCovered || 0,
+          healthInsuranceCovered: formData.healthInsuranceCovered || 0,
+          selfHelpGroups: formData.selfHelpGroups || 0,
+          thriftCreditSocieties: formData.thriftCreditSocieties || 0,
           slumDwellersAssociation: formData.slumDwellersAssociation || "",
-          childLabourPresence: '', // Need to add field for this
-          childMarriagePresence: '', // Need to add field for this
-          humanTraffickingPresence: '', // Need to add field for this
-          domesticViolenceReports: '', // Need to add field for this
-          communityOrganizations: 0, // Need to add field for this
-          NGOsOperating: 0, // Need to add field for this
-          majorChallenges: [] // Need to add field for this
-        },
-        transportationAndAccessibility: {
-          roadCondition: '', // Need to add field for this
-          publictransitAccess: '', // Need to add field for this
-          roadWidth: '', // Need to add field for this
-          mainTransportMode: [], // Need to add field for this
-          accessibilityForDisabled: '' // Need to add field for this
-        },
-        environmentalConditions: {
-          airQuality: '', // Need to add field for this
-          waterPollution: '', // Need to add field for this
-          soilContamination: '', // Need to add field for this
-          noiseLevel: '', // Need to add field for this
-          hazardousWaste: '', // Need to add field for this
-          floodzoneProximity: '' // Need to add field for this
-        },
-        slumImprovementAndDevelopment: {
-          slumRehabilitationScheme: '', // Need to add field for this
-          housingSchemeAvailable: '', // Need to add field for this
-          existingDevelopmentProjects: [], // Need to add field for this
-          plannedImprovements: [], // Need to add field for this
-          communicationWithGovernment: '', // Need to add field for this
-          communityParticipation: '' // Need to add field for this
+          youthAssociations: formData.youthAssociations || 0,
+          womensAssociations: formData.womensAssociations || 0
         }
       };
 
@@ -1424,11 +1519,11 @@ export default function SlumSurveyPage() {
                     <Input
                     label="No. of BPL Households"
                     type="number"
-                    value={formData.noBplHouseholds || ""}
-                    onChange={(e) => handleInputChange("noBplHouseholds", parseInt(e.target.value) || 0)}
+                    value={formData.noBplHouseholdsSlum || ""}
+                    onChange={(e) => handleInputChange("noBplHouseholdsSlum", parseInt(e.target.value) || 0)}
                     required
-                    name="noBplHouseholds"
-                    error={getFieldError('noBplHouseholds')}
+                    name="noBplHouseholdsSlum"
+                    error={getFieldError('noBplHouseholdsSlum')}
                     />
                 </div>
             </div>
@@ -1577,11 +1672,14 @@ export default function SlumSurveyPage() {
                     name="physicalLocationSlum"
                     error={getFieldError('physicalLocationSlum')}
                     options={[
-                        { value: "ALONG_NALLAH", label: "Along Nallah" },
-                        { value: "ALONG_OTHER_DRAINS", label: "Along Other Drains" },
-                        { value: "LOW_LYING_AREA", label: "Low Lying Area" },
-                        { value: "HILL_SIDE", label: "Hill Side" },
-                        { value: "OTHER", label: "Other" },
+                        { value: "ALONG_NALLAH", label: "Along Nallah (Major Stormwater Drain) -01" },
+                        { value: "ALONG_OTHER_DRAINS", label: "Along Other Drains - 02" },
+                        { value: "ALONG_RAILWAY_LINE", label: "Along Railway Line - 03" },
+                        { value: "ALONG_MAJOR_TRANSPORT", label: "Along Major Transport Alignment -04" },
+                        { value: "ALONG_RIVER_BANK", label: "Along River / Water Body Bank -05" },
+                        { value: "ON_RIVER_BED", label: "On River/ Water Body Bed -06" },
+                        { value: "OTHERS_HAZARDOUS", label: "Others (Hazardous or Objectionable) - 07" },
+                        { value: "OTHERS_NON_HAZARDOUS", label: "Others (Non-Hazardous/Non-objectionable) - 08" },
                     ]}
                     />
                     <Select
@@ -1650,11 +1748,12 @@ export default function SlumSurveyPage() {
             {currentStep === 5 && (
             <div className="space-y-6">
                 <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4">
-                Part F: Population & Health
+                Part F: Demographic Profile
                 </h2>
                 <div className="space-y-6">
+                    {/* Question 12 - Population & Health */}
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">Total Population</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. Total Population in Slum</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
                             label="SC"
@@ -1698,8 +1797,9 @@ export default function SlumSurveyPage() {
                         </div>
                     </div>
                     
+                    {/* Question 12 - BPL Population in Slum */}
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">BPL Population</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. BPL Population in Slum</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
                             label="SC"
@@ -1740,8 +1840,9 @@ export default function SlumSurveyPage() {
                         </div>
                     </div>
                     
+                    {/* Question 12 - No. of Households in Slum */}
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">Number of Households</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Households in Slum</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
                             label="SC"
@@ -1781,6 +1882,442 @@ export default function SlumSurveyPage() {
                             />
                         </div>
                     </div>
+                    
+                    {/* Question 12 - No. of BPL Households */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of BPL Households</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noBplHouseholdsSC || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noBplHouseholdsST || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noBplHouseholdsOBC || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noBplHouseholdsOthers || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noBplHouseholdsMinorities || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noBplHouseholdsTotal || ""}
+                            onChange={(e) => handleInputChange("noBplHouseholdsTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Women-headed Households */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Women-headed Households</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsSC || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsST || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsOBC || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsOthers || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsMinorities || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noWomenHeadedHouseholdsTotal || ""}
+                            onChange={(e) => handleInputChange("noWomenHeadedHouseholdsTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No of Persons older than 65 Years */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No of Persons older than 65 Years</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPersonsOlder65SC || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65SC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPersonsOlder65ST || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65ST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPersonsOlder65OBC || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65OBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPersonsOlder65Others || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65Others", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPersonsOlder65Minorities || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65Minorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPersonsOlder65Total || ""}
+                            onChange={(e) => handleInputChange("noPersonsOlder65Total", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No of Child Labourers */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No of Child Labourers</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noChildLabourersSC || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noChildLabourersST || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noChildLabourersOBC || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noChildLabourersOthers || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noChildLabourersMinorities || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noChildLabourersTotal || ""}
+                            onChange={(e) => handleInputChange("noChildLabourersTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Physically Challenged Persons */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Physically Challenged Persons</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPhysicallyChallengedSC || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPhysicallyChallengedST || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPhysicallyChallengedOBC || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPhysicallyChallengedOthers || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPhysicallyChallengedMinorities || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPhysicallyChallengedTotal || ""}
+                            onChange={(e) => handleInputChange("noPhysicallyChallengedTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Mentally Challenged Persons */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Mentally Challenged Persons</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noMentallyChallengedSC || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noMentallyChallengedST || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noMentallyChallengedOBC || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noMentallyChallengedOthers || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noMentallyChallengedMinorities || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noMentallyChallengedTotal || ""}
+                            onChange={(e) => handleInputChange("noMentallyChallengedTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No.of Persons with HIV-AIDs */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No.of Persons with HIV-AIDs</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPersonsHivaidsSC || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPersonsHivaidsST || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPersonsHivaidsOBC || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPersonsHivaidsOthers || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPersonsHivaidsMinorities || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPersonsHivaidsTotal || ""}
+                            onChange={(e) => handleInputChange("noPersonsHivaidsTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Persons with Tuberculosis */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Persons with Tuberculosis</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPersonsTuberculosisSC || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPersonsTuberculosisST || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPersonsTuberculosisOBC || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPersonsTuberculosisOthers || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPersonsTuberculosisMinorities || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPersonsTuberculosisTotal || ""}
+                            onChange={(e) => handleInputChange("noPersonsTuberculosisTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Persons with Respiratory Diseases including Asthma */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Persons with Respiratory Diseases including Asthma</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPersonsRespiratorySC || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratorySC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPersonsRespiratoryST || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratoryST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPersonsRespiratoryOBC || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratoryOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPersonsRespiratoryOthers || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratoryOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPersonsRespiratoryMinorities || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratoryMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPersonsRespiratoryTotal || ""}
+                            onChange={(e) => handleInputChange("noPersonsRespiratoryTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 12 - No. of Persons with Other Chronic Diseases */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">12. No. of Persons with Other Chronic Diseases</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noPersonsOtherChronicSC || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noPersonsOtherChronicST || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noPersonsOtherChronicOBC || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noPersonsOtherChronicOthers || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noPersonsOtherChronicMinorities || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noPersonsOtherChronicTotal || ""}
+                            onChange={(e) => handleInputChange("noPersonsOtherChronicTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - Literacy - Education (section header) */}
+                    <div className="border-t border-slate-700 pt-6 mt-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">13. Literacy - Education</h3>
+                        <p className="text-slate-300 text-sm">Proceeding to literacy and education questions...</p>
+                    </div>
                 </div>
             </div>
             )}
@@ -1791,86 +2328,346 @@ export default function SlumSurveyPage() {
                 Part G: Literacy & Education
                 </h2>
                 <div className="space-y-6">
+                    {/* Question 13 - Total No of Illiterate Persons */}
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">Total Illiterate Persons</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. Total No of Illiterate Persons</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
-                            label="SC Male"
+                            label="SC"
+                            type="number"
+                            value={formData.totalIlliteratePersonsSC || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.totalIlliteratePersonsST || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.totalIlliteratePersonsOBC || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.totalIlliteratePersonsOthers || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.totalIlliteratePersonsMinorities || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.totalIlliteratePersonsTotal || ""}
+                            onChange={(e) => handleInputChange("totalIlliteratePersonsTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - No. of Male Illiterate */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. No. of Male Illiterate</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
                             type="number"
                             value={formData.noMaleIlliterateSC || ""}
                             onChange={(e) => handleInputChange("noMaleIlliterateSC", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="ST Male"
+                            label="ST"
                             type="number"
                             value={formData.noMaleIlliterateST || ""}
                             onChange={(e) => handleInputChange("noMaleIlliterateST", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="OBC Male"
+                            label="OBC"
                             type="number"
                             value={formData.noMaleIlliterateOBC || ""}
                             onChange={(e) => handleInputChange("noMaleIlliterateOBC", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Others Male"
+                            label="Others"
                             type="number"
                             value={formData.noMaleIlliterateOthers || ""}
                             onChange={(e) => handleInputChange("noMaleIlliterateOthers", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Minorities Male"
+                            label="Minorities"
                             type="number"
                             value={formData.noMaleIlliterateMinorities || ""}
                             onChange={(e) => handleInputChange("noMaleIlliterateMinorities", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Total Male"
+                            label="Total"
                             type="number"
-                            value={formData.noMaleIlliterate || ""}
-                            onChange={(e) => handleInputChange("noMaleIlliterate", parseInt(e.target.value) || 0)}
+                            value={formData.noMaleIlliterateTotal || ""}
+                            onChange={(e) => handleInputChange("noMaleIlliterateTotal", parseInt(e.target.value) || 0)}
                             />
                         </div>
                     </div>
                     
+                    {/* Question 13 - No. of Female Illiterate */}
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">Female Illiterate Persons</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. No. of Female Illiterate</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
-                            label="SC Female"
+                            label="SC"
                             type="number"
                             value={formData.noFemaleIlliterateSC || ""}
                             onChange={(e) => handleInputChange("noFemaleIlliterateSC", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="ST Female"
+                            label="ST"
                             type="number"
                             value={formData.noFemaleIlliterateST || ""}
                             onChange={(e) => handleInputChange("noFemaleIlliterateST", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="OBC Female"
+                            label="OBC"
                             type="number"
                             value={formData.noFemaleIlliterateOBC || ""}
                             onChange={(e) => handleInputChange("noFemaleIlliterateOBC", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Others Female"
+                            label="Others"
                             type="number"
                             value={formData.noFemaleIlliterateOthers || ""}
                             onChange={(e) => handleInputChange("noFemaleIlliterateOthers", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Minorities Female"
+                            label="Minorities"
                             type="number"
                             value={formData.noFemaleIlliterateMinorities || ""}
                             onChange={(e) => handleInputChange("noFemaleIlliterateMinorities", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Total Female"
+                            label="Total"
                             type="number"
-                            value={formData.noFemaleIlliterate || ""}
-                            onChange={(e) => handleInputChange("noFemaleIlliterate", parseInt(e.target.value) || 0)}
+                            value={formData.noFemaleIlliterateTotal || ""}
+                            onChange={(e) => handleInputChange("noFemaleIlliterateTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - No. of BPL Illiterate Persons */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. No. of BPL Illiterate Persons</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsSC || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsST || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsOBC || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsOthers || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsMinorities || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noBplIlliteratePersonsTotal || ""}
+                            onChange={(e) => handleInputChange("noBplIlliteratePersonsTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - No. of Male BPL Illiterate */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. No. of Male BPL Illiterate</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noMaleBplIlliterateSC || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noMaleBplIlliterateST || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noMaleBplIlliterateOBC || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noMaleBplIlliterateOthers || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noMaleBplIlliterateMinorities || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noMaleBplIlliterateTotal || ""}
+                            onChange={(e) => handleInputChange("noMaleBplIlliterateTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - No. of Female BPL Illiterate */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. No. of Female BPL Illiterate</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateSC || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateST || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateOBC || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateOthers || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateMinorities || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.noFemaleBplIlliterateTotal || ""}
+                            onChange={(e) => handleInputChange("noFemaleBplIlliterateTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - School Dropouts – Male */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. School Dropouts – Male</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.schoolDropoutsMaleSC || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.schoolDropoutsMaleST || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.schoolDropoutsMaleOBC || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.schoolDropoutsMaleOthers || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.schoolDropoutsMaleMinorities || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.schoolDropoutsMaleTotal || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsMaleTotal", parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Question 13 - School Dropouts – Female */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">13. School Dropouts – Female</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                            label="SC"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleSC || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleSC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="ST"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleST || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleST", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="OBC"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleOBC || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleOBC", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Others"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleOthers || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleOthers", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Minorities"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleMinorities || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleMinorities", parseInt(e.target.value) || 0)}
+                            />
+                            <Input
+                            label="Total"
+                            type="number"
+                            value={formData.schoolDropoutsFemaleTotal || ""}
+                            onChange={(e) => handleInputChange("schoolDropoutsFemaleTotal", parseInt(e.target.value) || 0)}
                             />
                         </div>
                     </div>
@@ -2171,15 +2968,145 @@ export default function SlumSurveyPage() {
                             { value: "MORE_THAN_MONTH", label: "More than a Month" },
                         ]}
                         />
+                    </div>
+                    
+                    {/* Question 20 - Latrine facility used by Households */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">20. Latrine facility used by Households</h3>
                         <Select
-                        label="Street Light Available"
-                        value={formData.streetLightAvailable || ""}
-                        onChange={(e) => handleInputChange("streetLightAvailable", e.target.value)}
+                        label="Latrine Facility"
+                        value={formData.latrineFacility || ""}
+                        onChange={(e) => handleInputChange("latrineFacility", e.target.value)}
                         options={[
-                            { value: "YES", label: "Yes" },
-                            { value: "NO", label: "No" },
+                            { value: "PUBLIC_LATRINE", label: "Public Latrine" },
+                            { value: "SHARED_LATRINE", label: "Shared Latrine" },
+                            { value: "OWN_LATRINE", label: "Own Latrine" },
                         ]}
                         />
+                    </div>
+                    
+                    {/* Solid Waste Management Section (Questions 21a-21c) */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">Solid Waste Management</h3>
+                        
+                        {/* Question 21a - Frequency of Garbage Disposal */}
+                        <div className="mb-6">
+                            <h4 className="text-md font-medium text-white mb-2">21a. Frequency of Garbage Disposal</h4>
+                            <Select
+                            label="Frequency"
+                            value={formData.frequencyOfGarbageDisposal || ""}
+                            onChange={(e) => handleInputChange("frequencyOfGarbageDisposal", e.target.value)}
+                            options={[
+                                { value: "DAILY", label: "Daily" },
+                                { value: "ONCE_IN_2_DAYS", label: "Once in 2 days" },
+                                { value: "ONCE_IN_WEEK", label: "Once in a week" },
+                                { value: "ONCE_IN_15_DAYS", label: "Once in 15 days" },
+                                { value: "NO_COLLECTION", label: "No collection" },
+                            ]}
+                            />
+                        </div>
+                        
+                        {/* Question 21b - Arrangement for Garbage Disposal */}
+                        <div className="mb-6">
+                            <h4 className="text-md font-medium text-white mb-2">21b. Arrangement for Garbage Disposal</h4>
+                            <Select
+                            label="Arrangement"
+                            value={formData.arrangementForGarbageDisposal || ""}
+                            onChange={(e) => handleInputChange("arrangementForGarbageDisposal", e.target.value)}
+                            options={[
+                                { value: "MUNICIPAL_STAFF", label: "Municipal staff" },
+                                { value: "MUNICIPAL_CONTRACTOR", label: "Municipal Contractor" },
+                                { value: "RESIDENTS_THEMSELVES", label: "Residents themselves" },
+                                { value: "OTHERS", label: "Others" },
+                                { value: "NO_ARRANGEMENT", label: "No arrangement" },
+                            ]}
+                            />
+                        </div>
+                        
+                        {/* Question 21c - Frequency of Clearance of Open Drains */}
+                        <div>
+                            <h4 className="text-md font-medium text-white mb-2">21c. Frequency of Clearance of Open Drains</h4>
+                            <Select
+                            label="Frequency"
+                            value={formData.frequencyOfClearanceOfOpenDrains || ""}
+                            onChange={(e) => handleInputChange("frequencyOfClearanceOfOpenDrains", e.target.value)}
+                            options={[
+                                { value: "DAILY", label: "Daily" },
+                                { value: "ONCE_IN_2_DAYS", label: "Once in 2 days" },
+                                { value: "ONCE_IN_WEEK", label: "Once in a week" },
+                                { value: "ONCE_IN_15_DAYS", label: "Once in 15 days" },
+                                { value: "NO_CLEARANCE", label: "No clearance" },
+                            ]}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Additional Physical Infrastructure (Questions 22-25) */}
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">Additional Physical Infrastructure</h3>
+                        
+                        {/* Question 22 - Approach Road/Lane/Constructed Path */}
+                        <div className="mb-4">
+                            <h4 className="text-md font-medium text-white mb-2">22. Approach Road/Lane/Constructed Path to the Slum</h4>
+                            <Select
+                            label="Road Type"
+                            value={formData.approachRoadType || ""}
+                            onChange={(e) => handleInputChange("approachRoadType", e.target.value)}
+                            options={[
+                                { value: "MOTORABLE_PUCCA", label: "Motorable pucca" },
+                                { value: "MOTORABLE_KATCHA", label: "Motorable katcha" },
+                                { value: "NON_MOTORABLE_PUCCA", label: "Non-motorable pucca" },
+                                { value: "NON_MOTORABLE_KATCHA", label: "Non-motorable katcha" },
+                            ]}
+                            />
+                        </div>
+                        
+                        {/* Question 23 - Distance from the nearest Motorable Road */}
+                        <div className="mb-4">
+                            <h4 className="text-md font-medium text-white mb-2">23. Distance from the nearest Motorable Road</h4>
+                            <Select
+                            label="Distance"
+                            value={formData.distanceToNearestMotorableRoad || ""}
+                            onChange={(e) => handleInputChange("distanceToNearestMotorableRoad", e.target.value)}
+                            options={[
+                                { value: "LESS_THAN_0_5_KMS", label: "Less than 0.5 kms" },
+                                { value: "0_5_TO_1_0_KM", label: "0.5 to 1.0 km" },
+                                { value: "1_0_TO_2_0_KM", label: "1.0 km to 2.0 km" },
+                                { value: "2_0_TO_5_0_KM", label: "2.0 km to 5.0 km" },
+                                { value: "MORE_THAN_5_0_KM", label: "More than 5.0 km" },
+                            ]}
+                            />
+                        </div>
+                        
+                        {/* Question 24 - Internal Road */}
+                        <div className="mb-4">
+                            <h4 className="text-md font-medium text-white mb-2">24. Internal Road</h4>
+                            <Select
+                            label="Road Type"
+                            value={formData.internalRoadType || ""}
+                            onChange={(e) => handleInputChange("internalRoadType", e.target.value)}
+                            options={[
+                                { value: "MOTORABLE_PUCCA", label: "Motorable pucca" },
+                                { value: "MOTORABLE_KATCHA", label: "Motorable kutcha" },
+                                { value: "NON_MOTORABLE_PUCCA", label: "Non-motorable pucca" },
+                                { value: "NON_MOTORABLE_KATCHA", label: "Non-motorable katcha" },
+                            ]}
+                            />
+                        </div>
+                        
+                        {/* Question 25 - Street light facility */}
+                        <div>
+                            <h4 className="text-md font-medium text-white mb-2">25. Whether Street light facility is available in the Slum</h4>
+                            <Select
+                            label="Street Light Available"
+                            value={formData.streetLightAvailable || ""}
+                            onChange={(e) => handleInputChange("streetLightAvailable", e.target.value)}
+                            options={[
+                                { value: "YES", label: "Yes" },
+                                { value: "NO", label: "No" },
+                            ]}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2188,71 +3115,71 @@ export default function SlumSurveyPage() {
             {currentStep === 11 && (
             <div className="space-y-6">
                 <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4">
-                Part L: Education Facilities
+                Part L: Education Facilities (Questions 26-30)
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Input
-                    label="Anganwadi under ICDS"
+                    label="26a. Anganwadi under ICDS"
                     type="number"
                     value={formData.anganwadiUnderIcds || ""}
                     onChange={(e) => handleInputChange("anganwadiUnderIcds", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Municipal Pre-school"
+                    label="26b. Municipal pre-school"
                     type="number"
                     value={formData.municipalPreschool || ""}
                     onChange={(e) => handleInputChange("municipalPreschool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Private Pre-school"
+                    label="26c. Private pre-school"
                     type="number"
                     value={formData.privatePreschool || ""}
                     onChange={(e) => handleInputChange("privatePreschool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Municipal Primary School"
+                    label="27a. Municipal"
                     type="number"
                     value={formData.municipalPrimarySchool || ""}
                     onChange={(e) => handleInputChange("municipalPrimarySchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="State Govt. Primary School"
+                    label="27b. State Government"
                     type="number"
                     value={formData.stateGovtPrimarySchool || ""}
                     onChange={(e) => handleInputChange("stateGovtPrimarySchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Private Primary School"
+                    label="27c. Private"
                     type="number"
                     value={formData.privatePrimarySchool || ""}
                     onChange={(e) => handleInputChange("privatePrimarySchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Municipal High School"
+                    label="28a. Municipal"
                     type="number"
                     value={formData.municipalHighSchool || ""}
                     onChange={(e) => handleInputChange("municipalHighSchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="State Govt. High School"
+                    label="28b. State Government"
                     type="number"
                     value={formData.stateGovtHighSchool || ""}
                     onChange={(e) => handleInputChange("stateGovtHighSchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Private High School"
+                    label="28c. Private"
                     type="number"
                     value={formData.privateHighSchool || ""}
                     onChange={(e) => handleInputChange("privateHighSchool", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Adult Education Centre"
+                    label="29. Adult Education Centre"
                     type="number"
                     value={formData.adultEducationCentre || ""}
                     onChange={(e) => handleInputChange("adultEducationCentre", parseInt(e.target.value) || 0)}
                     />
                     <Input
-                    label="Non-formal Education Centre"
+                    label="30. Non-formal Education Centre"
                     type="number"
                     value={formData.nonFormalEducationCentre || ""}
                     onChange={(e) => handleInputChange("nonFormalEducationCentre", parseInt(e.target.value) || 0)}
@@ -2264,11 +3191,11 @@ export default function SlumSurveyPage() {
             {currentStep === 12 && (
             <div className="space-y-6">
                 <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4">
-                Part M: Health Facilities
+                Part M: Health Facilities (Question 31)
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Select
-                    label="Urban Health Post"
+                    label="31. Urban Health Post"
                     value={formData.urbanHealthPost || ""}
                     onChange={(e) => handleInputChange("urbanHealthPost", e.target.value)}
                     options={[
@@ -2277,7 +3204,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="Primary Health Centre"
+                    label="31. Primary Health Centre"
                     value={formData.primaryHealthCentre || ""}
                     onChange={(e) => handleInputChange("primaryHealthCentre", e.target.value)}
                     options={[
@@ -2286,7 +3213,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="Government Hospital"
+                    label="31. Government Hospital"
                     value={formData.governmentHospital || ""}
                     onChange={(e) => handleInputChange("governmentHospital", e.target.value)}
                     options={[
@@ -2295,7 +3222,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="Maternity Centre"
+                    label="31. Maternity Centre"
                     value={formData.maternityCentre || ""}
                     onChange={(e) => handleInputChange("maternityCentre", e.target.value)}
                     options={[
@@ -2304,7 +3231,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="Private Clinic"
+                    label="31. Private Clinic"
                     value={formData.privateClinic || ""}
                     onChange={(e) => handleInputChange("privateClinic", e.target.value)}
                     options={[
@@ -2313,7 +3240,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="RMP (Registered Medical Practitioner)"
+                    label="31. Registered Medical Practitioner (RMP)"
                     value={formData.rmp || ""}
                     onChange={(e) => handleInputChange("rmp", e.target.value)}
                     options={[
@@ -2322,7 +3249,7 @@ export default function SlumSurveyPage() {
                     ]}
                     />
                     <Select
-                    label="Ayurvedic Doctor"
+                    label="31. Ayurvedic Doctor/Vaidya"
                     value={formData.ayurvedicDoctor || ""}
                     onChange={(e) => handleInputChange("ayurvedicDoctor", e.target.value)}
                     options={[
@@ -2337,32 +3264,32 @@ export default function SlumSurveyPage() {
             {currentStep === 13 && (
             <div className="space-y-6">
                 <h2 className="text-xl font-bold text-white border-b border-slate-800 pb-4">
-                Part N: Social Development/Welfare
+                Part N: Social Development/Welfare (Questions 32-36c)
                 </h2>
                 <div className="space-y-6">
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-4">Community Facilities</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">32. Availability of Facilities within Slum:</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Input
-                            label="Community Hall"
+                            label="32. Community Hall"
                             type="number"
                             value={formData.communityHall || ""}
                             onChange={(e) => handleInputChange("communityHall", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Livelihood Production Centre"
+                            label="32. Livelihood/Production Centre"
                             type="number"
                             value={formData.livelihoodProductionCentre || ""}
                             onChange={(e) => handleInputChange("livelihoodProductionCentre", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Vocational Training Centre"
+                            label="32. Vocational training/Training-cum-production Centre"
                             type="number"
                             value={formData.vocationalTrainingCentre || ""}
                             onChange={(e) => handleInputChange("vocationalTrainingCentre", parseInt(e.target.value) || 0)}
                             />
                             <Input
-                            label="Street Children Rehabilitation Centre"
+                            label="32. Street Children Rehabilitation Centre"
                             type="number"
                             value={formData.streetChildrenRehabilitationCentre || ""}
                             onChange={(e) => handleInputChange("streetChildrenRehabilitationCentre", parseInt(e.target.value) || 0)}
