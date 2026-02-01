@@ -1905,7 +1905,7 @@ export default function SlumSurveyPage() {
           slumPopulation: finalFormData.slumPopulation || 0,
           noSlumHouseholds: finalFormData.noSlumHouseholds || 0,
           bplPopulation: finalFormData.bplPopulation || 0,
-          noBplHouseholdsCityTown: finalFormData.noBplHouseholdsCityTown || 0
+          noBplHouseholdsSlum: finalFormData.noBplHouseholdsSlum || 0
         },
         
         // PART-C: III. PARTICULARS OF SURVEY OPERATION
@@ -1939,8 +1939,9 @@ export default function SlumSurveyPage() {
           ownershipLandSpecify: finalFormData.ownershipLandSpecify || ""
         },
         
-        // SECTION 3: Population & Health Demographics (by caste categories)
-        populationAndHealth: {
+        // SECTION 6: DEMOGRAPHIC PROFILE (Population & Health + Literacy & Education)
+        demographicProfile: {
+          // Population & Health Demographics
           totalPopulation: {
             SC: finalFormData.totalPopulationSlumSC || 0,
             ST: finalFormData.totalPopulationSlumST || 0,
@@ -2044,11 +2045,8 @@ export default function SlumSurveyPage() {
             Others: finalFormData.noPersonsOtherChronicOthers || 0,
             Total: finalFormData.noPersonsOtherChronicTotal || 0,
             Minorities: finalFormData.noPersonsOtherChronicMinorities || 0
-          }
-        },
-        
-        // SECTION 4: Literacy & Education (by caste categories)
-        literacyAndEducation: {
+          },
+          // Literacy & Education
           totalIlliteratePerson: {
             SC: finalFormData.totalIlliteratePersonsSC || 0,
             ST: finalFormData.totalIlliteratePersonsST || 0,
@@ -2711,29 +2709,35 @@ export default function SlumSurveyPage() {
             };
             break;
           case 'housingStatus':
-            data.dwellingUnitsPucca = formData.dwellingUnitsPucca;
-            data.dwellingUnitsSemiPucca = formData.dwellingUnitsSemiPucca;
-            data.dwellingUnitsKatcha = formData.dwellingUnitsKatcha;
-            data.dwellingUnitsTotal = formData.dwellingUnitsTotal;
-            data.dwellingUnitsWithElectricityPucca = formData.dwellingUnitsWithElectricityPucca;
-            data.dwellingUnitsWithElectricitySemiPucca = formData.dwellingUnitsWithElectricitySemiPucca;
-            data.dwellingUnitsWithElectricityKatcha = formData.dwellingUnitsWithElectricityKatcha;
-            data.dwellingUnitsWithElectricityTotal = formData.dwellingUnitsWithElectricityTotal;
-            data.landTenureWithPatta = formData.landTenureWithPatta;
-            data.landTenurePossessionCertificate = formData.landTenurePossessionCertificate;
-            data.landTenureEncroachedPrivate = formData.landTenureEncroachedPrivate;
-            data.landTenureEncroachedPublic = formData.landTenureEncroachedPublic;
-            data.landTenureOnRent = formData.landTenureOnRent;
-            data.landTenureOther = formData.landTenureOther;
-            data.landTenureTotal = formData.landTenureTotal;
+            data.housingStatus = {
+              dwellingUnitsPucca: formData.dwellingUnitsPucca || 0,
+              dwellingUnitsSemiPucca: formData.dwellingUnitsSemiPucca || 0,
+              dwellingUnitsKatcha: formData.dwellingUnitsKatcha || 0,
+              dwellingUnitsTotal: formData.dwellingUnitsTotal || 0,
+              dwellingUnitsWithElectricityPucca: formData.dwellingUnitsWithElectricityPucca || 0,
+              dwellingUnitsWithElectricitySemiPucca: formData.dwellingUnitsWithElectricitySemiPucca || 0,
+              dwellingUnitsWithElectricityKatcha: formData.dwellingUnitsWithElectricityKatcha || 0,
+              dwellingUnitsWithElectricityTotal: formData.dwellingUnitsWithElectricityTotal || 0,
+              landTenureWithPatta: formData.landTenureWithPatta || 0,
+              landTenurePossessionCertificate: formData.landTenurePossessionCertificate || 0,
+              landTenureEncroachedPrivate: formData.landTenureEncroachedPrivate || 0,
+              landTenureEncroachedPublic: formData.landTenureEncroachedPublic || 0,
+              landTenureOnRent: formData.landTenureOnRent || 0,
+              landTenureOther: formData.landTenureOther || 0,
+              landTenureTotal: formData.landTenureTotal || 0
+            };
             break;
           case 'economicStatus':
-            data.lessThan500 = formData.economicStatus?.lessThan500;
-            data.rs500to1000 = formData.economicStatus?.rs500to1000;
-            data.rs1000to1500 = formData.economicStatus?.rs1000to1500;
-            data.rs1500to2000 = formData.economicStatus?.rs1500to2000;
-            data.rs2000to3000 = formData.economicStatus?.rs2000to3000;
-            data.moreThan3000 = formData.economicStatus?.moreThan3000;
+            data.economicStatus = {
+              economicStatusData: {
+                lessThan500: formData.economicStatus?.lessThan500 || 0,
+                rs500to1000: formData.economicStatus?.rs500to1000 || 0,
+                rs1000to1500: formData.economicStatus?.rs1000to1500 || 0,
+                rs1500to2000: formData.economicStatus?.rs1500to2000 || 0,
+                rs2000to3000: formData.economicStatus?.rs2000to3000 || 0,
+                moreThan3000: formData.economicStatus?.moreThan3000 || 0
+              }
+            };
             break;
           case 'employmentAndOccupation':
             data.employmentAndOccupation = {
@@ -2746,231 +2750,230 @@ export default function SlumSurveyPage() {
             };
             break;
           case 'physicalInfrastructure':
-            data.sourceDrinkingWater = formData.sourceDrinkingWater;
-            data.connectivityCityWaterSupply = formData.connectivityCityWaterSupply;
-            data.drainageSewerageFacility = formData.drainageSewerageFacility;
-            data.connectivityStormWaterDrainage = formData.connectivityStormWaterDrainage;
-            data.connectivitySewerageSystem = formData.connectivitySewerageSystem;
-            data.proneToFlooding = formData.proneToFlooding;
-            data.latrineFacility = formData.latrineFacility;
-            data.frequencyOfGarbageDisposal = formData.frequencyOfGarbageDisposal;
-            data.arrangementForGarbageDisposal = formData.arrangementForGarbageDisposal;
-            data.frequencyOfClearanceOfOpenDrains = formData.frequencyOfClearanceOfOpenDrains;
-            data.approachRoadType = formData.approachRoadType;
-            data.distanceToNearestMotorableRoad = formData.distanceToNearestMotorableRoad;
-            data.internalRoadType = formData.internalRoadType;
-            data.streetLightAvailable = formData.streetLightAvailable;
+            data.physicalInfrastructure = {
+              sourceDrinkingWater: {
+                individualTap: formData.sourceDrinkingWater?.individualTap || 0,
+                tubewellBorewellHandpump: formData.sourceDrinkingWater?.tubewellBorewellHandpump || 0,
+                publicTap: formData.sourceDrinkingWater?.publicTap || 0,
+                openwell: formData.sourceDrinkingWater?.openwell || 0,
+                tankPond: formData.sourceDrinkingWater?.tankPond || 0,
+                riverCanalLakeSpring: formData.sourceDrinkingWater?.riverCanalLakeSpring || 0,
+                waterTanker: formData.sourceDrinkingWater?.waterTanker || 0,
+                others: formData.sourceDrinkingWater?.others || 0
+              },
+              connectivityCityWaterSupply: formData.connectivityCityWaterSupply || "",
+              drainageSewerageFacility: formData.drainageSewerageFacility || "",
+              connectivityStormWaterDrainage: formData.connectivityStormWaterDrainage || "",
+              connectivitySewerageSystem: formData.connectivitySewerageSystem || "",
+              proneToFlooding: formData.proneToFlooding || "",
+              latrineFacility: formData.latrineFacility || "",
+              solidWasteManagement: {
+                frequencyOfGarbageDisposal: formData.frequencyOfGarbageDisposal || "",
+                arrangementForGarbageDisposal: formData.arrangementForGarbageDisposal || "",
+                frequencyOfClearanceOfOpenDrains: formData.frequencyOfClearanceOfOpenDrains || ""
+              },
+              approachRoadType: formData.approachRoadType || "",
+              distanceToNearestMotorableRoad: formData.distanceToNearestMotorableRoad || "",
+              internalRoadType: formData.internalRoadType || "",
+              streetLightAvailable: formData.streetLightAvailable || ""
+            };
             break;
           case 'educationFacilities':
-            data.anganwadiUnderIcds = formData.anganwadiUnderIcds;
-            data.municipalPreschool = formData.municipalPreschool;
-            data.privatePreschool = formData.privatePreschool;
-            data.municipalPrimarySchool = formData.municipalPrimarySchool;
-            data.stateGovtPrimarySchool = formData.stateGovtPrimarySchool;
-            data.privatePrimarySchool = formData.privatePrimarySchool;
-            data.municipalHighSchool = formData.municipalHighSchool;
-            data.stateGovtHighSchool = formData.stateGovtHighSchool;
-            data.privateHighSchool = formData.privateHighSchool;
-            data.adultEducationCentre = formData.adultEducationCentre;
-            data.nonFormalEducationCentre = formData.nonFormalEducationCentre;
+            data.educationFacilities = {
+              anganwadiUnderIcds: formData.anganwadiUnderIcds || 0,
+              municipalPreschool: formData.municipalPreschool || 0,
+              privatePreschool: formData.privatePreschool || 0,
+              municipalPrimarySchool: formData.municipalPrimarySchool || 0,
+              stateGovtPrimarySchool: formData.stateGovtPrimarySchool || 0,
+              privatePrimarySchool: formData.privatePrimarySchool || 0,
+              municipalHighSchool: formData.municipalHighSchool || 0,
+              stateGovtHighSchool: formData.stateGovtHighSchool || 0,
+              privateHighSchool: formData.privateHighSchool || 0,
+              adultEducationCentre: formData.adultEducationCentre || 0,
+              nonFormalEducationCentre: formData.nonFormalEducationCentre || 0
+            };
             break;
           case 'healthFacilities':
-            data.urbanHealthPost = formData.urbanHealthPost;
-            data.primaryHealthCentre = formData.primaryHealthCentre;
-            data.governmentHospital = formData.governmentHospital;
-            data.maternityCentre = formData.maternityCentre;
-            data.privateClinic = formData.privateClinic;
-            data.rmp = formData.rmp;
-            data.ayurvedicDoctor = formData.ayurvedicDoctor;
+            data.healthFacilities = {
+              urbanHealthPost: formData.urbanHealthPost || "",
+              primaryHealthCentre: formData.primaryHealthCentre || "",
+              governmentHospital: formData.governmentHospital || "",
+              maternityCentre: formData.maternityCentre || "",
+              privateClinic: formData.privateClinic || "",
+              rmp: formData.rmp || "",
+              ayurvedicDoctor: formData.ayurvedicDoctor || ""
+            };
             break;
           case 'socialDevelopment':
-            data.communityHall = formData.communityHall;
-            data.livelihoodProductionCentre = formData.livelihoodProductionCentre;
-            data.vocationalTrainingCentre = formData.vocationalTrainingCentre;
-            data.streetChildrenRehabilitationCentre = formData.streetChildrenRehabilitationCentre;
-            data.nightShelter = formData.nightShelter;
-            data.oldAgeHome = formData.oldAgeHome;
-            data.oldAgePensionsHolders = formData.oldAgePensionsHolders;
-            data.widowPensionsHolders = formData.widowPensionsHolders;
-            data.disabledPensionsHolders = formData.disabledPensionsHolders;
-            data.generalInsuranceCovered = formData.generalInsuranceCovered;
-            data.healthInsuranceCovered = formData.healthInsuranceCovered;
-            data.selfHelpGroups = formData.selfHelpGroups;
-            data.thriftCreditSocieties = formData.thriftCreditSocieties;
-            data.slumDwellersAssociation = formData.slumDwellersAssociation;
-            data.youthAssociations = formData.youthAssociations;
-            data.womensAssociations = formData.womensAssociations;
+            data.socialDevelopment = {
+              communityHall: formData.communityHall || 0,
+              livelihoodProductionCentre: formData.livelihoodProductionCentre || 0,
+              vocationalTrainingCentre: formData.vocationalTrainingCentre || 0,
+              streetChildrenRehabilitationCentre: formData.streetChildrenRehabilitationCentre || 0,
+              nightShelter: formData.nightShelter || 0,
+              oldAgeHome: formData.oldAgeHome || 0,
+              oldAgePensionsHolders: formData.oldAgePensionsHolders || 0,
+              widowPensionsHolders: formData.widowPensionsHolders || 0,
+              disabledPensionsHolders: formData.disabledPensionsHolders || 0,
+              generalInsuranceCovered: formData.generalInsuranceCovered || 0,
+              healthInsuranceCovered: formData.healthInsuranceCovered || 0,
+              selfHelpGroups: formData.selfHelpGroups || 0,
+              thriftCreditSocieties: formData.thriftCreditSocieties || 0,
+              slumDwellersAssociation: formData.slumDwellersAssociation || "",
+              youthAssociations: formData.youthAssociations || 0,
+              womensAssociations: formData.womensAssociations || 0
+            };
             break;
           case 'additionalInfrastructure':
-            // Water Supply
-            data.waterSupply = {
-              pipelines: {
-                existing: formData.waterSupplyPipelinesExisting || '',
-                additionalRequirement: formData.waterSupplyPipelinesAdditional || '',
-                estimatedCost: formData.waterSupplyPipelinesCost || 0
+            data.additionalInfrastructure = {
+              // Water Supply
+              waterSupply: {
+                pipelines: {
+                  existing: formData.waterSupplyPipelinesExisting || '',
+                  additionalRequirement: formData.waterSupplyPipelinesAdditional || '',
+                  estimatedCost: formData.waterSupplyPipelinesCost || 0
+                },
+                individualTaps: {
+                  existing: formData.waterSupplyIndividualTapsExisting || '',
+                  additionalRequirement: formData.waterSupplyIndividualTapsAdditional || '',
+                  estimatedCost: formData.waterSupplyIndividualTapsCost || 0
+                },
+                borewells: {
+                  existing: formData.waterSupplyBorewellsExisting || '',
+                  additionalRequirement: formData.waterSupplyBorewellsAdditional || '',
+                  estimatedCost: formData.waterSupplyBorewellsCost || 0
+                },
+                connectivityToTrunkLines: {
+                  existing: formData.waterSupplyConnectivityTrunkLinesExisting || '',
+                  additionalRequirement: formData.waterSupplyConnectivityTrunkLinesAdditional || '',
+                  estimatedCost: formData.waterSupplyConnectivityTrunkLinesCost || 0
+                }
               },
-              individualTaps: {
-                existing: formData.waterSupplyIndividualTapsExisting || '',
-                additionalRequirement: formData.waterSupplyIndividualTapsAdditional || '',
-                estimatedCost: formData.waterSupplyIndividualTapsCost || 0
-              },
-              borewells: {
-                existing: formData.waterSupplyBorewellsExisting || '',
-                additionalRequirement: formData.waterSupplyBorewellsAdditional || '',
-                estimatedCost: formData.waterSupplyBorewellsCost || 0
-              },
-              connectivityToTrunkLines: {
-                existing: formData.waterSupplyConnectivityTrunkLinesExisting || '',
-                additionalRequirement: formData.waterSupplyConnectivityTrunkLinesAdditional || '',
-                estimatedCost: formData.waterSupplyConnectivityTrunkLinesCost || 0
-              }
-            };
-            
-            // Drainage/Sewerage
-            data.drainageSewerage = {
-              stormwaterDrainage: {
-                existing: formData.drainageStormwaterDrainageExisting || '',
-                additionalRequirement: formData.drainageStormwaterDrainageAdditional || '',
-                estimatedCost: formData.drainageStormwaterDrainageCost || 0
-              },
-              connectivityToMainDrains: {
-                existing: formData.drainageConnectivityMainDrainsExisting || '',
-                additionalRequirement: formData.drainageConnectivityMainDrainsAdditional || '',
-                estimatedCost: formData.drainageConnectivityMainDrainsCost || 0
-              },
-              sewerLines: {
-                existing: formData.drainageSewerLinesExisting || '',
-                additionalRequirement: formData.drainageSewerLinesAdditional || '',
-                estimatedCost: formData.drainageSewerLinesCost || 0
-              },
-              connectivityToTrunkSewers: {
-                existing: formData.drainageConnectivityTrunkSewersExisting || '',
-                additionalRequirement: formData.drainageConnectivityTrunkSewersAdditional || '',
-                estimatedCost: formData.drainageConnectivityTrunkSewersCost || 0
-              }
-            };
-            
-            // Roads
-            data.roads = {
-              internalRoadsCC: {
-                existing: formData.roadsInternalRoadsCCExisting || '',
-                additionalRequirement: formData.roadsInternalRoadsCCAdditional || '',
-                estimatedCost: formData.roadsInternalRoadsCCCost || 0
-              },
-              internalRoadsBT: {
-                existing: formData.roadsInternalRoadsBTExisting || '',
-                additionalRequirement: formData.roadsInternalRoadsBTAdditional || '',
-                estimatedCost: formData.roadsInternalRoadsBTCost || 0
-              },
-              internalRoadsOthers: {
-                existing: formData.roadsInternalRoadsOthersExisting || '',
-                additionalRequirement: formData.roadsInternalRoadsOthersAdditional || '',
-                estimatedCost: formData.roadsInternalRoadsOthersCost || 0
-              },
-              approachRoadsCC: {
-                existing: formData.roadsApproachRoadsCCExisting || '',
-                additionalRequirement: formData.roadsApproachRoadsCCAdditional || '',
-                estimatedCost: formData.roadsApproachRoadsCCCost || 0
-              },
-              approachRoadsOthers: {
-                existing: formData.roadsApproachRoadsOthersExisting || '',
-                additionalRequirement: formData.roadsApproachRoadsOthersAdditional || '',
-                estimatedCost: formData.roadsApproachRoadsOthersCost || 0
-              }
-            };
-            
-            // Street Lighting
-            data.streetLighting = {
-              poles: {
-                existing: formData.streetLightingPolesExisting || '',
-                additionalRequirement: formData.streetLightingPolesAdditional || '',
-                estimatedCost: formData.streetLightingPolesCost || 0
-              },
-              lights: {
-                existing: formData.streetLightingLightsExisting || '',
-                additionalRequirement: formData.streetLightingLightsAdditional || '',
-                estimatedCost: formData.streetLightingLightsCost || 0
-              }
-            };
-            
-            // Sanitation
-            data.sanitation = {
-              individualToilets: {
-                existing: formData.sanitationIndividualToiletsExisting || '',
-                additionalRequirement: formData.sanitationIndividualToiletsAdditional || '',
-                estimatedCost: formData.sanitationIndividualToiletsCost || 0
-              },
-              communityToilets: {
-                existing: formData.sanitationCommunityToiletsExisting || '',
-                additionalRequirement: formData.sanitationCommunityToiletsAdditional || '',
-                estimatedCost: formData.sanitationCommunityToiletsCost || 0
-              },
-              seatsCommunityToilets: {
-                existing: formData.sanitationSeatsCommunityToiletsExisting || '',
-                additionalRequirement: formData.sanitationSeatsCommunityToiletsAdditional || '',
-                estimatedCost: formData.sanitationSeatsCommunityToiletsCost || 0
-              },
-              dumperBins: {
-                existing: formData.sanitationDumperBinsExisting || '',
-                additionalRequirement: formData.sanitationDumperBinsAdditional || '',
-                estimatedCost: formData.sanitationDumperBinsCost || 0
-              }
-            };
-            
-            // Community Facilities
-            data.communityFacilities = {
-              halls: {
-                existing: formData.communityHallsExisting || '',
-                additionalRequirement: formData.communityHallsAdditional || '',
-                estimatedCost: formData.communityHallsCost || 0
-              },
-              livelihoodCentres: {
-                existing: formData.communityLivelihoodCentresExisting || '',
-                additionalRequirement: formData.communityLivelihoodCentresAdditional || '',
-                estimatedCost: formData.communityLivelihoodCentresCost || 0
-              },
-              anganwadis: {
-                existing: formData.communityAnganwadisExisting || '',
-                additionalRequirement: formData.communityAnganwadisAdditional || '',
-                estimatedCost: formData.communityAnganwadisCost || 0
-              },
-              primarySchools: {
-                existing: formData.communityPrimarySchoolsExisting || '',
-                additionalRequirement: formData.communityPrimarySchoolsAdditional || '',
-                estimatedCost: formData.communityPrimarySchoolsCost || 0
-              },
-              healthCentres: {
-                existing: formData.communityHealthCentresExisting || '',
-                additionalRequirement: formData.communityHealthCentresAdditional || '',
-                estimatedCost: formData.communityHealthCentresCost || 0
-              },
-              others: {
-                existing: formData.communityOthersExisting || '',
-                additionalRequirement: formData.communityOthersAdditional || '',
-                estimatedCost: formData.communityOthersCost || 0
-              }
-            };
-            
-            // Electricity (standalone)
-            data.electricity = {
-              existing: formData.electricityExisting || '',
-              additionalRequirement: formData.electricityAdditional || '',
-              estimatedCost: formData.electricityCost || 0
-            };
-            
-            // Healthcare (standalone)
-            data.healthcare = {
-              existing: formData.healthcareExisting || '',
-              additionalRequirement: formData.healthcareAdditional || '',
-              estimatedCost: formData.healthcareCost || 0
-            };
-            
-            // Toilets (standalone)
-            data.toilets = {
-              existing: formData.toiletsExisting || '',
-              additionalRequirement: formData.toiletsAdditional || '',
-              estimatedCost: formData.toiletsCost || 0
               
+              // Drainage/Sewerage
+              drainageSewerage: {
+                stormwaterDrainage: {
+                  existing: formData.drainageStormwaterDrainageExisting || '',
+                  additionalRequirement: formData.drainageStormwaterDrainageAdditional || '',
+                  estimatedCost: formData.drainageStormwaterDrainageCost || 0
+                },
+                connectivityToMainDrains: {
+                  existing: formData.drainageConnectivityMainDrainsExisting || '',
+                  additionalRequirement: formData.drainageConnectivityMainDrainsAdditional || '',
+                  estimatedCost: formData.drainageConnectivityMainDrainsCost || 0
+                },
+                sewerLines: {
+                  existing: formData.drainageSewerLinesExisting || '',
+                  additionalRequirement: formData.drainageSewerLinesAdditional || '',
+                  estimatedCost: formData.drainageSewerLinesCost || 0
+                },
+                connectivityToTrunkSewers: {
+                  existing: formData.drainageConnectivityTrunkSewersExisting || '',
+                  additionalRequirement: formData.drainageConnectivityTrunkSewersAdditional || '',
+                  estimatedCost: formData.drainageConnectivityTrunkSewersCost || 0
+                }
+              },
+              
+              // Roads
+              roads: {
+                internalRoadsCC: {
+                  existing: formData.roadsInternalRoadsCCExisting || '',
+                  additionalRequirement: formData.roadsInternalRoadsCCAdditional || '',
+                  estimatedCost: formData.roadsInternalRoadsCCCost || 0
+                },
+                internalRoadsBT: {
+                  existing: formData.roadsInternalRoadsBTExisting || '',
+                  additionalRequirement: formData.roadsInternalRoadsBTAdditional || '',
+                  estimatedCost: formData.roadsInternalRoadsBTCost || 0
+                },
+                internalRoadsOthers: {
+                  existing: formData.roadsInternalRoadsOthersExisting || '',
+                  additionalRequirement: formData.roadsInternalRoadsOthersAdditional || '',
+                  estimatedCost: formData.roadsInternalRoadsOthersCost || 0
+                },
+                approachRoadsCC: {
+                  existing: formData.roadsApproachRoadsCCExisting || '',
+                  additionalRequirement: formData.roadsApproachRoadsCCAdditional || '',
+                  estimatedCost: formData.roadsApproachRoadsCCCost || 0
+                },
+                approachRoadsOthers: {
+                  existing: formData.roadsApproachRoadsOthersExisting || '',
+                  additionalRequirement: formData.roadsApproachRoadsOthersAdditional || '',
+                  estimatedCost: formData.roadsApproachRoadsOthersCost || 0
+                }
+              },
+              
+              // Street Lighting
+              streetLighting: {
+                poles: {
+                  existing: formData.streetLightingPolesExisting || '',
+                  additionalRequirement: formData.streetLightingPolesAdditional || '',
+                  estimatedCost: formData.streetLightingPolesCost || 0
+                },
+                lights: {
+                  existing: formData.streetLightingLightsExisting || '',
+                  additionalRequirement: formData.streetLightingLightsAdditional || '',
+                  estimatedCost: formData.streetLightingLightsCost || 0
+                }
+              },
+              
+              // Sanitation
+              sanitation: {
+                individualToilets: {
+                  existing: formData.sanitationIndividualToiletsExisting || '',
+                  additionalRequirement: formData.sanitationIndividualToiletsAdditional || '',
+                  estimatedCost: formData.sanitationIndividualToiletsCost || 0
+                },
+                communityToilets: {
+                  existing: formData.sanitationCommunityToiletsExisting || '',
+                  additionalRequirement: formData.sanitationCommunityToiletsAdditional || '',
+                  estimatedCost: formData.sanitationCommunityToiletsCost || 0
+                },
+                seatsInCommunityToilets: {
+                  existing: formData.sanitationSeatsCommunityToiletsExisting || '',
+                  additionalRequirement: formData.sanitationSeatsCommunityToiletsAdditional || '',
+                  estimatedCost: formData.sanitationSeatsCommunityToiletsCost || 0
+                },
+                dumperBins: {
+                  existing: formData.sanitationDumperBinsExisting || '',
+                  additionalRequirement: formData.sanitationDumperBinsAdditional || '',
+                  estimatedCost: formData.sanitationDumperBinsCost || 0
+                }
+              },
+              
+              // Community Facilities
+              communityFacilities: {
+                communityHalls: {
+                  existing: formData.communityHallsExisting || '',
+                  additionalRequirement: formData.communityHallsAdditional || '',
+                  estimatedCost: formData.communityHallsCost || 0
+                },
+                livelihoodCentres: {
+                  existing: formData.communityLivelihoodCentresExisting || '',
+                  additionalRequirement: formData.communityLivelihoodCentresAdditional || '',
+                  estimatedCost: formData.communityLivelihoodCentresCost || 0
+                },
+                anganwadis: {
+                  existing: formData.communityAnganwadisExisting || '',
+                  additionalRequirement: formData.communityAnganwadisAdditional || '',
+                  estimatedCost: formData.communityAnganwadisCost || 0
+                },
+                primarySchools: {
+                  existing: formData.communityPrimarySchoolsExisting || '',
+                  additionalRequirement: formData.communityPrimarySchoolsAdditional || '',
+                  estimatedCost: formData.communityPrimarySchoolsCost || 0
+                },
+                healthCentres: {
+                  existing: formData.communityHealthCentresExisting || '',
+                  additionalRequirement: formData.communityHealthCentresAdditional || '',
+                  estimatedCost: formData.communityHealthCentresCost || 0
+                },
+                others: {
+                  existing: formData.communityOthersExisting || '',
+                  additionalRequirement: formData.communityOthersAdditional || '',
+                  estimatedCost: formData.communityOthersCost || 0
+                }
+              }
             };
             break;
           case 'reviewAndSubmit':
