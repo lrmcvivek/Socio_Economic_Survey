@@ -2,29 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import apiService from "@/services/api";
 import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
-import Card from "@/components/Card";
+import ModernTable from "@/components/ModernTable";
 import Button from "@/components/Button";
 import SlumForm from "@/components/SlumForm";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
 
-interface LocationReference {
-  _id: string;
-  name: string;
-}
-
 interface Slum {
   _id: string;
   name: string;
-  location: string;
-  district: string | LocationReference;
-  state: string | LocationReference;
+  slumId: number;
+  stateCode: string;
+  distCode: string;
+  city: string;
+  ward: number;
   slumType: string;
+  village: string;
+  landOwnership: string;
   totalHouseholds: number;
-  city?: string;
-  ward?: string;
+  area: number;
+  surveyStatus: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface User {
@@ -39,6 +41,7 @@ interface User {
 export default function AdminSlumsPage() {
   const router = useRouter();
   const [slums, setSlums] = useState<Slum[]>([]);
+  const [filteredSlums, setFilteredSlums] = useState<Slum[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedSlum, setSelectedSlum] = useState<Slum | null>(null);
@@ -51,9 +54,10 @@ export default function AdminSlumsPage() {
   const fetchSlums = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAllSlums();
+      const response = await apiService.getAllSlums(1, 10, undefined, true); // Load all slums
       if (response.success) {
         setSlums(response.data || []);
+        setFilteredSlums(response.data || []);
       } else {
         console.error("Failed to fetch slums:", response.error);
       }
@@ -137,6 +141,22 @@ export default function AdminSlumsPage() {
     fetchSlums();
   };
 
+  const handleSearch = (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setFilteredSlums(slums);
+      return;
+    }
+    
+    const filtered = slums.filter((slum) =>
+      slum.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      slum.slumId.toString().includes(searchQuery) ||
+      slum.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      slum.village?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      slum.ward.toString().includes(searchQuery)
+    );
+    setFilteredSlums(filtered);
+  };
+
   if (loading) {
     return (
       <SupervisorAdminLayout role="ADMIN" username={user?.name || user?.username}>
@@ -176,109 +196,85 @@ export default function AdminSlumsPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {slums.length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <div className="text-slate-400 mb-4">
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                No Slums Found
-              </h3>
-              <p className="text-slate-400 mb-4">
-                Get started by creating your first slum
-              </p>
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-800 border-b border-slate-700">
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Name
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Location
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      State
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      District
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Type
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Households
-                    </th>
-                    <th className="text-left py-4 px-4 text-slate-300 font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slums.map((slum) => (
-                    <tr
-                      key={slum._id}
-                      className="border-b border-slate-700 hover:bg-slate-800/50"
-                    >
-                      <td className="py-4 px-4 font-medium text-white">
-                        {slum.name}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.location}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {typeof slum.state === 'string' ? slum.state : slum.state?.name || ''}
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {typeof slum.district === 'string' ? slum.district : slum.district?.name || ''}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            slum.slumType === 'NOTIFIED'
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : slum.slumType === 'DECLARED'
-                              ? 'bg-purple-500/20 text-purple-400'
-                              : 'bg-slate-500/20 text-slate-400'
-                          }`}
-                        >
-                          {slum.slumType}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-slate-400">
-                        {slum.totalHouseholds}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEditSlum(slum)}
-                            className="text-cyan-400 hover:text-cyan-300 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(slum)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+        {/* Empty State and Table */}
+        <ModernTable
+          data={filteredSlums}
+          keyField="_id"
+          searchPlaceholder="Search by name, ID, city, village, or ward..."
+          columns={[
+            {
+              header: "Slum ID",
+              accessorKey: "slumId",
+              sortable: true,
+              className: "font-medium text-white text-center",
+            },
+            {
+              header: "Name",
+              accessorKey: "name",
+              sortable: true,
+              className: "font-medium text-white",
+            },
+            {
+              header: "Ward",
+              accessorKey: "ward",
+              sortable: true,
+              className: "text-center",
+            },
+            {
+              header: "Village",
+              accessorKey: "village",
+              sortable: true,
+            },
+            {
+              header: "Type",
+              accessorKey: (row) => (
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                    row.slumType === "NOTIFIED"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-yellow-500/20 text-yellow-400"
+                  }`}
+                >
+                  {row.slumType.replace('_', ' ')}
+                </span>
+              ),
+            },
+            {
+              header: "Households",
+              accessorKey: (row) => row.totalHouseholds?.toString() || "0",
+              sortable: true,
+              className: "text-center font-medium tabular-nums align-middle",
+            },
+            {
+              header: "Area (sq.m)",
+              accessorKey: (row) => row.area?.toFixed(2) || "0",
+              sortable: true,
+              className: "text-right font-medium tabular-nums align-middle",
+            },
+            {
+              header: "Actions",
+              accessorKey: (row) => (
+                <div className="flex gap-2 justify-left" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleEditSlum(row)}
+                    className="p-1.5 text-cyan-400 hover:bg-cyan-500/20 rounded-md transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(row)}
+                    className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-md transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ),
+              className: "text-center align-middle",
+            },
+          ]}
+        />
 
         {/* Modals */}
         <SlumForm

@@ -19,6 +19,7 @@ interface ModernTableProps<T> {
   onRowClick?: (row: T) => void;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  rowsPerPageOptions?: number[];
 }
 
 export default function ModernTable<T>({
@@ -29,10 +30,11 @@ export default function ModernTable<T>({
   onRowClick,
   searchPlaceholder = "Search...",
   emptyMessage = "No data found",
+  rowsPerPageOptions = [10, 25, 50],
 }: ModernTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T | null;
     direction: "asc" | "desc";
@@ -172,15 +174,8 @@ export default function ModernTable<T>({
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between bg-slate-900">
-            <p className="text-sm text-slate-500">
-              Showing <span className="font-medium text-slate-300">{(currentPage - 1) * rowsPerPage + 1}</span> to{" "}
-              <span className="font-medium text-slate-300">
-                {Math.min(currentPage * rowsPerPage, sortedData.length)}
-              </span>{" "}
-              of <span className="font-medium text-slate-300">{sortedData.length}</span> results
-            </p>
+        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between bg-slate-900">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -189,27 +184,36 @@ export default function ModernTable<T>({
               >
                 <ChevronLeft size={16} />
               </button>
-              <div className="flex items-center gap-1">
-                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    // Simple pagination logic for now (showing first 5 or centered around current)
-                    // For simplicity, just showing 1..5 or limited range could be complex.
-                    // Let's just show current page number and total.
-                    return null; 
-                 })}
-                 <span className="text-sm text-slate-400">
-                    Page {currentPage} of {totalPages}
-                 </span>
-              </div>
+              <span className="text-sm text-slate-300 font-medium">
+                Page {currentPage} of {totalPages || Math.ceil(data.length / rowsPerPage) || 1}
+              </span>
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages || Math.ceil(data.length / rowsPerPage) || 1, prev + 1))}
+                disabled={currentPage === (totalPages || Math.ceil(data.length / rowsPerPage) || 1)}
                 className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Rows per page:</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              >
+                {rowsPerPageOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

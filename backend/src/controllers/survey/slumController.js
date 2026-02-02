@@ -11,46 +11,38 @@ const createSlum = async (req, res) => {
       userRole: req.user.role
     });
     
-    const { name, location, state: stateId, district: districtId, city, ward, slumType, landOwnership, totalHouseholds } = req.body;
+    const { name, slumId, location, stateCode, distCode, city, ward, slumType, landOwnership, totalHouseholds, village, area } = req.body;
 
-    // Validate that state and district exist
-    const state = await State.findById(stateId);
-    if (!state) {
-      console.log('[DEBUG] Invalid state ID provided for creation:', stateId);
+    // Validate required fields
+    if (!stateCode) {
+      console.log('[DEBUG] State code is required for creation');
       return res.status(400).json({
         success: false,
-        message: 'Invalid state ID.'
+        message: 'State code is required.'
       });
     }
 
-    const district = await District.findById(districtId);
-    if (!district) {
-      console.log('[DEBUG] Invalid district ID provided for creation:', districtId);
+    if (!distCode) {
+      console.log('[DEBUG] District code is required for creation');
       return res.status(400).json({
         success: false,
-        message: 'Invalid district ID.'
-      });
-    }
-
-    // Check if district belongs to the specified state
-    if (district.state.toString() !== stateId.toString()) {
-      console.log('[DEBUG] District does not belong to state for creation:', { districtState: district.state, providedState: stateId });
-      return res.status(400).json({
-        success: false,
-        message: 'District does not belong to the specified state.'
+        message: 'District code is required.'
       });
     }
 
     // Create new slum
     const slum = new Slum({
       name,
+      slumId,
       location,
-      state: stateId,
-      district: districtId,
+      stateCode,
+      distCode,
       city,
       ward,
       slumType,
       landOwnership,
+      village: village || '',
+      area: area || 0,
       totalHouseholds: totalHouseholds || 0,
       createdBy: req.user._id
     });
@@ -61,8 +53,6 @@ const createSlum = async (req, res) => {
 
     // Populate the references before returning
     const populatedSlum = await Slum.findById(slum._id)
-      .populate('state', 'name code')
-      .populate('district', 'name code')
       .populate('createdBy', 'name username');
       
     console.log('[DEBUG] Created slum with populated data:', populatedSlum._id);
@@ -92,48 +82,75 @@ const getAllSlums = async (req, res) => {
       userRole: req.user.role
     });
     
-    const { page = 1, limit = 10, state, district, search } = req.query;
+    const { page = 1, limit = 10, stateCode, distCode, search, loadAll } = req.query;
     
     let filter = {};
     
-    if (state) {
-      filter.state = state;
+    if (stateCode) {
+      filter.stateCode = stateCode;
     }
     
-    if (district) {
-      filter.district = district;
+    if (distCode) {
+      filter.distCode = distCode;
     }
     
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { location: { $regex: search, $options: 'i' } },
+        { slumId: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { village: { $regex: search, $options: 'i' } },
+        { ward: { $regex: search, $options: 'i' } }
       ];
     }
     
     console.log('[DEBUG] Slums query filter:', filter);
 
-    const slums = await Slum.find(filter)
-      .populate('state', 'name code')
-      .populate('district', 'name code')
-      .populate('createdBy', 'name username')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-      
-    console.log('[DEBUG] Retrieved slums count:', slums.length);
-
-    const total = await Slum.countDocuments(filter);
+    let slums, total;
     
-    console.log('[DEBUG] Total slums count:', total);
+    // If loadAll parameter is provided, load all slums
+    if (loadAll === 'true') {
+      console.log('[DEBUG] Loading all slums without pagination');
+      slums = await Slum.find(filter)
+        .populate('createdBy', 'name username')
+        .sort({ slumId: 1 });
+        
+      total = slums.length;
+      
+      res.json({
+        success: true,
+        data: slums,
+        total,
+        loadAll: true
+      });
+    } else {
+      // Use pagination
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10; // Default to 10 items per page
+      
+      console.log('[DEBUG] Loading slums with pagination:', { page: pageNum, limit: limitNum });
+      
+      slums = await Slum.find(filter)
+        .populate('createdBy', 'name username')
+        .sort({ slumId: 1 })
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum);
+        
+      total = await Slum.countDocuments(filter);
+      
+      console.log('[DEBUG] Retrieved slums count:', slums.length);
+      console.log('[DEBUG] Total slums count:', total);
 
-    res.json({
-      success: true,
-      data: slums,
-      totalPages: Math.ceil(total / limit),
-      currentPage: parseInt(page),
-      total
-    });
+      res.json({
+        success: true,
+        data: slums,
+        totalPages: Math.ceil(total / limitNum),
+        currentPage: pageNum,
+        total,
+        loadAll: false
+      });
+    }
   } catch (error) {
     console.error('Get all slums error:', error);
     console.error('Get all slums error stack:', error.stack);
@@ -155,8 +172,6 @@ const getSlumById = async (req, res) => {
     });
     
     const slum = await Slum.findById(req.params.id)
-      .populate('state', 'name code')
-      .populate('district', 'name code')
       .populate('createdBy', 'name username');
 
     if (!slum) {
@@ -194,7 +209,7 @@ const updateSlum = async (req, res) => {
       userRole: req.user.role
     });
     
-    const { name, location, state: stateId, district: districtId, city, ward, slumType, landOwnership, totalHouseholds } = req.body;
+    const { name, slumId, location, stateCode, distCode, city, ward, slumType, landOwnership, totalHouseholds, village, area } = req.body;
 
     const slum = await Slum.findById(req.params.id);
     if (!slum) {
@@ -216,39 +231,6 @@ const updateSlum = async (req, res) => {
       });
     }
 
-    // Validate state and district if provided
-    if (stateId) {
-      console.log('[DEBUG] Validating state:', stateId);
-      const state = await State.findById(stateId);
-      if (!state) {
-        console.log('[DEBUG] Invalid state ID provided:', stateId);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid state ID.'
-        });
-      }
-    }
-
-    if (districtId) {
-      console.log('[DEBUG] Validating district:', districtId);
-      const district = await District.findById(districtId);
-      if (!district) {
-        console.log('[DEBUG] Invalid district ID provided:', districtId);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid district ID.'
-        });
-      }
-
-      if (stateId && district.state.toString() !== stateId.toString()) {
-        console.log('[DEBUG] District does not belong to state:', { districtState: district.state, providedState: stateId });
-        return res.status(400).json({
-          success: false,
-          message: 'District does not belong to the specified state.'
-        });
-      }
-    }
-
     // Prepare update fields
     const updatedFields = {
       name,
@@ -257,11 +239,13 @@ const updateSlum = async (req, res) => {
       ward,
       slumType,
       landOwnership,
-      totalHouseholds
+      totalHouseholds,
+      village: village || slum.village,
+      area: area !== undefined ? area : slum.area
     };
 
-    if (stateId) updatedFields.state = stateId;
-    if (districtId) updatedFields.district = districtId;
+    if (stateCode) updatedFields.stateCode = stateCode;
+    if (distCode) updatedFields.distCode = distCode;
     
     console.log('[DEBUG] Updating slum with fields:', updatedFields);
 
@@ -270,8 +254,6 @@ const updateSlum = async (req, res) => {
       { ...updatedFields },
       { new: true, runValidators: true }
     )
-      .populate('state', 'name code')
-      .populate('district', 'name code')
       .populate('createdBy', 'name username');
       
     console.log('[DEBUG] Successfully updated slum:', updatedSlum._id);

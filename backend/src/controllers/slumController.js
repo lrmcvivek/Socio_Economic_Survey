@@ -1,10 +1,8 @@
 const Slum = require('../models/Slum');
-const State = require('../models/State');
-const District = require('../models/District');
 
 exports.createSlum = async (req, res) => {
   try {
-    const { name, location, state, district, city, ward, slumType, landOwnership, totalHouseholds } = req.body;
+    const { name, slumId, stateCode, distCode, city, ward, slumType, village, landOwnership, totalHouseholds, area } = req.body;
 
     // Verify user is admin or supervisor
     if (!['ADMIN', 'SUPERVISOR'].includes(req.user.role)) {
@@ -14,42 +12,23 @@ exports.createSlum = async (req, res) => {
       });
     }
 
-    // Validate state and district exist
-    const stateDoc = await State.findById(state);
-    if (!stateDoc) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid state ID'
-      });
-    }
-
-    const districtDoc = await District.findById(district);
-    if (!districtDoc) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid district ID'
-      });
-    }
-
     const newSlum = new Slum({
       name,
-      location,
-      state,
-      district,
+      slumId,
+      stateCode,
+      distCode,
       city,
       ward,
       slumType,
-      landOwnership,
+      village: village || '',
+      landOwnership: landOwnership || '',
       totalHouseholds: totalHouseholds || 0,
+      area: area || 0,
       surveyStatus: 'DRAFT',
       createdBy: req.user._id
     });
 
     await newSlum.save();
-    await newSlum.populate([
-      { path: 'state', select: 'name code' },
-      { path: 'district', select: 'name code' }
-    ]);
 
     res.status(201).json({
       success: true,
@@ -68,17 +47,21 @@ exports.createSlum = async (req, res) => {
 
 exports.listSlums = async (req, res) => {
   try {
-    const { state, district, city } = req.query;
+    const { stateCode, distCode, city, slumType, loadAll } = req.query;
 
     const query = {};
-    if (state) query.state = state;
-    if (district) query.district = district;
+    if (stateCode) query.stateCode = stateCode;
+    if (distCode) query.distCode = distCode;
     if (city) query.city = city;
+    if (slumType) query.slumType = slumType;
 
-    const slums = await Slum.find(query)
-      .populate('state', 'name code')
-      .populate('district', 'name code')
-      .sort({ createdAt: -1 });
+    let slums;
+    
+    if (loadAll === 'true') {
+      slums = await Slum.find(query).sort({ slumId: 1 });
+    } else {
+      slums = await Slum.find(query).sort({ createdAt: -1 });
+    }
 
     res.json({
       success: true,
@@ -98,10 +81,7 @@ exports.getSlumById = async (req, res) => {
   try {
     const { slumId } = req.params;
 
-    const slum = await Slum.findById(slumId)
-      .populate('state', 'name code')
-      .populate('district', 'name code')
-      .populate('createdBy', 'name username role');
+    const slum = await Slum.findById(slumId).populate('createdBy', 'name username role');
 
     if (!slum) {
       return res.status(404).json({
@@ -127,7 +107,7 @@ exports.getSlumById = async (req, res) => {
 exports.updateSlum = async (req, res) => {
   try {
     const { slumId } = req.params;
-    const { name, location, city, ward, slumType, landOwnership, totalHouseholds } = req.body;
+    const { name, stateCode, distCode, city, ward, slumType, village, landOwnership, totalHouseholds, area } = req.body;
 
     // Verify user is admin or supervisor
     if (!['ADMIN', 'SUPERVISOR'].includes(req.user.role)) {
@@ -139,9 +119,9 @@ exports.updateSlum = async (req, res) => {
 
     const slum = await Slum.findByIdAndUpdate(
       slumId,
-      { name, location, city, ward, slumType, landOwnership, totalHouseholds },
+      { name, stateCode, distCode, city, ward, slumType, village, landOwnership, totalHouseholds, area },
       { new: true }
-    ).populate('state', 'name code').populate('district', 'name code');
+    );
 
     if (!slum) {
       return res.status(404).json({

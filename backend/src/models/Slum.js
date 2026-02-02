@@ -6,20 +6,20 @@ const slumSchema = new mongoose.Schema({
     required: [true, 'Slum name is required'],
     trim: true
   },
-  location: {
+  slumId: {
+    type: Number,
+    required: [true, 'Slum ID is required'],
+    unique: true
+  },
+  stateCode: {
     type: String,
-    required: [true, 'Location is required'],
+    required: [true, 'State code is required'],
     trim: true
   },
-  state: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'State',
-    required: true
-  },
-  district: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'District',
-    required: true
+  distCode: {
+    type: String,
+    required: [true, 'District code is required'],
+    trim: true
   },
   city: {
     type: String,
@@ -27,23 +27,33 @@ const slumSchema = new mongoose.Schema({
     trim: true
   },
   ward: {
-    type: String,
-    required: [true, 'Ward is required'],
-    trim: true
+    type: Number,
+    required: [true, 'Ward number is required']
   },
   slumType: {
     type: String,
-    enum: ['NOTIFIED', 'NON_NOTIFIED'],
+    enum: ['NOTIFIED', 'NON-NOTIFIED'],
     required: true
+  },
+  village: {
+    type: String,
+    trim: true,
+    default: ''
   },
   landOwnership: {
     type: String,
-    required: [true, 'Land ownership is required'],
-    trim: true
+    trim: true,
+    default: ''
   },
   totalHouseholds: {
     type: Number,
-    min: 0
+    min: 0,
+    default: 0
+  },
+  area: {
+    type: Number,
+    min: 0,
+    default: 0
   },
   surveyStatus: {
     type: String,

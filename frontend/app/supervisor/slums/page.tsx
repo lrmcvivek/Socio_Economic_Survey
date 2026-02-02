@@ -26,13 +26,20 @@ interface User {
 interface Slum {
   _id: string;
   name: string;
-  location: string;
-  district: string | LocationReference;
-  state: string | LocationReference;
+  slumId: number;
+  stateCode: string;
+  distCode: string;
+  city: string;
+  ward: number;
   slumType: string;
+  village: string;
+  landOwnership: string;
   totalHouseholds: number;
-  city?: string;
-  ward?: string;
+  area: number;
+  surveyStatus: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function SupervisorSlumsPage() {
@@ -51,7 +58,7 @@ export default function SupervisorSlumsPage() {
     console.log('SupervisorSlumsPage: Starting fetchSlums');
     try {
       setLoading(true);
-      const response = await apiService.getAllSlums();
+      const response = await apiService.getAllSlums(1, 10, undefined, true); // Load all slums
       console.log('SupervisorSlumsPage: Fetched slums response', response);
       if (response.success) {
         setSlums(response.data || []);
@@ -200,36 +207,39 @@ export default function SupervisorSlumsPage() {
           onRowClick={(row) => handleViewSlum(row._id)}
           columns={[
             {
+              header: "Slum ID",
+              accessorKey: "slumId",
+              sortable: true,
+              className: "font-medium text-white text-center",
+            },
+            {
               header: "Name",
               accessorKey: "name",
               sortable: true,
               className: "font-medium text-white",
             },
             {
-              header: "Location",
-              accessorKey: "location",
+              header: "Ward",
+              accessorKey: "ward",
               sortable: true,
+              className: "text-center",
             },
             {
-              header: "State",
-              accessorKey: (row: Slum) => typeof row.state === 'string' ? row.state : row.state?.name || "N/A",
+              header: "Village",
+              accessorKey: "village",
               sortable: true,
-            },
-            {
-              header: "District",
-              accessorKey: (row: Slum) => typeof row.district === 'string' ? row.district : row.district?.name || "N/A",
             },
             {
               header: "Type",
               accessorKey: (row) => (
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                     row.slumType === "NOTIFIED"
                       ? "bg-green-500/20 text-green-400"
                       : "bg-yellow-500/20 text-yellow-400"
                   }`}
                 >
-                  {row.slumType}
+                  {row.slumType.replace('_', ' ')}
                 </span>
               ),
             },
@@ -237,7 +247,13 @@ export default function SupervisorSlumsPage() {
               header: "Households",
               accessorKey: (row) => row.totalHouseholds?.toString() || "0",
               sortable: true,
-              className: "text-left font-medium tabular-nums align-middle",
+              className: "text-center font-medium tabular-nums align-middle",
+            },
+            {
+              header: "Area (sq.m)",
+              accessorKey: (row) => row.area?.toFixed(2) || "0",
+              sortable: true,
+              className: "text-right font-medium tabular-nums align-middle",
             },
             {
               header: "Actions",

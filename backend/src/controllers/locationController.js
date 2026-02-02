@@ -5,7 +5,7 @@ const District = require('../models/District');
 const getStates = async (req, res) => {
   try {
     const states = await State.find({}).sort({ name: 1 });
-    
+
     res.json({
       success: true,
       data: states
@@ -23,14 +23,14 @@ const getStates = async (req, res) => {
 const getStateById = async (req, res) => {
   try {
     const state = await State.findById(req.params.id);
-    
+
     if (!state) {
       return res.status(404).json({
         success: false,
         message: 'State not found.'
       });
     }
-    
+
     res.json({
       success: true,
       data: state
@@ -49,13 +49,13 @@ const getDistricts = async (req, res) => {
   try {
     const { stateId } = req.query;
     let districts;
-    
+
     if (stateId) {
       districts = await District.find({ state: stateId }).populate('state').sort({ name: 1 });
     } else {
       districts = await District.find({}).populate('state').sort({ name: 1 });
     }
-    
+
     res.json({
       success: true,
       data: districts
@@ -73,14 +73,14 @@ const getDistricts = async (req, res) => {
 const getDistrictById = async (req, res) => {
   try {
     const district = await District.findById(req.params.id).populate('state');
-    
+
     if (!district) {
       return res.status(404).json({
         success: false,
         message: 'District not found.'
       });
     }
-    
+
     res.json({
       success: true,
       data: district
@@ -98,9 +98,36 @@ const getDistrictById = async (req, res) => {
 const getDistrictsByState = async (req, res) => {
   try {
     const { stateId } = req.params;
-    
-    const districts = await District.find({ state: stateId }).sort({ name: 1 });
-    
+
+    let query = { state: stateId };
+
+    // Check if stateId is a valid ObjectId
+    const mongoose = require('mongoose');
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(stateId);
+
+    if (!isValidObjectId) {
+      // If not a valid ObjectId, try to find state by code or name
+      const state = await State.findOne({
+        $or: [
+          { code: stateId.toUpperCase() },
+          { name: stateId.toUpperCase() }
+        ]
+      });
+
+      if (state) {
+        query = { state: state._id };
+      } else {
+        // If state not found by code/name, return empty list or 404
+        // Returning empty list to be safe, or we could error out
+        return res.status(404).json({
+          success: false,
+          message: 'State not found.'
+        });
+      }
+    }
+
+    const districts = await District.find(query).sort({ name: 1 });
+
     res.json({
       success: true,
       data: districts

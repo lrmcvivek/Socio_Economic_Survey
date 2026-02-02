@@ -444,9 +444,22 @@ class ApiService {
     }
   }
 
-  public async getAllSlums(): Promise<ApiResponse> {
+  public async getAllSlums(page: number = 1, limit: number = 10, search?: string, loadAll: boolean = false): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/surveys/slums`, {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+        
+      if (loadAll) {
+        queryParams.append('loadAll', 'true');
+      }
+        
+      if (search) {
+        queryParams.append('search', search);
+      }
+      
+      const response = await fetch(`${this.baseUrl}/surveys/slums?${queryParams.toString()}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });

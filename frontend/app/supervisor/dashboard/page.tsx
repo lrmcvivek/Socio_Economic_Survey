@@ -64,7 +64,7 @@ export default function SupervisorDashboardPage() {
     try {
       // Fetch all assignments to calculate statistics
       const assignmentsResponse = await apiService.getAllAssignments();
-      const slumsResponse = await apiService.getAllSlums();
+      const slumsResponse = await apiService.getAllSlums(1, 10, undefined, true); // Load all slums for count
       const usersResponse = await apiService.getUsers();
       
       if (assignmentsResponse.success && assignmentsResponse.data) {
@@ -103,7 +103,7 @@ export default function SupervisorDashboardPage() {
         });
       }
       
-      if (slumsResponse.success && !dashboardStats.totalSlums) {
+      if (slumsResponse.success) {
         setDashboardStats(prev => ({
           ...prev,
           totalSlums: slumsResponse.data?.length || 0

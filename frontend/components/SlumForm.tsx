@@ -7,6 +7,19 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import apiService from "@/services/api";
 
+interface State {
+  _id: string;
+  name: string;
+  code: string;
+}
+
+interface District {
+  _id: string;
+  name: string;
+  code: string;
+  state: string;
+}
+
 interface SlumFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,147 +35,122 @@ export default function SlumForm({
 }: SlumFormProps) {
   const [formData, setFormData] = useState({
     name: "",
-    location: "",
-    state: "",
-    district: "",
+    slumId: 0,
+    stateCode: "",
+    distCode: "",
     city: "",
-    ward: "",
+    ward: 0,
     slumType: "NOTIFIED",
+    village: "",
     landOwnership: "",
     totalHouseholds: 0,
+    area: 0,
   });
 
-  const [states, setStates] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [userDetails, setUserDetails] = useState<any>(null); // To store user details for auto-fill
+  const [states, setStates] = useState<State[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
 
-  // Auto-fill state and district based on user preference
-  const autoFillLocation = useCallback(() => {
-    if (userDetails && states.length > 0) {
-      // Example: auto-fill based on user's assigned region or last used values
-      // You can customize this logic based on your specific requirements
-      const lastUsedState = localStorage.getItem('lastSelectedState');
-      const lastUsedDistrict = localStorage.getItem('lastSelectedDistrict');
-      
-      if (lastUsedState) {
-        const stateExists = states.some((state: any) => state._id === lastUsedState);
-        if (stateExists) {
-          setFormData(prev => ({ ...prev, state: lastUsedState }));
-          
-          // Auto-fill district if it was used with this state
-          if (lastUsedDistrict) {
-            setTimeout(() => {
-              const districtExists = districts.some((district: any) => district._id === lastUsedDistrict);
-              if (districtExists) {
-                setFormData(prev => ({ ...prev, district: lastUsedDistrict }));
-              }
-            }, 300); // Wait for districts to load
-          }
-        }
+  const fetchStates = async () => {
+    setLoadingStates(true);
+    try {
+      const response = await apiService.getStates();
+      if (response.success && response.data) {
+        setStates(response.data);
       }
+    } catch (error) {
+      console.error('Error fetching states:', error);
+    } finally {
+      setLoadingStates(false);
     }
-  }, [userDetails, states]); // Removed districts to prevent circular updates
+  };
 
-  // Load user details for auto-fill
+  const fetchDistricts = async (stateCode: string) => {
+    if (!stateCode) {
+      setDistricts([]);
+      return;
+    }
+    
+    setLoadingDistricts(true);
+    try {
+      const response = await apiService.getDistrictsByState(stateCode);
+      if (response.success && response.data) {
+        setDistricts(response.data);
+      } else {
+        setDistricts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching districts:', error);
+      setDistricts([]);
+    } finally {
+      setLoadingDistricts(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      try {
-        const response = await apiService.getMe();
-        if (response.success) {
-          setUserDetails(response.user);
-        }
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-      }
-    };
-
-    if (isOpen && !slum) { // Only fetch for new slums, not editing
-      fetchUserDetails();
+    if (isOpen) {
+      fetchStates();
     }
-  }, [isOpen, slum]); // This dependency array is correct
+  }, [isOpen]);
 
   useEffect(() => {
     if (slum) {
       setFormData({
         name: slum.name || "",
-        location: slum.location || "",
-        state: slum.state?._id || slum.state || "",
-        district: slum.district?._id || slum.district || "",
+        slumId: slum.slumId || 0,
+        stateCode: slum.stateCode || "",
+        distCode: slum.distCode || "",
         city: slum.city || "",
-        ward: slum.ward || "",
+        ward: slum.ward || 0,
         slumType: slum.slumType || "NOTIFIED",
+        village: slum.village || "",
         landOwnership: slum.landOwnership || "",
         totalHouseholds: slum.totalHouseholds || 0,
+        area: slum.area || 0,
       });
-    } else if (userDetails && !slum) {
-      // Auto-fill based on user details when creating a new slum
-      // You can customize this logic based on your user data structure
-      setFormData(prev => ({
-        ...prev,
-        state: prev.state || "", // Will be set after state selection
-        district: prev.district || "",
-        city: prev.city || "",
-      }));
-    }
-  }, [slum]); // Only depend on slum to prevent auto-fill from triggering unnecessary updates
-
-  useEffect(() => {
-    const fetchStates = async () => {
-      try {
-        const response = await apiService.getStates();
-        if (response.success) {
-          setStates(response.data || []);
-          
-          // Auto-fill after states are loaded
-          if (isOpen && !slum) {
-            setTimeout(() => {
-              autoFillLocation();
-            }, 100);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching states:", error);
+      // Load districts for the state when editing
+      if (slum.stateCode) {
+        fetchDistricts(slum.stateCode);
       }
-    };
-
-    if (isOpen) {
-      fetchStates();
+    } else {
+      setFormData({
+        name: "",
+        slumId: 0,
+        stateCode: "",
+        distCode: "",
+        city: "",
+        ward: 0,
+        slumType: "NOTIFIED",
+        village: "",
+        landOwnership: "",
+        totalHouseholds: 0,
+        area: 0,
+      });
+      setDistricts([]); // Clear districts when creating new
     }
-  }, [isOpen, slum]); // Removed autoFillLocation from dependencies to prevent circular updates
-
-  useEffect(() => {
-    const fetchDistricts = async () => {
-      if (formData.state) {
-        try {
-          const response = await apiService.getDistrictsByState(formData.state);
-          if (response.success) {
-            setDistricts(response.data || []);
-          }
-        } catch (error) {
-          console.error("Error fetching districts:", error);
-        }
-      }
-    };
-
-    fetchDistricts();
-  }, [formData.state]); // This is correct as it should update when state changes
+  }, [slum, isOpen]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    const isNumberField = ['slumId', 'ward', 'totalHouseholds', 'area'].includes(name);
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "totalHouseholds" ? parseInt(value) || 0 : value,
+      [name]: isNumberField ? parseFloat(value) || 0 : value,
     }));
     
-    // Save to localStorage for auto-fill
-    if (name === 'state') {
-      localStorage.setItem('lastSelectedState', value);
-    } else if (name === 'district') {
-      localStorage.setItem('lastSelectedDistrict', value);
+    // When state changes, fetch districts and clear district selection
+    if (name === 'stateCode') {
+      setDistricts([]);
+      setFormData(prev => ({ ...prev, distCode: '' }));
+      if (value) {
+        fetchDistricts(value);
+      }
     }
     
     setError("");
@@ -170,70 +158,56 @@ export default function SlumForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('SlumForm: HandleSubmit called', { slum, formData });
 
     if (
       !formData.name ||
-      !formData.location ||
-      !formData.state ||
-      !formData.district
+      !formData.slumId ||
+      !formData.stateCode ||
+      !formData.distCode ||
+      !formData.city ||
+      !formData.ward
     ) {
-      console.log('SlumForm: Validation failed', {
-        name: !!formData.name,
-        location: !!formData.location,
-        state: !!formData.state,
-        district: !!formData.district
-      });
       setError("Please fill all required fields");
       return;
     }
 
     setLoading(true);
     try {
-      console.log('SlumForm: Calling API service', { slumId: slum?._id, formData });
       let response;
       if (slum) {
-        console.log('SlumForm: Updating existing slum', slum._id);
         response = await apiService.updateSlum(slum._id, formData);
       } else {
-        console.log('SlumForm: Creating new slum');
         response = await apiService.createSlum(formData);
       }
-      
-      console.log('SlumForm: API response received', response);
 
       if (response.success) {
-        console.log('SlumForm: Operation successful, calling callbacks');
         onSuccess();
         onClose();
         setFormData({
           name: "",
-          location: "",
-          state: "",
-          district: "",
+          slumId: 0,
+          stateCode: "",
+          distCode: "",
           city: "",
-          ward: "",
+          ward: 0,
           slumType: "NOTIFIED",
+          village: "",
           landOwnership: "",
           totalHouseholds: 0,
+          area: 0,
         });
       } else {
-        console.log('SlumForm: Operation failed', response.message);
         setError(response.message || "Failed to save slum");
       }
     } catch (err) {
-      console.error('SlumForm: handleSubmit error caught', err);
       setError("Error saving slum");
       console.error(err);
     } finally {
       setLoading(false);
-      console.log('SlumForm: Loading state set to false');
     }
   };
 
   const handleButtonClick = () => {
-    // Create a synthetic form event for the button click
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
     handleSubmit(fakeEvent);
   };
@@ -279,11 +253,12 @@ export default function SlumForm({
                 required
               />
               <Input
-                label="Location"
-                name="location"
-                value={formData.location}
+                label="Slum ID"
+                name="slumId"
+                type="number"
+                value={formData.slumId || ''}
                 onChange={handleChange}
-                placeholder="e.g. Sector 4, North Block"
+                placeholder="Enter unique slum ID"
                 required
               />
             </div>
@@ -291,31 +266,32 @@ export default function SlumForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Select
                 label="State"
-                name="state"
-                value={formData.state}
+                name="stateCode"
+                value={formData.stateCode}
                 onChange={handleChange}
                 options={[
-                  { value: "", label: "Select State" },
-                  ...states.map((state: any) => ({
-                    value: state._id,
-                    label: state.name,
-                  })),
+                  { value: "", label: loadingStates ? "Loading states..." : "Select state" },
+                  ...states.map(state => ({ 
+                    value: state.code, 
+                    label: `${state.name} (${state.code})` 
+                  }))
                 ]}
                 required
               />
               <Select
                 label="District"
-                name="district"
-                value={formData.district}
+                name="distCode"
+                value={formData.distCode}
                 onChange={handleChange}
                 options={[
-                  { value: "", label: "Select District" },
-                  ...districts.map((district: any) => ({
-                    value: district._id,
-                    label: district.name,
-                  })),
+                  { value: "", label: loadingDistricts ? "Loading districts..." : (formData.stateCode ? "Select district" : "Select state first") },
+                  ...districts.map(district => ({ 
+                    value: district.code, 
+                    label: `${district.name} (${district.code})` 
+                  }))
                 ]}
                 required
+                disabled={!formData.stateCode || loadingDistricts}
               />
             </div>
 
@@ -331,7 +307,8 @@ export default function SlumForm({
               <Input
                 label="Ward Number"
                 name="ward"
-                value={formData.ward}
+                type="number"
+                value={formData.ward || ''}
                 onChange={handleChange}
                 placeholder="Enter ward number"
                 required
@@ -346,35 +323,53 @@ export default function SlumForm({
                 onChange={handleChange}
                 options={[
                   { value: "NOTIFIED", label: "Notified" },
-                  { value: "NON_NOTIFIED", label: "Non-Notified" },
+                  { value: "NON-NOTIFIED", label: "Non-Notified" },
                 ]}
                 required
               />
+              <Input
+                label="Village"
+                name="village"
+                value={formData.village}
+                onChange={handleChange}
+                placeholder="Enter village name"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Land Ownership Status"
                 name="landOwnership"
                 value={formData.landOwnership}
                 onChange={handleChange}
                 placeholder="e.g. Private / Government"
-                required
+              />
+              <Input
+                label="Total Households (Approx)"
+                name="totalHouseholds"
+                type="number"
+                value={formData.totalHouseholds || ''}
+                onChange={handleChange}
+                placeholder="0"
+                min="0"
               />
             </div>
-
-             <div className="max-w-md">
-                <Input
-                  label="Total Households (Approx)"
-                  name="totalHouseholds"
-                  type="number"
-                  value={formData.totalHouseholds}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-             </div>
-             
-             {/* Hidden submit for Enter key support */}
-             <button type="submit" className="hidden" />
+            
+            <div className="max-w-md">
+              <Input
+                label="Area (sq.m)"
+                name="area"
+                type="number"
+                value={formData.area || ''}
+                onChange={handleChange}
+                placeholder="0"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            
+            {/* Hidden submit for Enter key support */}
+            <button type="submit" className="hidden" />
           </form>
         </div>
 

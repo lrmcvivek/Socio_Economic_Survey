@@ -9,6 +9,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Card from "@/components/Card";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
+import InfiniteScrollSelect from "@/components/InfiniteScrollSelect";
 
 interface Assignment {
   _id: string;
@@ -42,6 +43,7 @@ interface Slum {
   _id: string;
   name: string;
   location: string;
+  slumId: number;
 }
 
 interface User {
@@ -100,7 +102,7 @@ export default function SupervisorAssignmentsPage() {
         // Fetch assignments, surveyors, and slums
         const [surveyorsRes, slumsRes, assignmentsRes] = await Promise.all([
           apiService.getUsers("SURVEYOR"),
-          apiService.getAllSlums(),
+          apiService.getAllSlums(1, 10, undefined, true), // Load all slums
           apiService.getAllAssignments(), // Use getAllAssignments for supervisors to see all assignments they created
         ]);
 
@@ -113,8 +115,9 @@ export default function SupervisorAssignmentsPage() {
           setAvailableUsers(surveyorsRes.data || []); // Also set available users for editing
         }
         if (slumsRes.success) {
-          setSlums(slumsRes.data || []);
-          setAvailableSlumsList(slumsRes.data || []); // Also set available slums for editing
+          const sortedSlums = [...(slumsRes.data || [])].sort((a, b) => a.name.localeCompare(b.name));
+          setSlums(sortedSlums);
+          setAvailableSlumsList(sortedSlums); // Also set available slums for editing
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -170,7 +173,9 @@ export default function SupervisorAssignmentsPage() {
   );
 
   // Filter slums to only show those not yet assigned
-  const availableSlums = slums.filter((slum) => !assignedSlumIds.has(slum._id));
+  const availableSlums = slums
+    .filter((slum) => !assignedSlumIds.has(slum._id))
+    .sort((a, b) => a.name.localeCompare(b.name)); // Sort slums alphabetically by name
 
   const handleEditAssignment = (assignment: Assignment) => {
     setAssignmentToEdit(assignment);
@@ -413,18 +418,15 @@ export default function SupervisorAssignmentsPage() {
                   })),
                 ]}
               />
-              <Select
+              <InfiniteScrollSelect
                 label="Slum"
                 value={newAssignment.slumId}
-                onChange={(e) =>
-                  setNewAssignment({ ...newAssignment, slumId: e.target.value })
-                }
-                options={[
-                  ...availableSlums.map((s) => ({
-                    value: s._id,
-                    label: `${s.name} - ${s.location}`,
-                  })),
-                ]}
+                onChange={(value) => setNewAssignment({ ...newAssignment, slumId: value })}
+                options={availableSlums.map((s) => ({
+                  value: s._id,
+                  label: `${s.name} (${s.slumId})`,
+                }))}
+                placeholder="Select a slum..."
                 disabled={availableSlums.length === 0}
               />
               <div className="flex items-end">

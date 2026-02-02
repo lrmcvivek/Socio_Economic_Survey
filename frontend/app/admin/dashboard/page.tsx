@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
         : 0;
 
       // Fetch slums count
-      const slumsResponse = await apiService.getAllSlums();
+      const slumsResponse = await apiService.getAllSlums(1, 10, undefined, true); // Load all slums for count
       const slumsCount = slumsResponse.success && slumsResponse.data ? slumsResponse.data.length : 0;
 
       // Fetch assignments count
@@ -139,7 +139,7 @@ export default function AdminDashboardPage() {
 
       setDashboardStats({
         totalUsers: usersCount,
-        totalSlums: uniqueSlumsCount > 0 ? uniqueSlumsCount : slumsCount,
+        totalSlums: slumsCount, // Use actual database count
         totalAssignments: totalAssignments,
         activeAssignments: activeAssignmentsCount,
         completedAssignments: completedAssignmentsCount,
@@ -160,7 +160,7 @@ export default function AdminDashboardPage() {
         },
         {
           title: "Total Slums",
-          value: uniqueSlumsCount > 0 ? uniqueSlumsCount : slumsCount,
+          value: slumsCount, // Use actual database count
           icon: <Building2 className="w-6 h-6" />,
           color: "from-purple-600 to-purple-700",
         },
