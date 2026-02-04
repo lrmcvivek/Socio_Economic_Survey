@@ -53,7 +53,7 @@ const slumSurveySchema = new mongoose.Schema({
     slumPopulation: Number,
     noSlumHouseholds: Number,
     bplPopulation: Number,
-    noBplHouseholdsSlum: Number
+    bplHouseholds: Number
   },
 
   // SECTION 3: PARTICULARS OF SURVEY OPERATION

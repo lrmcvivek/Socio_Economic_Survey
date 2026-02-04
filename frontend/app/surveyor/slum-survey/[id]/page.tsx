@@ -40,29 +40,21 @@ interface SlumSurveyForm {
   slumPopulation?: number; // 10 - Slum population
   noSlumHouseholds?: number; // 11 - No. of slum House Holds
   bplPopulation?: number; // 12 - BPL(Below Poverty Line) population
-  noBplHouseholdsCityTown?: number; // 13 - No. of BPL House Holds
+  bplHouseholds?: number; // 13 - No. of BPL House Holds
   
   // PART-C: III. PARTICULARS OF SURVEY OPERATION
   surveyorName?: string; // 7 - Name
   surveyDate?: string; // 8(a) - Date(s) of Survey
-  receiptQuestionnaireDate?: string; // 8(b) - Date(s) of Receipt of Questionnaire
-  scrutinyDate?: string; // 8(c) - Date(s) of Scrutiny
-  receiptByNodalCellDate?: string; // 8(d) - Date(s) of Receipt by Nodal Cell in Urban Municipal Corporation
-  remarksInvestigator?: string; // 10 - Remarks by Investigator/Surveyor
-  commentsSupervisor?: string; // 11 - Comments by the Supervisor
   
   // PART-D: I. BASIC INFORMATION ON SLUM
-  slumNameBasicInfo?: string; // 1 - Name of Slum
+  slumNameBasicInfo?: string; // 1 - Name of Slum (Note: backend uses slumName in cityTownSlumProfile)
   wardNumber?: string; // 2 - Location - Ward No/Name
-  wardName?: string; // 2 - Location - Ward No/Name
-  zoneNumber?: string; // 2 - Location - Ward No/Name
+  wardName?: string; // 2 - Location - Ward Name (Note: backend uses wardNumber for both)
+  zone?: string; // 2 - Location - Ward No/Name (Note: backend has zoneNumber)
   ageSlumYears?: number; // 3 - Age of Slum in Years
-  areaSlumSqMtrs?: number; // 4 - Area of Slum (Sq. metres)
   locationCoreOrFringe?: string; // 5 - Whether located in Core City/Town or Fringe area (Core City/Town - 01, Fringe Area -02)
   typeAreaSurrounding?: string; // 6 - Type of Area surrounding Slum (Residential - 01, Industrial - 02, Commercial - 03, Institutional-04, Other-49)
   physicalLocationSlum?: string; // 7 - Physical Location of Slum (Along Nallah -01, Along Other Drains - 02, etc.)
-  isSlumNotified?: string; // 8 - Is the Slum Notified/Declared? (Yes-01, No-02)
-  yearOfNotification?: number; // 9 - If Yes (01) in 8, state Year of Notification
   
   // PART-E: II. LAND STATUS
   ownershipLandDetail?: string; // 10 - Ownership of Land where Slum is located (Public: Municipal Corporation -01, State Government - 02, etc.)
@@ -595,15 +587,31 @@ export default function SlumSurveyPage() {
   }
   const [errors, setErrors] = useState<FieldError[]>([]);
 
+  // Helper function to render values: show 0 for numeric fields when undefined/null, 'N/A' for others
+  const renderValue = (value: any, isNumeric: boolean = false) => {
+    if (isNumeric) {
+      if (value === undefined || value === null || value === '') {
+        return 0;
+      }
+      return value;
+    } else {
+      if (value === undefined || value === null || value === '') {
+        return 'N/A';
+      }
+      return value;
+    }
+  };
+
   const [formData, setFormData] = useState<SlumSurveyForm>({
     slumId: "",
     surveyed: false,
+    surveyorName: user?.name || "", // Pre-populate with user name
+    surveyDate: "", // Will be set after user data is loaded
     slumType: "",
     ownershipLand: "",
     locationCoreOrFringe: "",
     typeAreaSurrounding: "",
     physicalLocationSlum: "",
-    isSlumNotified: "",
     connectivityCityWaterSupply: "",
     drainageSewerageFacility: "",
     connectivityStormWaterDrainage: "",
@@ -761,9 +769,18 @@ export default function SlumSurveyPage() {
   useEffect(() => {
     // Load user data
     const userStr = localStorage.getItem("user");
+    let userData = null;
     if (userStr) {
-      const userData = JSON.parse(userStr);
+      userData = JSON.parse(userStr);
       setUser(userData);
+    }
+    
+    // Set survey date when component mounts and user data is available
+    if (userData && !formData.surveyDate) {
+      setFormData(prev => ({
+        ...prev,
+        surveyDate: new Date().toISOString().split('T')[0]
+      }));
     }
 
     const loadData = async () => {
@@ -781,25 +798,95 @@ export default function SlumSurveyPage() {
             slumId: slumId,
           }));
 
+          // First, get the assignment again to access the populated ward information
+          // The assignment controller populates the slum with ward details
+          let assignmentWardData = null;
+          
+          if (assignmentResponse.success && assignmentResponse.data?.slum?.ward) {
+            assignmentWardData = assignmentResponse.data.slum.ward;
+          }
+
           // Now fetch the slum details
           const slumResponse = await apiService.getSlum(slumId);
           if (slumResponse.success) {
             const slumData = slumResponse.data;
             setSlum(slumData);
             
-            // Auto-fill slum details
+            // Auto-fill slum details with initial values from slum data
             setFormData((prev) => ({
               ...prev,
-              slumName: slumData.name || "",
-              stateName: slumData.state?.name || "",
-              stateCode: slumData.state?.code || "",
-              districtName: slumData.district?.name || "",
-              districtCode: slumData.district?.code || "",
-              locationWard: slumData.ward || "",
+              slumName: slumData.slumName || "",
+              slumIdField: slumData.slumId?.toString() || "",
+              areaSqMtrs: slumData.area || 0,
+              stateCode: slumData.stateCode || "",
+              districtCode: slumData.distCode || "",
+              ulbCode: slumData.ulbCode || "",
+              ulbName: slumData.ulbName || "",
+              cityTownCode: slumData.cityTownCode || "",
               slumType: slumData.slumType || "",
               ownershipLand: slumData.landOwnership || "",
               noSlumHouseholds: slumData.totalHouseholds || 0,
+              
+              // Populate ward information from assignment if available
+              wardNumber: assignmentWardData?.number || assignmentWardData?.wardNumber || "",
+              wardName: assignmentWardData?.name || "",
+              zone: assignmentWardData?.zone || ""
             }));
+
+            // Now fetch additional data to get state and district names
+            // Get state by code to populate state name
+            if (slumData.stateCode) {
+              try {
+                const statesResponse = await apiService.getStates();
+                if (statesResponse.success) {
+                  const state = statesResponse.data.find((s: any) => s.code === slumData.stateCode);
+                  if (state) {
+                    setFormData(prev => ({
+                      ...prev,
+                      stateName: state.name || ""
+                    }));
+                  }
+                }
+              } catch (error) {
+                console.error("Error fetching state data:", error);
+              }
+            }
+
+            // Get district by code to populate district name
+            if (slumData.distCode) {
+              try {
+                const districtsResponse = await apiService.getDistricts();
+                if (districtsResponse.success) {
+                  const district = districtsResponse.data.find((d: any) => d.code === slumData.distCode);
+                  if (district) {
+                    setFormData(prev => ({
+                      ...prev,
+                      districtName: district.name || ""
+                    }));
+                  }
+                }
+              } catch (error) {
+                console.error("Error fetching district data:", error);
+              }
+            }
+
+            // If ward information wasn't populated from the assignment, try to fetch it separately
+            if (slumData.ward && !(assignmentWardData && (assignmentWardData.number || assignmentWardData.name))) {
+              try {
+                const wardResponse = await apiService.get(`/admin/wards/${slumData.ward}`);
+                if (wardResponse.success) {
+                  const wardData = wardResponse.data;
+                  setFormData(prev => ({
+                    ...prev,
+                    wardNumber: wardData.number || "",
+                    wardName: wardData.name || "",
+                    zone: wardData.zone || ""
+                  }));
+                }
+              } catch (error) {
+                console.error("Error fetching ward data separately:", error);
+              }
+            }
           } else {
             showToast("Failed to load slum details", "error");
           }
@@ -863,12 +950,9 @@ export default function SlumSurveyPage() {
                 slumCode: surveyData.basicInformation.slumCode || "",
                 locationWard: surveyData.basicInformation.locationWard || "",
                 ageSlumYears: surveyData.basicInformation.ageSlumYears || undefined,
-                areaSlumSqMtrs: surveyData.basicInformation.areaSlumSqMtrs ? parseFloat(surveyData.basicInformation.areaSlumSqMtrs) : undefined,
                 locationCoreOrFringe: surveyData.basicInformation.locationCoreOrFringe || "",
                 typeAreaSurrounding: surveyData.basicInformation.typeAreaSurrounding || "",
                 physicalLocationSlum: surveyData.basicInformation.physicalLocationSlum || "",
-                isSlumNotified: surveyData.basicInformation.isSlumNotified || "",
-                yearOfNotification: surveyData.basicInformation.yearOfNotification ? parseInt(surveyData.basicInformation.yearOfNotification) : undefined,
               }));
             }
             
@@ -1332,14 +1416,14 @@ export default function SlumSurveyPage() {
                 slumPopulation: surveyData.cityTownSlumProfile.slumPopulation || 0,
                 noSlumHouseholds: surveyData.cityTownSlumProfile.noSlumHouseholds || 0,
                 bplPopulation: surveyData.cityTownSlumProfile.bplPopulation || 0,
-                noBplHouseholdsCityTown: surveyData.cityTownSlumProfile.noBplHouseholdsCityTown || 0,
+                bplHouseholds: surveyData.cityTownSlumProfile.bplHouseholds || 0,
               }));
             }
             
             if (surveyData.surveyOperation) {
               setFormData(prev => ({
                 ...prev,
-                surveyorName: surveyData.surveyOperation.surveyorName || "",
+                surveyorName: user?.name || surveyData.surveyOperation.surveyorName || "",
                 surveyDate: surveyData.surveyOperation.surveyDate || "",
                 receiptQuestionnaireDate: surveyData.surveyOperation.receiptQuestionnaireDate || "",
                 scrutinyDate: surveyData.surveyOperation.scrutinyDate || "",
@@ -1347,7 +1431,33 @@ export default function SlumSurveyPage() {
                 remarksInvestigator: surveyData.surveyOperation.remarksInvestigator || "",
                 commentsSupervisor: surveyData.surveyOperation.commentsSupervisor || "",
               }));
+            } else {
+              // For new surveys, populate surveyor name from user data
+              setFormData(prev => ({
+                ...prev,
+                surveyorName: user?.name || "",
+                surveyDate: new Date().toISOString().split('T')[0] // Set current date as default
+              }));
             }
+
+            // Also populate city/town code from general information if available
+            if (surveyData.generalInformation) {
+              setFormData(prev => ({
+                ...prev,
+                cityTownCode: surveyData.generalInformation.cityTownCode || "",
+                cityTown: surveyData.generalInformation.cityTown || "",
+                cityTownNoHouseholds: surveyData.generalInformation.cityTownNoHouseholds || 0
+              }));
+            }
+
+            // Ensure areaSqMtrs is also populated from cityTownSlumProfile if not already set
+            if (surveyData.cityTownSlumProfile) {
+              setFormData(prev => ({
+                ...prev,
+                areaSqMtrs: surveyData.cityTownSlumProfile.areaSqMtrs || prev.areaSqMtrs || 0
+              }));
+            }
+
           } else {
             showToast("Failed to load/create slum survey", "error");
           }
@@ -1355,7 +1465,7 @@ export default function SlumSurveyPage() {
           showToast("Failed to load assignment details", "error");
           router.push("/surveyor/dashboard");
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error loading data:", error);
         showToast("Failed to load data", "error");
         router.push("/surveyor/dashboard");
@@ -1365,7 +1475,7 @@ export default function SlumSurveyPage() {
     };
 
     if (assignmentId) loadData();
-  }, [assignmentId, router, showToast]);
+  }, [assignmentId, router, showToast, isEditMode, user?.name]);
 
 
 
@@ -1425,8 +1535,8 @@ export default function SlumSurveyPage() {
     if (formData.bplPopulation === undefined || formData.bplPopulation === null || isNaN(formData.bplPopulation) || formData.bplPopulation < 0) {
       newErrors.push({ field: 'bplPopulation', message: 'BPL Population is required' });
     }
-    if (formData.noBplHouseholdsSlum === undefined || formData.noBplHouseholdsSlum === null || isNaN(formData.noBplHouseholdsSlum) || formData.noBplHouseholdsSlum < 0) {
-      newErrors.push({ field: 'noBplHouseholdsSlum', message: 'No. of BPL Households is required' });
+    if (formData.bplHouseholds=== undefined || formData.bplHouseholds=== null || isNaN(formData.bplHouseholds) || formData.bplHouseholds< 0) {
+      newErrors.push({ field: 'bplHouseholds', message: 'No. of BPL Households is required' });
     }
     
     // Part C - Particulars of Survey Operation
@@ -1815,32 +1925,24 @@ export default function SlumSurveyPage() {
           slumPopulation: finalFormData.slumPopulation || 0,
           noSlumHouseholds: finalFormData.noSlumHouseholds || 0,
           bplPopulation: finalFormData.bplPopulation || 0,
-          noBplHouseholdsSlum: finalFormData.noBplHouseholdsSlum || 0
+          bplHouseholds: finalFormData.bplHouseholds || 0
         },
         
         // PART-C: III. PARTICULARS OF SURVEY OPERATION
         surveyOperation: {
           surveyorName: finalFormData.surveyorName || "",
-          surveyDate: finalFormData.surveyDate || "",
-          receiptQuestionnaireDate: finalFormData.receiptQuestionnaireDate || "",
-          scrutinyDate: finalFormData.scrutinyDate || "",
-          receiptByNodalCellDate: finalFormData.receiptByNodalCellDate || "",
-          remarksInvestigator: finalFormData.remarksInvestigator || "",
-          commentsSupervisor: finalFormData.commentsSupervisor || ""
+          surveyDate: finalFormData.surveyDate || ""
         },
         
         // PART-D: I. BASIC INFORMATION ON SLUM
         basicInformation: {
           slumNameBasicInfo: finalFormData.slumNameBasicInfo || "",
           wardNumber: finalFormData.wardNumber || "",
-          zoneNumber: finalFormData.zoneNumber || "",
+          zoneNumber: finalFormData.zone || "",  // Note: frontend uses 'zone', backend uses 'zoneNumber'
           ageSlumYears: finalFormData.ageSlumYears || 0,
-          areaSlumSqMtrs: finalFormData.areaSlumSqMtrs || 0,
           locationCoreOrFringe: finalFormData.locationCoreOrFringe || "",
           typeAreaSurrounding: finalFormData.typeAreaSurrounding || "",
-          physicalLocationSlum: finalFormData.physicalLocationSlum || "",
-          isSlumNotified: finalFormData.isSlumNotified || "",
-          yearOfNotification: finalFormData.yearOfNotification || 0
+          physicalLocationSlum: finalFormData.physicalLocationSlum || ""
         },
         
         // PART-E: II. LAND STATUS
@@ -2023,7 +2125,7 @@ export default function SlumSurveyPage() {
           }
         },
         
-        // PART-H: IV. HOUSING STATUS
+        // SECTION 7: HOUSING STATUS
         housingStatus: {
           dwellingUnitsPucca: finalFormData.dwellingUnitsPucca || 0,
           dwellingUnitsSemiPucca: finalFormData.dwellingUnitsSemiPucca || 0,
@@ -2042,7 +2144,7 @@ export default function SlumSurveyPage() {
           landTenureTotal: finalFormData.landTenureTotal || 0
         },
         
-        // PART-I: V. ECONOMIC STATUS OF HOUSEHOLDS
+        // SECTION 8: ECONOMIC STATUS OF HOUSEHOLDS
         economicStatus: {
           economicStatusData: {
             lessThan500: finalFormData.economicStatus?.lessThan500 || 0,
@@ -2054,7 +2156,7 @@ export default function SlumSurveyPage() {
           }
         },
         
-        // Employment and Occupation Status
+        // SECTION 9: EMPLOYMENT AND OCCUPATION STATUS
         employmentAndOccupation: {
           selfEmployed: finalFormData.occupationalStatus?.selfEmployed || 0,
           salaried: finalFormData.occupationalStatus?.salaried || 0,
@@ -2063,27 +2165,7 @@ export default function SlumSurveyPage() {
           others: finalFormData.occupationalStatus?.others || 0
         },
         
-        // Transportation and Accessibility
-        transportationAndAccessibility: {
-          mainTransportMode: [] // Will be populated from form data if available
-        },
-        
-        // Environmental Conditions
-        environmentalConditions: {},
-        
-        // Social Issues and Vulnerable Groups
-        socialIssuesAndVulnerableGroups: {
-          majorChallenges: [],
-          slumDwellersAssociation: finalFormData.slumDwellersAssociation || "NO"
-        },
-        
-        // Slum Improvement and Development
-        slumImprovementAndDevelopment: {
-          existingDevelopmentProjects: [],
-          plannedImprovements: []
-        },
-        
-        // PART-J: VII. ACCESS TO PHYSICAL INFRASTRUCTURE
+        // SECTION 10: ACCESS TO PHYSICAL INFRASTRUCTURE
         physicalInfrastructure: {
           sourceDrinkingWater: {
             individualTap: finalFormData.sourceDrinkingWater?.individualTap || 0,
@@ -2112,22 +2194,55 @@ export default function SlumSurveyPage() {
           streetLightAvailable: finalFormData.streetLightAvailable || ""
         },
         
-        // PART-K: VIII. EDUCATION FACILITIES
+        // SECTION 11: EDUCATION FACILITIES
         educationFacilities: {
-          anganwadiUnderIcds: finalFormData.anganwadiUnderIcds || 0,
-          municipalPreschool: finalFormData.municipalPreschool || 0,
-          privatePreschool: finalFormData.privatePreschool || 0,
-          municipalPrimarySchool: finalFormData.municipalPrimarySchool || 0,
-          stateGovtPrimarySchool: finalFormData.stateGovtPrimarySchool || 0,
-          privatePrimarySchool: finalFormData.privatePrimarySchool || 0,
-          municipalHighSchool: finalFormData.municipalHighSchool || 0,
-          stateGovtHighSchool: finalFormData.stateGovtHighSchool || 0,
-          privateHighSchool: finalFormData.privateHighSchool || 0,
-          adultEducationCentre: finalFormData.adultEducationCentre || 0,
-          nonFormalEducationCentre: finalFormData.nonFormalEducationCentre || 0
+          anganwadiUnderIcds: {
+            option: finalFormData.anganwadiUnderIcds?.option || '',
+            distance: finalFormData.anganwadiUnderIcds?.distance || null
+          },
+          municipalPreschool: {
+            option: finalFormData.municipalPreschool?.option || '',
+            distance: finalFormData.municipalPreschool?.distance || null
+          },
+          privatePreschool: {
+            option: finalFormData.privatePreschool?.option || '',
+            distance: finalFormData.privatePreschool?.distance || null
+          },
+          municipalPrimarySchool: {
+            option: finalFormData.municipalPrimarySchool?.option || '',
+            distance: finalFormData.municipalPrimarySchool?.distance || null
+          },
+          stateGovtPrimarySchool: {
+            option: finalFormData.stateGovtPrimarySchool?.option || '',
+            distance: finalFormData.stateGovtPrimarySchool?.distance || null
+          },
+          privatePrimarySchool: {
+            option: finalFormData.privatePrimarySchool?.option || '',
+            distance: finalFormData.privatePrimarySchool?.distance || null
+          },
+          municipalHighSchool: {
+            option: finalFormData.municipalHighSchool?.option || '',
+            distance: finalFormData.municipalHighSchool?.distance || null
+          },
+          stateGovtHighSchool: {
+            option: finalFormData.stateGovtHighSchool?.option || '',
+            distance: finalFormData.stateGovtHighSchool?.distance || null
+          },
+          privateHighSchool: {
+            option: finalFormData.privateHighSchool?.option || '',
+            distance: finalFormData.privateHighSchool?.distance || null
+          },
+          adultEducationCentre: {
+            option: finalFormData.adultEducationCentre?.option || '',
+            distance: finalFormData.adultEducationCentre?.distance || null
+          },
+          nonFormalEducationCentre: {
+            option: finalFormData.nonFormalEducationCentre?.option || '',
+            distance: finalFormData.nonFormalEducationCentre?.distance || null
+          }
         },
         
-        // PART-L: IX. Health Facilities
+        // SECTION 12: HEALTH FACILITIES
         healthFacilities: {
           urbanHealthPost: finalFormData.urbanHealthPost || "",
           primaryHealthCentre: finalFormData.primaryHealthCentre || "",
@@ -2138,7 +2253,7 @@ export default function SlumSurveyPage() {
           ayurvedicDoctor: finalFormData.ayurvedicDoctor || ""
         },
         
-        // PART-M: X. Social Development/Welfare
+        // SECTION 13: SOCIAL DEVELOPMENT/WELFARE
         socialDevelopment: {
           communityHall: finalFormData.communityHall || 0,
           livelihoodProductionCentre: finalFormData.livelihoodProductionCentre || 0,
@@ -2158,149 +2273,168 @@ export default function SlumSurveyPage() {
           womensAssociations: finalFormData.womensAssociations || 0
         },
         
-        // PART-N: XI. ADDITIONAL INFRASTRUCTURE REQUIREMENTS
+        // SECTION 14: ADDITIONAL INFRASTRUCTURE REQUIREMENTS
         additionalInfrastructure: {
           // Water Supply
           waterSupply: {
             pipelines: {
-              existing: finalFormData.waterSupplyPipelinesExisting || "",
-              additionalRequirement: finalFormData.waterSupplyPipelinesAdditional || "",
+              existing: finalFormData.waterSupplyPipelinesExisting !== undefined ? Number(finalFormData.waterSupplyPipelinesExisting) : 0,
+              additionalRequirement: finalFormData.waterSupplyPipelinesAdditional !== undefined ? Number(finalFormData.waterSupplyPipelinesAdditional) : 0,
               estimatedCost: finalFormData.waterSupplyPipelinesCost || 0
             },
             individualTaps: {
-              existing: finalFormData.waterSupplyIndividualTapsExisting || "",
-              additionalRequirement: finalFormData.waterSupplyIndividualTapsAdditional || "",
+              existing: finalFormData.waterSupplyIndividualTapsExisting !== undefined ? Number(finalFormData.waterSupplyIndividualTapsExisting) : 0,
+              additionalRequirement: finalFormData.waterSupplyIndividualTapsAdditional !== undefined ? Number(finalFormData.waterSupplyIndividualTapsAdditional) : 0,
               estimatedCost: finalFormData.waterSupplyIndividualTapsCost || 0
             },
             borewells: {
-              existing: finalFormData.waterSupplyBorewellsExisting || "",
-              additionalRequirement: finalFormData.waterSupplyBorewellsAdditional || "",
+              existing: finalFormData.waterSupplyBorewellsExisting !== undefined ? Number(finalFormData.waterSupplyBorewellsExisting) : 0,
+              additionalRequirement: finalFormData.waterSupplyBorewellsAdditional !== undefined ? Number(finalFormData.waterSupplyBorewellsAdditional) : 0,
               estimatedCost: finalFormData.waterSupplyBorewellsCost || 0
             },
             connectivityToTrunkLines: {
-              existing: finalFormData.waterSupplyConnectivityTrunkLinesExisting || "",
-              additionalRequirement: finalFormData.waterSupplyConnectivityTrunkLinesAdditional || "",
+              existing: finalFormData.waterSupplyConnectivityTrunkLinesExisting !== undefined ? Number(finalFormData.waterSupplyConnectivityTrunkLinesExisting) : 0,
+              additionalRequirement: finalFormData.waterSupplyConnectivityTrunkLinesAdditional !== undefined ? Number(finalFormData.waterSupplyConnectivityTrunkLinesAdditional) : 0,
               estimatedCost: finalFormData.waterSupplyConnectivityTrunkLinesCost || 0
             }
           },
           // Drainage/Sewerage
           drainageSewerage: {
             stormwaterDrainage: {
-              existing: finalFormData.drainageStormwaterDrainageExisting || "",
-              additionalRequirement: finalFormData.drainageStormwaterDrainageAdditional || "",
+              existing: finalFormData.drainageStormwaterDrainageExisting !== undefined ? Number(finalFormData.drainageStormwaterDrainageExisting) : 0,
+              additionalRequirement: finalFormData.drainageStormwaterDrainageAdditional !== undefined ? Number(finalFormData.drainageStormwaterDrainageAdditional) : 0,
               estimatedCost: finalFormData.drainageStormwaterDrainageCost || 0
             },
             connectivityToMainDrains: {
-              existing: finalFormData.drainageConnectivityMainDrainsExisting || "",
-              additionalRequirement: finalFormData.drainageConnectivityMainDrainsAdditional || "",
+              existing: finalFormData.drainageConnectivityMainDrainsExisting !== undefined ? Number(finalFormData.drainageConnectivityMainDrainsExisting) : 0,
+              additionalRequirement: finalFormData.drainageConnectivityMainDrainsAdditional !== undefined ? Number(finalFormData.drainageConnectivityMainDrainsAdditional) : 0,
               estimatedCost: finalFormData.drainageConnectivityMainDrainsCost || 0
             },
             sewerLines: {
-              existing: finalFormData.drainageSewerLinesExisting || "",
-              additionalRequirement: finalFormData.drainageSewerLinesAdditional || "",
+              existing: finalFormData.drainageSewerLinesExisting !== undefined ? Number(finalFormData.drainageSewerLinesExisting) : 0,
+              additionalRequirement: finalFormData.drainageSewerLinesAdditional !== undefined ? Number(finalFormData.drainageSewerLinesAdditional) : 0,
               estimatedCost: finalFormData.drainageSewerLinesCost || 0
             },
             connectivityToTrunkSewers: {
-              existing: finalFormData.drainageConnectivityTrunkSewersExisting || "",
-              additionalRequirement: finalFormData.drainageConnectivityTrunkSewersAdditional || "",
+              existing: finalFormData.drainageConnectivityTrunkSewersExisting !== undefined ? Number(finalFormData.drainageConnectivityTrunkSewersExisting) : 0,
+              additionalRequirement: finalFormData.drainageConnectivityTrunkSewersAdditional !== undefined ? Number(finalFormData.drainageConnectivityTrunkSewersAdditional) : 0,
               estimatedCost: finalFormData.drainageConnectivityTrunkSewersCost || 0
             }
           },
           // Roads
           roads: {
             internalRoadsCC: {
-              existing: finalFormData.roadsInternalRoadsCCExisting || "",
-              additionalRequirement: finalFormData.roadsInternalRoadsCCAdditional || "",
+              existing: finalFormData.roadsInternalRoadsCCExisting !== undefined ? Number(finalFormData.roadsInternalRoadsCCExisting) : 0,
+              additionalRequirement: finalFormData.roadsInternalRoadsCCAdditional !== undefined ? Number(finalFormData.roadsInternalRoadsCCAdditional) : 0,
               estimatedCost: finalFormData.roadsInternalRoadsCCCost || 0
             },
             internalRoadsBT: {
-              existing: finalFormData.roadsInternalRoadsBTExisting || "",
-              additionalRequirement: finalFormData.roadsInternalRoadsBTAdditional || "",
+              existing: finalFormData.roadsInternalRoadsBTExisting !== undefined ? Number(finalFormData.roadsInternalRoadsBTExisting) : 0,
+              additionalRequirement: finalFormData.roadsInternalRoadsBTAdditional !== undefined ? Number(finalFormData.roadsInternalRoadsBTAdditional) : 0,
               estimatedCost: finalFormData.roadsInternalRoadsBTCost || 0
             },
             internalRoadsOthers: {
-              existing: finalFormData.roadsInternalRoadsOthersExisting || "",
-              additionalRequirement: finalFormData.roadsInternalRoadsOthersAdditional || "",
+              existing: finalFormData.roadsInternalRoadsOthersExisting !== undefined ? Number(finalFormData.roadsInternalRoadsOthersExisting) : 0,
+              additionalRequirement: finalFormData.roadsInternalRoadsOthersAdditional !== undefined ? Number(finalFormData.roadsInternalRoadsOthersAdditional) : 0,
               estimatedCost: finalFormData.roadsInternalRoadsOthersCost || 0
             },
             approachRoadsCC: {
-              existing: finalFormData.roadsApproachRoadsCCExisting || "",
-              additionalRequirement: finalFormData.roadsApproachRoadsCCAdditional || "",
+              existing: finalFormData.roadsApproachRoadsCCExisting !== undefined ? Number(finalFormData.roadsApproachRoadsCCExisting) : 0,
+              additionalRequirement: finalFormData.roadsApproachRoadsCCAdditional !== undefined ? Number(finalFormData.roadsApproachRoadsCCAdditional) : 0,
               estimatedCost: finalFormData.roadsApproachRoadsCCCost || 0
             },
             approachRoadsOthers: {
-              existing: finalFormData.roadsApproachRoadsOthersExisting || "",
-              additionalRequirement: finalFormData.roadsApproachRoadsOthersAdditional || "",
+              existing: finalFormData.roadsApproachRoadsOthersExisting !== undefined ? Number(finalFormData.roadsApproachRoadsOthersExisting) : 0,
+              additionalRequirement: finalFormData.roadsApproachRoadsOthersAdditional !== undefined ? Number(finalFormData.roadsApproachRoadsOthersAdditional) : 0,
               estimatedCost: finalFormData.roadsApproachRoadsOthersCost || 0
             }
           },
           // Street Lighting
           streetLighting: {
             poles: {
-              existing: finalFormData.streetLightingPolesExisting || "",
-              additionalRequirement: finalFormData.streetLightingPolesAdditional || "",
+              existing: finalFormData.streetLightingPolesExisting !== undefined ? Number(finalFormData.streetLightingPolesExisting) : 0,
+              additionalRequirement: finalFormData.streetLightingPolesAdditional !== undefined ? Number(finalFormData.streetLightingPolesAdditional) : 0,
               estimatedCost: finalFormData.streetLightingPolesCost || 0
             },
             lights: {
-              existing: finalFormData.streetLightingLightsExisting || "",
-              additionalRequirement: finalFormData.streetLightingLightsAdditional || "",
+              existing: finalFormData.streetLightingLightsExisting !== undefined ? Number(finalFormData.streetLightingLightsExisting) : 0,
+              additionalRequirement: finalFormData.streetLightingLightsAdditional !== undefined ? Number(finalFormData.streetLightingLightsAdditional) : 0,
               estimatedCost: finalFormData.streetLightingLightsCost || 0
             }
           },
           // Sanitation
           sanitation: {
             individualToilets: {
-              existing: finalFormData.sanitationIndividualToiletsExisting || "",
-              additionalRequirement: finalFormData.sanitationIndividualToiletsAdditional || "",
+              existing: finalFormData.sanitationIndividualToiletsExisting !== undefined ? Number(finalFormData.sanitationIndividualToiletsExisting) : 0,
+              additionalRequirement: finalFormData.sanitationIndividualToiletsAdditional !== undefined ? Number(finalFormData.sanitationIndividualToiletsAdditional) : 0,
               estimatedCost: finalFormData.sanitationIndividualToiletsCost || 0
             },
             communityToilets: {
-              existing: finalFormData.sanitationCommunityToiletsExisting || "",
-              additionalRequirement: finalFormData.sanitationCommunityToiletsAdditional || "",
+              existing: finalFormData.sanitationCommunityToiletsExisting !== undefined ? Number(finalFormData.sanitationCommunityToiletsExisting) : 0,
+              additionalRequirement: finalFormData.sanitationCommunityToiletsAdditional !== undefined ? Number(finalFormData.sanitationCommunityToiletsAdditional) : 0,
               estimatedCost: finalFormData.sanitationCommunityToiletsCost || 0
             },
             seatsInCommunityToilets: {
-              existing: finalFormData.sanitationSeatsCommunityToiletsExisting || "",
-              additionalRequirement: finalFormData.sanitationSeatsCommunityToiletsAdditional || "",
+              existing: finalFormData.sanitationSeatsCommunityToiletsExisting !== undefined ? Number(finalFormData.sanitationSeatsCommunityToiletsExisting) : 0,
+              additionalRequirement: finalFormData.sanitationSeatsCommunityToiletsAdditional !== undefined ? Number(finalFormData.sanitationSeatsCommunityToiletsAdditional) : 0,
               estimatedCost: finalFormData.sanitationSeatsCommunityToiletsCost || 0
             },
             dumperBins: {
-              existing: finalFormData.sanitationDumperBinsExisting || "",
-              additionalRequirement: finalFormData.sanitationDumperBinsAdditional || "",
+              existing: finalFormData.sanitationDumperBinsExisting !== undefined ? Number(finalFormData.sanitationDumperBinsExisting) : 0,
+              additionalRequirement: finalFormData.sanitationDumperBinsAdditional !== undefined ? Number(finalFormData.sanitationDumperBinsAdditional) : 0,
               estimatedCost: finalFormData.sanitationDumperBinsCost || 0
             }
           },
           // Community Facilities
           communityFacilities: {
             communityHalls: {
-              existing: finalFormData.communityHallsExisting || "",
-              additionalRequirement: finalFormData.communityHallsAdditional || "",
+              existing: finalFormData.communityHallsExisting !== undefined ? Number(finalFormData.communityHallsExisting) : 0,
+              additionalRequirement: finalFormData.communityHallsAdditional !== undefined ? Number(finalFormData.communityHallsAdditional) : 0,
               estimatedCost: finalFormData.communityHallsCost || 0
             },
             livelihoodCentres: {
-              existing: finalFormData.communityLivelihoodCentresExisting || "",
-              additionalRequirement: finalFormData.communityLivelihoodCentresAdditional || "",
+              existing: finalFormData.communityLivelihoodCentresExisting !== undefined ? Number(finalFormData.communityLivelihoodCentresExisting) : 0,
+              additionalRequirement: finalFormData.communityLivelihoodCentresAdditional !== undefined ? Number(finalFormData.communityLivelihoodCentresAdditional) : 0,
               estimatedCost: finalFormData.communityLivelihoodCentresCost || 0
             },
             anganwadis: {
-              existing: finalFormData.communityAnganwadisExisting || "",
-              additionalRequirement: finalFormData.communityAnganwadisAdditional || "",
+              existing: finalFormData.communityAnganwadisExisting !== undefined ? Number(finalFormData.communityAnganwadisExisting) : 0,
+              additionalRequirement: finalFormData.communityAnganwadisAdditional !== undefined ? Number(finalFormData.communityAnganwadisAdditional) : 0,
               estimatedCost: finalFormData.communityAnganwadisCost || 0
             },
             primarySchools: {
-              existing: finalFormData.communityPrimarySchoolsExisting || "",
-              additionalRequirement: finalFormData.communityPrimarySchoolsAdditional || "",
+              existing: finalFormData.communityPrimarySchoolsExisting !== undefined ? Number(finalFormData.communityPrimarySchoolsExisting) : 0,
+              additionalRequirement: finalFormData.communityPrimarySchoolsAdditional !== undefined ? Number(finalFormData.communityPrimarySchoolsAdditional) : 0,
               estimatedCost: finalFormData.communityPrimarySchoolsCost || 0
             },
             healthCentres: {
-              existing: finalFormData.communityHealthCentresExisting || "",
-              additionalRequirement: finalFormData.communityHealthCentresAdditional || "",
+              existing: finalFormData.communityHealthCentresExisting !== undefined ? Number(finalFormData.communityHealthCentresExisting) : 0,
+              additionalRequirement: finalFormData.communityHealthCentresAdditional !== undefined ? Number(finalFormData.communityHealthCentresAdditional) : 0,
               estimatedCost: finalFormData.communityHealthCentresCost || 0
             },
             others: {
-              existing: finalFormData.communityOthersExisting || "",
-              additionalRequirement: finalFormData.communityOthersAdditional || "",
+              existing: finalFormData.communityOthersExisting !== undefined ? Number(finalFormData.communityOthersExisting) : 0,
+              additionalRequirement: finalFormData.communityOthersAdditional !== undefined ? Number(finalFormData.communityOthersAdditional) : 0,
               estimatedCost: finalFormData.communityOthersCost || 0
+            }
+          },
+          
+          // Standalone Infrastructure Requirements
+          standaloneInfrastructureRequirements: {
+            electricity: {
+              existing: finalFormData.electricityExisting || 0,
+              additionalRequirement: finalFormData.electricityAdditional || 0,
+              estimatedCost: finalFormData.electricityCost || 0
+            },
+            healthCare: {
+              existing: finalFormData.healthcareExisting || 0,
+              additionalRequirement: finalFormData.healthcareAdditional || 0,
+              estimatedCost: finalFormData.healthcareCost || 0
+            },
+            toilets: {
+              existing: finalFormData.toiletsExisting || 0,
+              additionalRequirement: finalFormData.toiletsAdditional || 0,
+              estimatedCost: finalFormData.toiletsCost || 0
             }
           }
         }
@@ -2417,7 +2551,7 @@ export default function SlumSurveyPage() {
             data.slumPopulation = formData.slumPopulation;
             data.noSlumHouseholds = formData.noSlumHouseholds;
             data.bplPopulation = formData.bplPopulation;
-            data.noBplHouseholdsCityTown = formData.noBplHouseholdsSlum;
+            data.bplHouseholds = formData.bplHouseholds;
             break;
           case 'surveyOperation':
             data.surveyorName = formData.surveyorName;
@@ -2427,7 +2561,7 @@ export default function SlumSurveyPage() {
             data.slumNameBasicInfo = formData.slumNameBasicInfo;
             data.wardNumber = formData.wardNumber;
             data.wardName = formData.wardName;
-            data.zoneNumber = formData.zoneNumber;
+            data.zoneNumber = formData.zone;  // Note: frontend uses 'zone', backend uses 'zoneNumber'
             data.ageSlumYears = formData.ageSlumYears;
             data.locationCoreOrFringe = formData.locationCoreOrFringe;
             data.typeAreaSurrounding = formData.typeAreaSurrounding;
@@ -2763,23 +2897,23 @@ export default function SlumSurveyPage() {
               // Water Supply
               waterSupply: {
                 pipelines: {
-                  existing: formData.waterSupplyPipelinesExisting || '',
-                  additionalRequirement: formData.waterSupplyPipelinesAdditional || '',
+                  existing: formData.waterSupplyPipelinesExisting !== undefined ? Number(formData.waterSupplyPipelinesExisting) : 0,
+                  additionalRequirement: formData.waterSupplyPipelinesAdditional !== undefined ? Number(formData.waterSupplyPipelinesAdditional) : 0,
                   estimatedCost: formData.waterSupplyPipelinesCost || 0
                 },
                 individualTaps: {
-                  existing: formData.waterSupplyIndividualTapsExisting || '',
-                  additionalRequirement: formData.waterSupplyIndividualTapsAdditional || '',
+                  existing: formData.waterSupplyIndividualTapsExisting !== undefined ? Number(formData.waterSupplyIndividualTapsExisting) : 0,
+                  additionalRequirement: formData.waterSupplyIndividualTapsAdditional !== undefined ? Number(formData.waterSupplyIndividualTapsAdditional) : 0,
                   estimatedCost: formData.waterSupplyIndividualTapsCost || 0
                 },
                 borewells: {
-                  existing: formData.waterSupplyBorewellsExisting || '',
-                  additionalRequirement: formData.waterSupplyBorewellsAdditional || '',
+                  existing: formData.waterSupplyBorewellsExisting !== undefined ? Number(formData.waterSupplyBorewellsExisting) : 0,
+                  additionalRequirement: formData.waterSupplyBorewellsAdditional !== undefined ? Number(formData.waterSupplyBorewellsAdditional) : 0,
                   estimatedCost: formData.waterSupplyBorewellsCost || 0
                 },
                 connectivityToTrunkLines: {
-                  existing: formData.waterSupplyConnectivityTrunkLinesExisting || '',
-                  additionalRequirement: formData.waterSupplyConnectivityTrunkLinesAdditional || '',
+                  existing: formData.waterSupplyConnectivityTrunkLinesExisting !== undefined ? Number(formData.waterSupplyConnectivityTrunkLinesExisting) : 0,
+                  additionalRequirement: formData.waterSupplyConnectivityTrunkLinesAdditional !== undefined ? Number(formData.waterSupplyConnectivityTrunkLinesAdditional) : 0,
                   estimatedCost: formData.waterSupplyConnectivityTrunkLinesCost || 0
                 }
               },
@@ -2787,23 +2921,23 @@ export default function SlumSurveyPage() {
               // Drainage/Sewerage
               drainageSewerage: {
                 stormwaterDrainage: {
-                  existing: formData.drainageStormwaterDrainageExisting || '',
-                  additionalRequirement: formData.drainageStormwaterDrainageAdditional || '',
+                  existing: formData.drainageStormwaterDrainageExisting !== undefined ? Number(formData.drainageStormwaterDrainageExisting) : 0,
+                  additionalRequirement: formData.drainageStormwaterDrainageAdditional !== undefined ? Number(formData.drainageStormwaterDrainageAdditional) : 0,
                   estimatedCost: formData.drainageStormwaterDrainageCost || 0
                 },
                 connectivityToMainDrains: {
-                  existing: formData.drainageConnectivityMainDrainsExisting || '',
-                  additionalRequirement: formData.drainageConnectivityMainDrainsAdditional || '',
+                  existing: formData.drainageConnectivityMainDrainsExisting !== undefined ? Number(formData.drainageConnectivityMainDrainsExisting) : 0,
+                  additionalRequirement: formData.drainageConnectivityMainDrainsAdditional !== undefined ? Number(formData.drainageConnectivityMainDrainsAdditional) : 0,
                   estimatedCost: formData.drainageConnectivityMainDrainsCost || 0
                 },
                 sewerLines: {
-                  existing: formData.drainageSewerLinesExisting || '',
-                  additionalRequirement: formData.drainageSewerLinesAdditional || '',
+                  existing: formData.drainageSewerLinesExisting !== undefined ? Number(formData.drainageSewerLinesExisting) : 0,
+                  additionalRequirement: formData.drainageSewerLinesAdditional !== undefined ? Number(formData.drainageSewerLinesAdditional) : 0,
                   estimatedCost: formData.drainageSewerLinesCost || 0
                 },
                 connectivityToTrunkSewers: {
-                  existing: formData.drainageConnectivityTrunkSewersExisting || '',
-                  additionalRequirement: formData.drainageConnectivityTrunkSewersAdditional || '',
+                  existing: formData.drainageConnectivityTrunkSewersExisting !== undefined ? Number(formData.drainageConnectivityTrunkSewersExisting) : 0,
+                  additionalRequirement: formData.drainageConnectivityTrunkSewersAdditional !== undefined ? Number(formData.drainageConnectivityTrunkSewersAdditional) : 0,
                   estimatedCost: formData.drainageConnectivityTrunkSewersCost || 0
                 }
               },
@@ -2811,28 +2945,28 @@ export default function SlumSurveyPage() {
               // Roads
               roads: {
                 internalRoadsCC: {
-                  existing: formData.roadsInternalRoadsCCExisting || '',
-                  additionalRequirement: formData.roadsInternalRoadsCCAdditional || '',
+                  existing: formData.roadsInternalRoadsCCExisting !== undefined ? Number(formData.roadsInternalRoadsCCExisting) : 0,
+                  additionalRequirement: formData.roadsInternalRoadsCCAdditional !== undefined ? Number(formData.roadsInternalRoadsCCAdditional) : 0,
                   estimatedCost: formData.roadsInternalRoadsCCCost || 0
                 },
                 internalRoadsBT: {
-                  existing: formData.roadsInternalRoadsBTExisting || '',
-                  additionalRequirement: formData.roadsInternalRoadsBTAdditional || '',
+                  existing: formData.roadsInternalRoadsBTExisting !== undefined ? Number(formData.roadsInternalRoadsBTExisting) : 0,
+                  additionalRequirement: formData.roadsInternalRoadsBTAdditional !== undefined ? Number(formData.roadsInternalRoadsBTAdditional) : 0,
                   estimatedCost: formData.roadsInternalRoadsBTCost || 0
                 },
                 internalRoadsOthers: {
-                  existing: formData.roadsInternalRoadsOthersExisting || '',
-                  additionalRequirement: formData.roadsInternalRoadsOthersAdditional || '',
+                  existing: formData.roadsInternalRoadsOthersExisting !== undefined ? Number(formData.roadsInternalRoadsOthersExisting) : 0,
+                  additionalRequirement: formData.roadsInternalRoadsOthersAdditional !== undefined ? Number(formData.roadsInternalRoadsOthersAdditional) : 0,
                   estimatedCost: formData.roadsInternalRoadsOthersCost || 0
                 },
                 approachRoadsCC: {
-                  existing: formData.roadsApproachRoadsCCExisting || '',
-                  additionalRequirement: formData.roadsApproachRoadsCCAdditional || '',
+                  existing: formData.roadsApproachRoadsCCExisting !== undefined ? Number(formData.roadsApproachRoadsCCExisting) : 0,
+                  additionalRequirement: formData.roadsApproachRoadsCCAdditional !== undefined ? Number(formData.roadsApproachRoadsCCAdditional) : 0,
                   estimatedCost: formData.roadsApproachRoadsCCCost || 0
                 },
                 approachRoadsOthers: {
-                  existing: formData.roadsApproachRoadsOthersExisting || '',
-                  additionalRequirement: formData.roadsApproachRoadsOthersAdditional || '',
+                  existing: formData.roadsApproachRoadsOthersExisting !== undefined ? Number(formData.roadsApproachRoadsOthersExisting) : 0,
+                  additionalRequirement: formData.roadsApproachRoadsOthersAdditional !== undefined ? Number(formData.roadsApproachRoadsOthersAdditional) : 0,
                   estimatedCost: formData.roadsApproachRoadsOthersCost || 0
                 }
               },
@@ -2840,13 +2974,13 @@ export default function SlumSurveyPage() {
               // Street Lighting
               streetLighting: {
                 poles: {
-                  existing: formData.streetLightingPolesExisting || '',
-                  additionalRequirement: formData.streetLightingPolesAdditional || '',
+                  existing: formData.streetLightingPolesExisting !== undefined ? Number(formData.streetLightingPolesExisting) : 0,
+                  additionalRequirement: formData.streetLightingPolesAdditional !== undefined ? Number(formData.streetLightingPolesAdditional) : 0,
                   estimatedCost: formData.streetLightingPolesCost || 0
                 },
                 lights: {
-                  existing: formData.streetLightingLightsExisting || '',
-                  additionalRequirement: formData.streetLightingLightsAdditional || '',
+                  existing: formData.streetLightingLightsExisting !== undefined ? Number(formData.streetLightingLightsExisting) : 0,
+                  additionalRequirement: formData.streetLightingLightsAdditional !== undefined ? Number(formData.streetLightingLightsAdditional) : 0,
                   estimatedCost: formData.streetLightingLightsCost || 0
                 }
               },
@@ -2854,23 +2988,23 @@ export default function SlumSurveyPage() {
               // Sanitation
               sanitation: {
                 individualToilets: {
-                  existing: formData.sanitationIndividualToiletsExisting || '',
-                  additionalRequirement: formData.sanitationIndividualToiletsAdditional || '',
+                  existing: formData.sanitationIndividualToiletsExisting !== undefined ? Number(formData.sanitationIndividualToiletsExisting) : 0,
+                  additionalRequirement: formData.sanitationIndividualToiletsAdditional !== undefined ? Number(formData.sanitationIndividualToiletsAdditional) : 0,
                   estimatedCost: formData.sanitationIndividualToiletsCost || 0
                 },
                 communityToilets: {
-                  existing: formData.sanitationCommunityToiletsExisting || '',
-                  additionalRequirement: formData.sanitationCommunityToiletsAdditional || '',
+                  existing: formData.sanitationCommunityToiletsExisting !== undefined ? Number(formData.sanitationCommunityToiletsExisting) : 0,
+                  additionalRequirement: formData.sanitationCommunityToiletsAdditional !== undefined ? Number(formData.sanitationCommunityToiletsAdditional) : 0,
                   estimatedCost: formData.sanitationCommunityToiletsCost || 0
                 },
                 seatsInCommunityToilets: {
-                  existing: formData.sanitationSeatsCommunityToiletsExisting || '',
-                  additionalRequirement: formData.sanitationSeatsCommunityToiletsAdditional || '',
+                  existing: formData.sanitationSeatsCommunityToiletsExisting !== undefined ? Number(formData.sanitationSeatsCommunityToiletsExisting) : 0,
+                  additionalRequirement: formData.sanitationSeatsCommunityToiletsAdditional !== undefined ? Number(formData.sanitationSeatsCommunityToiletsAdditional) : 0,
                   estimatedCost: formData.sanitationSeatsCommunityToiletsCost || 0
                 },
                 dumperBins: {
-                  existing: formData.sanitationDumperBinsExisting || '',
-                  additionalRequirement: formData.sanitationDumperBinsAdditional || '',
+                  existing: formData.sanitationDumperBinsExisting !== undefined ? Number(formData.sanitationDumperBinsExisting) : 0,
+                  additionalRequirement: formData.sanitationDumperBinsAdditional !== undefined ? Number(formData.sanitationDumperBinsAdditional) : 0,
                   estimatedCost: formData.sanitationDumperBinsCost || 0
                 }
               },
@@ -2878,34 +3012,53 @@ export default function SlumSurveyPage() {
               // Community Facilities
               communityFacilities: {
                 communityHalls: {
-                  existing: formData.communityHallsExisting || '',
-                  additionalRequirement: formData.communityHallsAdditional || '',
+                  existing: formData.communityHallsExisting !== undefined ? Number(formData.communityHallsExisting) : 0,
+                  additionalRequirement: formData.communityHallsAdditional !== undefined ? Number(formData.communityHallsAdditional) : 0,
                   estimatedCost: formData.communityHallsCost || 0
                 },
                 livelihoodCentres: {
-                  existing: formData.communityLivelihoodCentresExisting || '',
-                  additionalRequirement: formData.communityLivelihoodCentresAdditional || '',
+                  existing: formData.communityLivelihoodCentresExisting !== undefined ? Number(formData.communityLivelihoodCentresExisting) : 0,
+                  additionalRequirement: formData.communityLivelihoodCentresAdditional !== undefined ? Number(formData.communityLivelihoodCentresAdditional) : 0,
                   estimatedCost: formData.communityLivelihoodCentresCost || 0
                 },
                 anganwadis: {
-                  existing: formData.communityAnganwadisExisting || '',
-                  additionalRequirement: formData.communityAnganwadisAdditional || '',
+                  existing: formData.communityAnganwadisExisting !== undefined ? Number(formData.communityAnganwadisExisting) : 0,
+                  additionalRequirement: formData.communityAnganwadisAdditional !== undefined ? Number(formData.communityAnganwadisAdditional) : 0,
                   estimatedCost: formData.communityAnganwadisCost || 0
                 },
                 primarySchools: {
-                  existing: formData.communityPrimarySchoolsExisting || '',
-                  additionalRequirement: formData.communityPrimarySchoolsAdditional || '',
+                  existing: formData.communityPrimarySchoolsExisting !== undefined ? Number(formData.communityPrimarySchoolsExisting) : 0,
+                  additionalRequirement: formData.communityPrimarySchoolsAdditional !== undefined ? Number(formData.communityPrimarySchoolsAdditional) : 0,
                   estimatedCost: formData.communityPrimarySchoolsCost || 0
                 },
                 healthCentres: {
-                  existing: formData.communityHealthCentresExisting || '',
-                  additionalRequirement: formData.communityHealthCentresAdditional || '',
+                  existing: formData.communityHealthCentresExisting !== undefined ? Number(formData.communityHealthCentresExisting) : 0,
+                  additionalRequirement: formData.communityHealthCentresAdditional !== undefined ? Number(formData.communityHealthCentresAdditional) : 0,
                   estimatedCost: formData.communityHealthCentresCost || 0
                 },
                 others: {
-                  existing: formData.communityOthersExisting || '',
-                  additionalRequirement: formData.communityOthersAdditional || '',
+                  existing: formData.communityOthersExisting !== undefined ? Number(formData.communityOthersExisting) : 0,
+                  additionalRequirement: formData.communityOthersAdditional !== undefined ? Number(formData.communityOthersAdditional) : 0,
                   estimatedCost: formData.communityOthersCost || 0
+                }
+              },
+              
+              // Standalone Infrastructure Requirements
+              standaloneInfrastructureRequirements: {
+                electricity: {
+                  existing: formData.electricityExisting || 0,
+                  additionalRequirement: formData.electricityAdditional || 0,
+                  estimatedCost: formData.electricityCost || 0
+                },
+                healthCare: {
+                  existing: formData.healthcareExisting || 0,
+                  additionalRequirement: formData.healthcareAdditional || 0,
+                  estimatedCost: formData.healthcareCost || 0
+                },
+                toilets: {
+                  existing: formData.toiletsExisting || 0,
+                  additionalRequirement: formData.toiletsAdditional || 0,
+                  estimatedCost: formData.toiletsCost || 0
                 }
               }
             };
@@ -3201,11 +3354,11 @@ export default function SlumSurveyPage() {
                     <Input
                     label="No. of BPL Households"
                     type="number"
-                    value={formData.noBplHouseholdsSlum || ""}
-                    onChange={(e) => handleInputChange("noBplHouseholdsSlum", parseInt(e.target.value) || 0)}
+                    value={formData.bplHouseholds|| ""}
+                    onChange={(e) => handleInputChange("bplHouseholds", parseInt(e.target.value) || 0)}
                     required
-                    name="noBplHouseholdsSlum"
-                    error={getFieldError('noBplHouseholdsSlum')}
+                    name="bplHouseholds"
+                    error={getFieldError('bplHouseholds')}
                     />
                 </div>
             </div>
@@ -3265,12 +3418,12 @@ export default function SlumSurveyPage() {
                     className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
                     <Input
-                    label="Zone Number"
-                    value={formData.zoneNumber || ""}
-                    onChange={(e) => handleInputChange("zoneNumber", e.target.value)}
+                    label="Zone"
+                    value={formData.zone || ""}
+                    onChange={(e) => handleInputChange("zone", e.target.value)}
                     required
-                    name="zoneNumber"
-                    error={getFieldError('zoneNumber')}
+                    name="zone"
+                    error={getFieldError('zone')}
                     readOnly
                     className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
@@ -6476,14 +6629,14 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">1. General Information - City/Town</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>State Code:</strong> {formData.stateCode || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>State Name:</strong> {formData.stateName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>District Code:</strong> {formData.districtCode || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>District Name:</strong> {formData.districtName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>ULB Code:</strong> {formData.ulbCode || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>ULB Name:</strong> {formData.ulbName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>City/Town Code:</strong> {formData.cityTownCode || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households in City/Town:</strong> {formData.cityTownNoHouseholds || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>State Code:</strong> {renderValue(formData.stateCode)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>State Name:</strong> {renderValue(formData.stateName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>District Code:</strong> {renderValue(formData.districtCode)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>District Name:</strong> {renderValue(formData.districtName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>ULB Code:</strong> {renderValue(formData.ulbCode)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>ULB Name:</strong> {renderValue(formData.ulbName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>City/Town Code:</strong> {renderValue(formData.cityTownCode)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households in City/Town:</strong> {renderValue(formData.cityTownNoHouseholds, true)}</div>
                     </div>
                 </div>
                 
@@ -6491,15 +6644,15 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">2. City/Town Slum Profile</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Type:</strong> {formData.slumType || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Slum ID:</strong> {formData.slumIdField || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Name:</strong> {formData.slumName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Ownership of Land:</strong> {formData.ownershipLand || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Area (sq mtrs):</strong> {formData.areaSqMtrs || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Population:</strong> {formData.slumPopulation || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Slum Households:</strong> {formData.noSlumHouseholds || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population:</strong> {formData.bplPopulation || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households:</strong> {formData.noBplHouseholdsSlum || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Type:</strong> {renderValue(formData.slumType)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Slum ID:</strong> {renderValue(formData.slumIdField)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Name:</strong> {renderValue(formData.slumName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Ownership of Land:</strong> {renderValue(formData.ownershipLand)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Area (sq mtrs):</strong> {renderValue(formData.areaSqMtrs, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Slum Population:</strong> {renderValue(formData.slumPopulation, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Slum Households:</strong> {renderValue(formData.noSlumHouseholds, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population:</strong> {renderValue(formData.bplPopulation, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households:</strong> {renderValue(formData.bplHouseholds, true)}</div>
                     </div>
                 </div>
                 
@@ -6507,8 +6660,8 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">3. Particulars of Survey Operation</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Surveyor Name:</strong> {formData.surveyorName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Survey Date:</strong> {formData.surveyDate || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Surveyor Name:</strong> {renderValue(formData.surveyorName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Survey Date:</strong> {renderValue(formData.surveyDate)}</div>
                     </div>
                 </div>
                 
@@ -6516,13 +6669,13 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">4. Basic Information of Slum</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Ward Number:</strong> {formData.wardNumber || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Ward Name:</strong> {formData.wardName || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Zone Number:</strong> {formData.zoneNumber || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Age of Slum (years):</strong> {formData.ageSlumYears || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Location (Core/Fringe):</strong> {formData.locationCoreOrFringe || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Type of Area Surrounding:</strong> {formData.typeAreaSurrounding || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Physical Location of Slum:</strong> {formData.physicalLocationSlum || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Ward Number:</strong> {renderValue(formData.wardNumber)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Ward Name:</strong> {renderValue(formData.wardName)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Zone Number:</strong> {renderValue(formData.zone)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Age of Slum (years):</strong> {renderValue(formData.ageSlumYears, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Location (Core/Fringe):</strong> {renderValue(formData.locationCoreOrFringe)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Type of Area Surrounding:</strong> {renderValue(formData.typeAreaSurrounding)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Physical Location of Slum:</strong> {renderValue(formData.physicalLocationSlum)}</div>
                     </div>
                 </div>
                 
@@ -6540,145 +6693,145 @@ export default function SlumSurveyPage() {
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">6. Population & Health Demographics</h3>
                     <h3 className="text-lg font-medium mb-3 p-2 bg-blue-500 rounded text-black-800">Population & Health</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population SC:</strong> {formData.totalPopulationSlumSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population ST:</strong> {formData.totalPopulationSlumST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population OBC:</strong> {formData.totalPopulationSlumOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population Others:</strong> {formData.totalPopulationSlumOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population:</strong> {formData.totalPopulationSlum || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population Minorities:</strong> {formData.totalPopulationSlumMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population SC:</strong> {formData.bplPopulationSlumSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population ST:</strong> {formData.bplPopulationSlumST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population OBC:</strong> {formData.bplPopulationSlumOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population Others:</strong> {formData.bplPopulationSlumOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population:</strong> {formData.bplPopulationSlum || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population Minorities:</strong> {formData.bplPopulationSlumMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households SC:</strong> {formData.noHouseholdsSlumSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households ST:</strong> {formData.noHouseholdsSlumST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households OBC:</strong> {formData.noHouseholdsSlumOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households Others:</strong> {formData.noHouseholdsSlumOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households:</strong> {formData.noHouseholdsSlum || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households Minorities:</strong> {formData.noHouseholdsSlumMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households SC:</strong> {formData.noBplHouseholdsSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households ST:</strong> {formData.noBplHouseholdsST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households OBC:</strong> {formData.noBplHouseholdsOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Others:</strong> {formData.noBplHouseholdsOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Total:</strong> {formData.noBplHouseholdsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Minorities:</strong> {formData.noBplHouseholdsMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households:</strong> {formData.noWomenHeadedHouseholds || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households SC:</strong> {formData.noWomenHeadedHouseholdsSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households ST:</strong> {formData.noWomenHeadedHouseholdsST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households OBC:</strong> {formData.noWomenHeadedHouseholdsOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Others:</strong> {formData.noWomenHeadedHouseholdsOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Total:</strong> {formData.noWomenHeadedHouseholdsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Minorities:</strong> {formData.noWomenHeadedHouseholdsMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65:</strong> {formData.noPersonsOlder65 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 SC:</strong> {formData.noPersonsOlder65SC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 ST:</strong> {formData.noPersonsOlder65ST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 OBC:</strong> {formData.noPersonsOlder65OBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Others:</strong> {formData.noPersonsOlder65Others || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Total:</strong> {formData.noPersonsOlder65Total || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Minorities:</strong> {formData.noPersonsOlder65Minorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers:</strong> {formData.noChildLabourers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers SC:</strong> {formData.noChildLabourersSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers ST:</strong> {formData.noChildLabourersST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers OBC:</strong> {formData.noChildLabourersOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Others:</strong> {formData.noChildLabourersOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Total:</strong> {formData.noChildLabourersTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Minorities:</strong> {formData.noChildLabourersMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged:</strong> {formData.noPhysicallyChallenged || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged SC:</strong> {formData.noPhysicallyChallengedSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged ST:</strong> {formData.noPhysicallyChallengedST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged OBC:</strong> {formData.noPhysicallyChallengedOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Others:</strong> {formData.noPhysicallyChallengedOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Total:</strong> {formData.noPhysicallyChallengedTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Minorities:</strong> {formData.noPhysicallyChallengedMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged:</strong> {formData.noMentallyChallenged || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged SC:</strong> {formData.noMentallyChallengedSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged ST:</strong> {formData.noMentallyChallengedST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged OBC:</strong> {formData.noMentallyChallengedOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Others:</strong> {formData.noMentallyChallengedOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Total:</strong> {formData.noMentallyChallengedTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Minorities:</strong> {formData.noMentallyChallengedMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS:</strong> {formData.noPersonsHivaids || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS SC:</strong> {formData.noPersonsHivaidsSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS ST:</strong> {formData.noPersonsHivaidsST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS OBC:</strong> {formData.noPersonsHivaidsOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Others:</strong> {formData.noPersonsHivaidsOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Total:</strong> {formData.noPersonsHivaidsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Minorities:</strong> {formData.noPersonsHivaidsMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis:</strong> {formData.noPersonsTuberculosis || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis SC:</strong> {formData.noPersonsTuberculosisSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis ST:</strong> {formData.noPersonsTuberculosisST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis OBC:</strong> {formData.noPersonsTuberculosisOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Others:</strong> {formData.noPersonsTuberculosisOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Total:</strong> {formData.noPersonsTuberculosisTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Minorities:</strong> {formData.noPersonsTuberculosisMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory:</strong> {formData.noPersonsRespiratory || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory SC:</strong> {formData.noPersonsRespiratorySC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory ST:</strong> {formData.noPersonsRespiratoryST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory OBC:</strong> {formData.noPersonsRespiratoryOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Others:</strong> {formData.noPersonsRespiratoryOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Total:</strong> {formData.noPersonsRespiratoryTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Minorities:</strong> {formData.noPersonsRespiratoryMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic:</strong> {formData.noPersonsOtherChronic || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic SC:</strong> {formData.noPersonsOtherChronicSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic ST:</strong> {formData.noPersonsOtherChronicST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic OBC:</strong> {formData.noPersonsOtherChronicOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Others:</strong> {formData.noPersonsOtherChronicOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Total:</strong> {formData.noPersonsOtherChronicTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Minorities:</strong> {formData.noPersonsOtherChronicMinorities || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population SC:</strong> {renderValue(formData.totalPopulationSlumSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population ST:</strong> {renderValue(formData.totalPopulationSlumST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population OBC:</strong> {renderValue(formData.totalPopulationSlumOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population Others:</strong> {renderValue(formData.totalPopulationSlumOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population:</strong> {renderValue(formData.totalPopulationSlum, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Population Minorities:</strong> {renderValue(formData.totalPopulationSlumMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population SC:</strong> {renderValue(formData.bplPopulationSlumSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population ST:</strong> {renderValue(formData.bplPopulationSlumST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population OBC:</strong> {renderValue(formData.bplPopulationSlumOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population Others:</strong> {renderValue(formData.bplPopulationSlumOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population:</strong> {renderValue(formData.bplPopulationSlum, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>BPL Population Minorities:</strong> {renderValue(formData.bplPopulationSlumMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households SC:</strong> {renderValue(formData.noHouseholdsSlumSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households ST:</strong> {renderValue(formData.noHouseholdsSlumST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households OBC:</strong> {renderValue(formData.noHouseholdsSlumOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households Others:</strong> {renderValue(formData.noHouseholdsSlumOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households:</strong> {renderValue(formData.noHouseholdsSlum, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Households Minorities:</strong> {renderValue(formData.noHouseholdsSlumMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households SC:</strong> {renderValue(formData.noBplHouseholdsSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households ST:</strong> {renderValue(formData.noBplHouseholdsST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households OBC:</strong> {renderValue(formData.noBplHouseholdsOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Others:</strong> {renderValue(formData.noBplHouseholdsOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Total:</strong> {renderValue(formData.noBplHouseholdsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Households Minorities:</strong> {renderValue(formData.noBplHouseholdsMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households:</strong> {renderValue(formData.noWomenHeadedHouseholds, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households SC:</strong> {renderValue(formData.noWomenHeadedHouseholdsSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households ST:</strong> {renderValue(formData.noWomenHeadedHouseholdsST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households OBC:</strong> {renderValue(formData.noWomenHeadedHouseholdsOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Others:</strong> {renderValue(formData.noWomenHeadedHouseholdsOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Total:</strong> {renderValue(formData.noWomenHeadedHouseholdsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Women Headed Households Minorities:</strong> {renderValue(formData.noWomenHeadedHouseholdsMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65:</strong> {renderValue(formData.noPersonsOlder65, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 SC:</strong> {renderValue(formData.noPersonsOlder65SC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 ST:</strong> {renderValue(formData.noPersonsOlder65ST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 OBC:</strong> {renderValue(formData.noPersonsOlder65OBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Others:</strong> {renderValue(formData.noPersonsOlder65Others, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Total:</strong> {renderValue(formData.noPersonsOlder65Total, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Older 65 Minorities:</strong> {renderValue(formData.noPersonsOlder65Minorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers:</strong> {renderValue(formData.noChildLabourers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers SC:</strong> {renderValue(formData.noChildLabourersSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers ST:</strong> {renderValue(formData.noChildLabourersST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers OBC:</strong> {renderValue(formData.noChildLabourersOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Others:</strong> {renderValue(formData.noChildLabourersOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Total:</strong> {renderValue(formData.noChildLabourersTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Child Labourers Minorities:</strong> {renderValue(formData.noChildLabourersMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged:</strong> {renderValue(formData.noPhysicallyChallenged, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged SC:</strong> {renderValue(formData.noPhysicallyChallengedSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged ST:</strong> {renderValue(formData.noPhysicallyChallengedST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged OBC:</strong> {renderValue(formData.noPhysicallyChallengedOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Others:</strong> {renderValue(formData.noPhysicallyChallengedOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Total:</strong> {renderValue(formData.noPhysicallyChallengedTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Physically Challenged Minorities:</strong> {renderValue(formData.noPhysicallyChallengedMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged:</strong> {renderValue(formData.noMentallyChallenged, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged SC:</strong> {renderValue(formData.noMentallyChallengedSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged ST:</strong> {renderValue(formData.noMentallyChallengedST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged OBC:</strong> {renderValue(formData.noMentallyChallengedOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Others:</strong> {renderValue(formData.noMentallyChallengedOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Total:</strong> {renderValue(formData.noMentallyChallengedTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Mentally Challenged Minorities:</strong> {renderValue(formData.noMentallyChallengedMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS:</strong> {renderValue(formData.noPersonsHivaids, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS SC:</strong> {renderValue(formData.noPersonsHivaidsSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS ST:</strong> {renderValue(formData.noPersonsHivaidsST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS OBC:</strong> {renderValue(formData.noPersonsHivaidsOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Others:</strong> {renderValue(formData.noPersonsHivaidsOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Total:</strong> {renderValue(formData.noPersonsHivaidsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons HIV/AIDS Minorities:</strong> {renderValue(formData.noPersonsHivaidsMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis:</strong> {renderValue(formData.noPersonsTuberculosis, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis SC:</strong> {renderValue(formData.noPersonsTuberculosisSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis ST:</strong> {renderValue(formData.noPersonsTuberculosisST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis OBC:</strong> {renderValue(formData.noPersonsTuberculosisOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Others:</strong> {renderValue(formData.noPersonsTuberculosisOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Total:</strong> {renderValue(formData.noPersonsTuberculosisTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Tuberculosis Minorities:</strong> {renderValue(formData.noPersonsTuberculosisMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory:</strong> {renderValue(formData.noPersonsRespiratory, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory SC:</strong> {renderValue(formData.noPersonsRespiratorySC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory ST:</strong> {renderValue(formData.noPersonsRespiratoryST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory OBC:</strong> {renderValue(formData.noPersonsRespiratoryOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Others:</strong> {renderValue(formData.noPersonsRespiratoryOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Total:</strong> {renderValue(formData.noPersonsRespiratoryTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Respiratory Minorities:</strong> {renderValue(formData.noPersonsRespiratoryMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic:</strong> {renderValue(formData.noPersonsOtherChronic, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic SC:</strong> {renderValue(formData.noPersonsOtherChronicSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic ST:</strong> {renderValue(formData.noPersonsOtherChronicST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic OBC:</strong> {renderValue(formData.noPersonsOtherChronicOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Others:</strong> {renderValue(formData.noPersonsOtherChronicOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Total:</strong> {renderValue(formData.noPersonsOtherChronicTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Persons Other Chronic Minorities:</strong> {renderValue(formData.noPersonsOtherChronicMinorities, true)}</div>
                     </div>
 
                     <h3 className="text-lg font-medium mt-3 mb-3 bg-blue-500 p-2 rounded text-black-800">Literacy & Education</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons SC:</strong> {formData.totalIlliteratePersonsSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons ST:</strong> {formData.totalIlliteratePersonsST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons OBC:</strong> {formData.totalIlliteratePersonsOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Others:</strong> {formData.totalIlliteratePersonsOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Total:</strong> {formData.totalIlliteratePersonsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Minorities:</strong> {formData.totalIlliteratePersonsMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate SC:</strong> {formData.noMaleIlliterateSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate ST:</strong> {formData.noMaleIlliterateST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate OBC:</strong> {formData.noMaleIlliterateOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Others:</strong> {formData.noMaleIlliterateOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Total:</strong> {formData.noMaleIlliterateTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Minorities:</strong> {formData.noMaleIlliterateMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate SC:</strong> {formData.noFemaleIlliterateSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate ST:</strong> {formData.noFemaleIlliterateST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate OBC:</strong> {formData.noFemaleIlliterateOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Others:</strong> {formData.noFemaleIlliterateOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Total:</strong> {formData.noFemaleIlliterateTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Minorities:</strong> {formData.noFemaleIlliterateMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons SC:</strong> {formData.noBplIlliteratePersonsSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons ST:</strong> {formData.noBplIlliteratePersonsST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons OBC:</strong> {formData.noBplIlliteratePersonsOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Others:</strong> {formData.noBplIlliteratePersonsOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Total:</strong> {formData.noBplIlliteratePersonsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Minorities:</strong> {formData.noBplIlliteratePersonsMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate SC:</strong> {formData.noMaleBplIlliterateSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate ST:</strong> {formData.noMaleBplIlliterateST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate OBC:</strong> {formData.noMaleBplIlliterateOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Others:</strong> {formData.noMaleBplIlliterateOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Total:</strong> {formData.noMaleBplIlliterateTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Minorities:</strong> {formData.noMaleBplIlliterateMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate SC:</strong> {formData.noFemaleBplIlliterateSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate ST:</strong> {formData.noFemaleBplIlliterateST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate OBC:</strong> {formData.noFemaleBplIlliterateOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Others:</strong> {formData.noFemaleBplIlliterateOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Total:</strong> {formData.noFemaleBplIlliterateTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Minorities:</strong> {formData.noFemaleBplIlliterateMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male SC:</strong> {formData.schoolDropoutsMaleSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male ST:</strong> {formData.schoolDropoutsMaleST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male OBC:</strong> {formData.schoolDropoutsMaleOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Others:</strong> {formData.schoolDropoutsMaleOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Total:</strong> {formData.schoolDropoutsMaleTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Minorities:</strong> {formData.schoolDropoutsMaleMinorities || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female SC:</strong> {formData.schoolDropoutsFemaleSC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female ST:</strong> {formData.schoolDropoutsFemaleST || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female OBC:</strong> {formData.schoolDropoutsFemaleOBC || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Others:</strong> {formData.schoolDropoutsFemaleOthers || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Total:</strong> {formData.schoolDropoutsFemaleTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Minorities:</strong> {formData.schoolDropoutsFemaleMinorities || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons SC:</strong> {renderValue(formData.totalIlliteratePersonsSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons ST:</strong> {renderValue(formData.totalIlliteratePersonsST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons OBC:</strong> {renderValue(formData.totalIlliteratePersonsOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Others:</strong> {renderValue(formData.totalIlliteratePersonsOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Total:</strong> {renderValue(formData.totalIlliteratePersonsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Total Illiterate Persons Minorities:</strong> {renderValue(formData.totalIlliteratePersonsMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate SC:</strong> {renderValue(formData.noMaleIlliterateSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate ST:</strong> {renderValue(formData.noMaleIlliterateST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate OBC:</strong> {renderValue(formData.noMaleIlliterateOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Others:</strong> {renderValue(formData.noMaleIlliterateOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Total:</strong> {renderValue(formData.noMaleIlliterateTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male Illiterate Minorities:</strong> {renderValue(formData.noMaleIlliterateMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate SC:</strong> {renderValue(formData.noFemaleIlliterateSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate ST:</strong> {renderValue(formData.noFemaleIlliterateST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate OBC:</strong> {renderValue(formData.noFemaleIlliterateOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Others:</strong> {renderValue(formData.noFemaleIlliterateOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Total:</strong> {renderValue(formData.noFemaleIlliterateTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female Illiterate Minorities:</strong> {renderValue(formData.noFemaleIlliterateMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons SC:</strong> {renderValue(formData.noBplIlliteratePersonsSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons ST:</strong> {renderValue(formData.noBplIlliteratePersonsST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons OBC:</strong> {renderValue(formData.noBplIlliteratePersonsOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Others:</strong> {renderValue(formData.noBplIlliteratePersonsOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Total:</strong> {renderValue(formData.noBplIlliteratePersonsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of BPL Illiterate Persons Minorities:</strong> {renderValue(formData.noBplIlliteratePersonsMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate SC:</strong> {renderValue(formData.noMaleBplIlliterateSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate ST:</strong> {renderValue(formData.noMaleBplIlliterateST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate OBC:</strong> {renderValue(formData.noMaleBplIlliterateOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Others:</strong> {renderValue(formData.noMaleBplIlliterateOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Total:</strong> {renderValue(formData.noMaleBplIlliterateTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Male BPL Illiterate Minorities:</strong> {renderValue(formData.noMaleBplIlliterateMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate SC:</strong> {renderValue(formData.noFemaleBplIlliterateSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate ST:</strong> {renderValue(formData.noFemaleBplIlliterateST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate OBC:</strong> {renderValue(formData.noFemaleBplIlliterateOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Others:</strong> {renderValue(formData.noFemaleBplIlliterateOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Total:</strong> {renderValue(formData.noFemaleBplIlliterateTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>No. of Female BPL Illiterate Minorities:</strong> {renderValue(formData.noFemaleBplIlliterateMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male SC:</strong> {renderValue(formData.schoolDropoutsMaleSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male ST:</strong> {renderValue(formData.schoolDropoutsMaleST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male OBC:</strong> {renderValue(formData.schoolDropoutsMaleOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Others:</strong> {renderValue(formData.schoolDropoutsMaleOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Total:</strong> {renderValue(formData.schoolDropoutsMaleTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Male Minorities:</strong> {renderValue(formData.schoolDropoutsMaleMinorities, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female SC:</strong> {renderValue(formData.schoolDropoutsFemaleSC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female ST:</strong> {renderValue(formData.schoolDropoutsFemaleST, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female OBC:</strong> {renderValue(formData.schoolDropoutsFemaleOBC, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Others:</strong> {renderValue(formData.schoolDropoutsFemaleOthers, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Total:</strong> {renderValue(formData.schoolDropoutsFemaleTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>School Dropouts Female Minorities:</strong> {renderValue(formData.schoolDropoutsFemaleMinorities, true)}</div>
                     </div>
                 </div>
                 
@@ -6686,21 +6839,21 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">7. Housing Status</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Pucca:</strong> {formData.dwellingUnitsPucca || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Semi-Pucca:</strong> {formData.dwellingUnitsSemiPucca || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Katcha:</strong> {formData.dwellingUnitsKatcha || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Total:</strong> {formData.dwellingUnitsTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Pucca:</strong> {formData.dwellingUnitsWithElectricityPucca || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Semi-Pucca:</strong> {formData.dwellingUnitsWithElectricitySemiPucca || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Katcha:</strong> {formData.dwellingUnitsWithElectricityKatcha || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Total:</strong> {formData.dwellingUnitsWithElectricityTotal || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure with Patta:</strong> {formData.landTenureWithPatta || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Possession Certificate:</strong> {formData.landTenurePossessionCertificate || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Encroached Private:</strong> {formData.landTenureEncroachedPrivate || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Encroached Public:</strong> {formData.landTenureEncroachedPublic || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure On Rent:</strong> {formData.landTenureOnRent || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Other:</strong> {formData.landTenureOther || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Total:</strong> {formData.landTenureTotal || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Pucca:</strong> {renderValue(formData.dwellingUnitsPucca, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Semi-Pucca:</strong> {renderValue(formData.dwellingUnitsSemiPucca, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Katcha:</strong> {renderValue(formData.dwellingUnitsKatcha, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units Total:</strong> {renderValue(formData.dwellingUnitsTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Pucca:</strong> {renderValue(formData.dwellingUnitsWithElectricityPucca, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Semi-Pucca:</strong> {renderValue(formData.dwellingUnitsWithElectricitySemiPucca, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Katcha:</strong> {renderValue(formData.dwellingUnitsWithElectricityKatcha, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dwelling Units with Electricity Total:</strong> {renderValue(formData.dwellingUnitsWithElectricityTotal, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure with Patta:</strong> {renderValue(formData.landTenureWithPatta, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Possession Certificate:</strong> {renderValue(formData.landTenurePossessionCertificate, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Encroached Private:</strong> {renderValue(formData.landTenureEncroachedPrivate, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Encroached Public:</strong> {renderValue(formData.landTenureEncroachedPublic, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure On Rent:</strong> {renderValue(formData.landTenureOnRent, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Other:</strong> {renderValue(formData.landTenureOther, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Land Tenure Total:</strong> {renderValue(formData.landTenureTotal, true)}</div>
                     </div>
                 </div>
                 
@@ -6708,12 +6861,12 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">8. Economic Status of Households</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>&lt; Rs 500:</strong> {formData.economicStatus?.lessThan500 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 500-1000:</strong> {formData.economicStatus?.rs500to1000 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 1000-1500:</strong> {formData.economicStatus?.rs1000to1500 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 1500-2000:</strong> {formData.economicStatus?.rs1500to2000 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 2000-3000:</strong> {formData.economicStatus?.rs2000to3000 || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>&gt; Rs 3000:</strong> {formData.economicStatus?.moreThan3000 || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>&lt; Rs 500:</strong> {renderValue(formData.economicStatus?.lessThan500, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 500-1000:</strong> {renderValue(formData.economicStatus?.rs500to1000, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 1000-1500:</strong> {renderValue(formData.economicStatus?.rs1000to1500, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 1500-2000:</strong> {renderValue(formData.economicStatus?.rs1500to2000, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Rs 2000-3000:</strong> {renderValue(formData.economicStatus?.rs2000to3000, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>&gt; Rs 3000:</strong> {renderValue(formData.economicStatus?.moreThan3000, true)}</div>
                     </div>
                 </div>
                 
@@ -6721,11 +6874,11 @@ export default function SlumSurveyPage() {
                 <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 bg-gray-500 p-2 rounded text-black-800">9. Employment and Occupation Status</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-2 bg-slate-800 rounded"><strong>Self Employed:</strong> {formData.occupationalStatus?.selfEmployed || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Salaried:</strong> {formData.occupationalStatus?.salaried || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Regular Wage:</strong> {formData.occupationalStatus?.regularWage || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Casual Labour:</strong> {formData.occupationalStatus?.casualLabour || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Others:</strong> {formData.occupationalStatus?.others || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Self Employed:</strong> {renderValue(formData.occupationalStatus?.selfEmployed, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Salaried:</strong> {renderValue(formData.occupationalStatus?.salaried, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Regular Wage:</strong> {renderValue(formData.occupationalStatus?.regularWage, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Casual Labour:</strong> {renderValue(formData.occupationalStatus?.casualLabour, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Others:</strong> {renderValue(formData.occupationalStatus?.others, true)}</div>
                     </div>
                 </div>
                 
@@ -6812,96 +6965,96 @@ export default function SlumSurveyPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Water Supply */}
                         <div className="p-2 bg-blue-500 rounded col-span-2"><strong>Water Supply</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Pipelines Existing:</strong> {formData.waterSupplyPipelinesExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Pipelines Additional:</strong> {formData.waterSupplyPipelinesAdditional || 'N/A'}</div>
-                        {formData.waterSupplyPipelinesAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Pipelines Estimated Cost:</strong> {formData.waterSupplyPipelinesCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Taps Existing:</strong> {formData.waterSupplyIndividualTapsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Taps Additional:</strong> {formData.waterSupplyIndividualTapsAdditional || 'N/A'}</div>
-                        {formData.waterSupplyIndividualTapsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Individual Taps Estimated Cost:</strong> {formData.waterSupplyIndividualTapsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Borewells Existing:</strong> {formData.waterSupplyBorewellsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Borewells Additional:</strong> {formData.waterSupplyBorewellsAdditional || 'N/A'}</div>
-                        {formData.waterSupplyBorewellsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Borewells Estimated Cost:</strong> {formData.waterSupplyBorewellsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Lines Existing:</strong> {formData.waterSupplyConnectivityTrunkLinesExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Lines Additional:</strong> {formData.waterSupplyConnectivityTrunkLinesAdditional || 'N/A'}</div>
-                        {formData.waterSupplyConnectivityTrunkLinesAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Trunk Lines Estimated Cost:</strong> {formData.waterSupplyConnectivityTrunkLinesCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Pipelines Existing:</strong> {renderValue(formData.waterSupplyPipelinesExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Pipelines Additional:</strong> {renderValue(formData.waterSupplyPipelinesAdditional, true)}</div>
+                        {renderValue(formData.waterSupplyPipelinesAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Pipelines Estimated Cost:</strong> {renderValue(formData.waterSupplyPipelinesCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Taps Existing:</strong> {renderValue(formData.waterSupplyIndividualTapsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Taps Additional:</strong> {renderValue(formData.waterSupplyIndividualTapsAdditional, true)}</div>
+                        {renderValue(formData.waterSupplyIndividualTapsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Individual Taps Estimated Cost:</strong> {renderValue(formData.waterSupplyIndividualTapsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Borewells Existing:</strong> {renderValue(formData.waterSupplyBorewellsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Borewells Additional:</strong> {renderValue(formData.waterSupplyBorewellsAdditional, true)}</div>
+                        {renderValue(formData.waterSupplyBorewellsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Borewells Estimated Cost:</strong> {renderValue(formData.waterSupplyBorewellsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Lines Existing:</strong> {renderValue(formData.waterSupplyConnectivityTrunkLinesExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Lines Additional:</strong> {renderValue(formData.waterSupplyConnectivityTrunkLinesAdditional, true)}</div>
+                        {renderValue(formData.waterSupplyConnectivityTrunkLinesAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Trunk Lines Estimated Cost:</strong> {renderValue(formData.waterSupplyConnectivityTrunkLinesCost, true)}</div>}
                         
                         {/* Drainage/Sewerage */}
                         <div className="p-2 bg-blue-500 rounded col-span-2 mt-4"><strong>Drainage/Sewerage</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Stormwater Drainage Existing:</strong> {formData.drainageStormwaterDrainageExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Stormwater Drainage Additional:</strong> {formData.drainageStormwaterDrainageAdditional || 'N/A'}</div>
-                        {formData.drainageStormwaterDrainageAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Stormwater Drainage Estimated Cost:</strong> {formData.drainageStormwaterDrainageCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Main Drains Existing:</strong> {formData.drainageConnectivityMainDrainsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Main Drains Additional:</strong> {formData.drainageConnectivityMainDrainsAdditional || 'N/A'}</div>
-                        {formData.drainageConnectivityMainDrainsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Main Drains Estimated Cost:</strong> {formData.drainageConnectivityMainDrainsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Sewer Lines Existing:</strong> {formData.drainageSewerLinesExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Sewer Lines Additional:</strong> {formData.drainageSewerLinesAdditional || 'N/A'}</div>
-                        {formData.drainageSewerLinesAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Sewer Lines Estimated Cost:</strong> {formData.drainageSewerLinesCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Sewers Existing:</strong> {formData.drainageConnectivityTrunkSewersExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Sewers Additional:</strong> {formData.drainageConnectivityTrunkSewersAdditional || 'N/A'}</div>
-                        {formData.drainageConnectivityTrunkSewersAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Trunk Sewers Estimated Cost:</strong> {formData.drainageConnectivityTrunkSewersCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Stormwater Drainage Existing:</strong> {renderValue(formData.drainageStormwaterDrainageExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Stormwater Drainage Additional:</strong> {renderValue(formData.drainageStormwaterDrainageAdditional, true)}</div>
+                        {renderValue(formData.drainageStormwaterDrainageAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Stormwater Drainage Estimated Cost:</strong> {renderValue(formData.drainageStormwaterDrainageCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Main Drains Existing:</strong> {renderValue(formData.drainageConnectivityMainDrainsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Main Drains Additional:</strong> {renderValue(formData.drainageConnectivityMainDrainsAdditional, true)}</div>
+                        {renderValue(formData.drainageConnectivityMainDrainsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Main Drains Estimated Cost:</strong> {renderValue(formData.drainageConnectivityMainDrainsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Sewer Lines Existing:</strong> {renderValue(formData.drainageSewerLinesExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Sewer Lines Additional:</strong> {renderValue(formData.drainageSewerLinesAdditional, true)}</div>
+                        {renderValue(formData.drainageSewerLinesAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Sewer Lines Estimated Cost:</strong> {renderValue(formData.drainageSewerLinesCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Sewers Existing:</strong> {renderValue(formData.drainageConnectivityTrunkSewersExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Trunk Sewers Additional:</strong> {renderValue(formData.drainageConnectivityTrunkSewersAdditional, true)}</div>
+                        {renderValue(formData.drainageConnectivityTrunkSewersAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Connectivity Trunk Sewers Estimated Cost:</strong> {renderValue(formData.drainageConnectivityTrunkSewersCost, true)}</div>}
                         
                         {/* Roads */}
                         <div className="p-2 bg-blue-500 rounded col-span-2 mt-4"><strong>Roads</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads CC Existing:</strong> {formData.roadsInternalRoadsCCExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads CC Additional:</strong> {formData.roadsInternalRoadsCCAdditional || 'N/A'}</div>
-                        {formData.roadsInternalRoadsCCAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads CC Estimated Cost:</strong> {formData.roadsInternalRoadsCCCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads BT Existing:</strong> {formData.roadsInternalRoadsBTExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads BT Additional:</strong> {formData.roadsInternalRoadsBTAdditional || 'N/A'}</div>
-                        {formData.roadsInternalRoadsBTAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads BT Estimated Cost:</strong> {formData.roadsInternalRoadsBTCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads Others Existing:</strong> {formData.roadsInternalRoadsOthersExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads Others Additional:</strong> {formData.roadsInternalRoadsOthersAdditional || 'N/A'}</div>
-                        {formData.roadsInternalRoadsOthersAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads Others Estimated Cost:</strong> {formData.roadsInternalRoadsOthersCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads CC Existing:</strong> {formData.roadsApproachRoadsCCExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads CC Additional:</strong> {formData.roadsApproachRoadsCCAdditional || 'N/A'}</div>
-                        {formData.roadsApproachRoadsCCAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Approach Roads CC Estimated Cost:</strong> {formData.roadsApproachRoadsCCCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads Others Existing:</strong> {formData.roadsApproachRoadsOthersExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads Others Additional:</strong> {formData.roadsApproachRoadsOthersAdditional || 'N/A'}</div>
-                        {formData.roadsApproachRoadsOthersAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Approach Roads Others Estimated Cost:</strong> {formData.roadsApproachRoadsOthersCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads CC Existing:</strong> {renderValue(formData.roadsInternalRoadsCCExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads CC Additional:</strong> {renderValue(formData.roadsInternalRoadsCCAdditional, true)}</div>
+                        {renderValue(formData.roadsInternalRoadsCCAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads CC Estimated Cost:</strong> {renderValue(formData.roadsInternalRoadsCCCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads BT Existing:</strong> {renderValue(formData.roadsInternalRoadsBTExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads BT Additional:</strong> {renderValue(formData.roadsInternalRoadsBTAdditional, true)}</div>
+                        {renderValue(formData.roadsInternalRoadsBTAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads BT Estimated Cost:</strong> {renderValue(formData.roadsInternalRoadsBTCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads Others Existing:</strong> {renderValue(formData.roadsInternalRoadsOthersExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Internal Roads Others Additional:</strong> {renderValue(formData.roadsInternalRoadsOthersAdditional, true)}</div>
+                        {renderValue(formData.roadsInternalRoadsOthersAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Internal Roads Others Estimated Cost:</strong> {renderValue(formData.roadsInternalRoadsOthersCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads CC Existing:</strong> {renderValue(formData.roadsApproachRoadsCCExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads CC Additional:</strong> {renderValue(formData.roadsApproachRoadsCCAdditional, true)}</div>
+                        {renderValue(formData.roadsApproachRoadsCCAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Approach Roads CC Estimated Cost:</strong> {renderValue(formData.roadsApproachRoadsCCCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads Others Existing:</strong> {renderValue(formData.roadsApproachRoadsOthersExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Approach Roads Others Additional:</strong> {renderValue(formData.roadsApproachRoadsOthersAdditional, true)}</div>
+                        {renderValue(formData.roadsApproachRoadsOthersAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Approach Roads Others Estimated Cost:</strong> {renderValue(formData.roadsApproachRoadsOthersCost, true)}</div>}
                         
                         {/* Street Lighting */}
                         <div className="p-2 bg-blue-500 rounded col-span-2 mt-4"><strong>Street Lighting</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Poles Existing:</strong> {formData.streetLightingPolesExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Poles Additional:</strong> {formData.streetLightingPolesAdditional || 'N/A'}</div>
-                        {formData.streetLightingPolesAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Poles Estimated Cost:</strong> {formData.streetLightingPolesCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Lights Existing:</strong> {formData.streetLightingLightsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Lights Additional:</strong> {formData.streetLightingLightsAdditional || 'N/A'}</div>
-                        {formData.streetLightingLightsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Lights Estimated Cost:</strong> {formData.streetLightingLightsCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Poles Existing:</strong> {renderValue(formData.streetLightingPolesExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Poles Additional:</strong> {renderValue(formData.streetLightingPolesAdditional, true)}</div>
+                        {renderValue(formData.streetLightingPolesAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Poles Estimated Cost:</strong> {renderValue(formData.streetLightingPolesCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Lights Existing:</strong> {renderValue(formData.streetLightingLightsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Lights Additional:</strong> {renderValue(formData.streetLightingLightsAdditional, true)}</div>
+                        {renderValue(formData.streetLightingLightsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Lights Estimated Cost:</strong> {renderValue(formData.streetLightingLightsCost, true)}</div>}
                         
                         {/* Sanitation */}
                         <div className="p-2 bg-blue-500 rounded col-span-2 mt-4"><strong>Sanitation</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Toilets Existing:</strong> {formData.sanitationIndividualToiletsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Toilets Additional:</strong> {formData.sanitationIndividualToiletsAdditional || 'N/A'}</div>
-                        {formData.sanitationIndividualToiletsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Individual Toilets Estimated Cost:</strong> {formData.sanitationIndividualToiletsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Community Toilets Existing:</strong> {formData.sanitationCommunityToiletsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Community Toilets Additional:</strong> {formData.sanitationCommunityToiletsAdditional || 'N/A'}</div>
-                        {formData.sanitationCommunityToiletsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Community Toilets Estimated Cost:</strong> {formData.sanitationCommunityToiletsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Seats in Community Toilets Existing:</strong> {formData.sanitationSeatsCommunityToiletsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Seats in Community Toilets Additional:</strong> {formData.sanitationSeatsCommunityToiletsAdditional || 'N/A'}</div>
-                        {formData.sanitationSeatsCommunityToiletsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Seats in Community Toilets Estimated Cost:</strong> {formData.sanitationSeatsCommunityToiletsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dumper Bins Existing:</strong> {formData.sanitationDumperBinsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Dumper Bins Additional:</strong> {formData.sanitationDumperBinsAdditional || 'N/A'}</div>
-                        {formData.sanitationDumperBinsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Dumper Bins Estimated Cost:</strong> {formData.sanitationDumperBinsCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Toilets Existing:</strong> {renderValue(formData.sanitationIndividualToiletsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Individual Toilets Additional:</strong> {renderValue(formData.sanitationIndividualToiletsAdditional, true)}</div>
+                        {renderValue(formData.sanitationIndividualToiletsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Individual Toilets Estimated Cost:</strong> {renderValue(formData.sanitationIndividualToiletsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Community Toilets Existing:</strong> {renderValue(formData.sanitationCommunityToiletsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Community Toilets Additional:</strong> {renderValue(formData.sanitationCommunityToiletsAdditional, true)}</div>
+                        {renderValue(formData.sanitationCommunityToiletsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Community Toilets Estimated Cost:</strong> {renderValue(formData.sanitationCommunityToiletsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Seats in Community Toilets Existing:</strong> {renderValue(formData.sanitationSeatsCommunityToiletsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Seats in Community Toilets Additional:</strong> {renderValue(formData.sanitationSeatsCommunityToiletsAdditional, true)}</div>
+                        {renderValue(formData.sanitationSeatsCommunityToiletsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Seats in Community Toilets Estimated Cost:</strong> {renderValue(formData.sanitationSeatsCommunityToiletsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dumper Bins Existing:</strong> {renderValue(formData.sanitationDumperBinsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Dumper Bins Additional:</strong> {renderValue(formData.sanitationDumperBinsAdditional, true)}</div>
+                        {renderValue(formData.sanitationDumperBinsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Dumper Bins Estimated Cost:</strong> {renderValue(formData.sanitationDumperBinsCost, true)}</div>}
                         
                         {/* Community Facilities */}
                         <div className="p-2 bg-blue-500 rounded col-span-2 mt-4"><strong>Community Facilities</strong></div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Community Halls Existing:</strong> {formData.communityHallsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Community Halls Additional:</strong> {formData.communityHallsAdditional || 'N/A'}</div>
-                        {formData.communityHallsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Community Halls Estimated Cost:</strong> {formData.communityHallsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Livelihood Centres Existing:</strong> {formData.communityLivelihoodCentresExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Livelihood Centres Additional:</strong> {formData.communityLivelihoodCentresAdditional || 'N/A'}</div>
-                        {formData.communityLivelihoodCentresAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Livelihood Centres Estimated Cost:</strong> {formData.communityLivelihoodCentresCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Anganwadis Existing:</strong> {formData.communityAnganwadisExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Anganwadis Additional:</strong> {formData.communityAnganwadisAdditional || 'N/A'}</div>
-                        {formData.communityAnganwadisAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Anganwadis Estimated Cost:</strong> {formData.communityAnganwadisCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Primary Schools Existing:</strong> {formData.communityPrimarySchoolsExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Primary Schools Additional:</strong> {formData.communityPrimarySchoolsAdditional || 'N/A'}</div>
-                        {formData.communityPrimarySchoolsAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Primary Schools Estimated Cost:</strong> {formData.communityPrimarySchoolsCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Health Centres Existing:</strong> {formData.communityHealthCentresExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Health Centres Additional:</strong> {formData.communityHealthCentresAdditional || 'N/A'}</div>
-                        {formData.communityHealthCentresAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Health Centres Estimated Cost:</strong> {formData.communityHealthCentresCost || 'N/A'}</div>}
-                        <div className="p-2 bg-slate-800 rounded"><strong>Others Existing:</strong> {formData.communityOthersExisting || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Others Additional:</strong> {formData.communityOthersAdditional || 'N/A'}</div>
-                        {formData.communityOthersAdditional || 0 > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Others Estimated Cost:</strong> {formData.communityOthersCost || 'N/A'}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Community Halls Existing:</strong> {renderValue(formData.communityHallsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Community Halls Additional:</strong> {renderValue(formData.communityHallsAdditional, true)}</div>
+                        {renderValue(formData.communityHallsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Community Halls Estimated Cost:</strong> {renderValue(formData.communityHallsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Livelihood Centres Existing:</strong> {renderValue(formData.communityLivelihoodCentresExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Livelihood Centres Additional:</strong> {renderValue(formData.communityLivelihoodCentresAdditional, true)}</div>
+                        {renderValue(formData.communityLivelihoodCentresAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Livelihood Centres Estimated Cost:</strong> {renderValue(formData.communityLivelihoodCentresCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Anganwadis Existing:</strong> {renderValue(formData.communityAnganwadisExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Anganwadis Additional:</strong> {renderValue(formData.communityAnganwadisAdditional, true)}</div>
+                        {renderValue(formData.communityAnganwadisAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Anganwadis Estimated Cost:</strong> {renderValue(formData.communityAnganwadisCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Primary Schools Existing:</strong> {renderValue(formData.communityPrimarySchoolsExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Primary Schools Additional:</strong> {renderValue(formData.communityPrimarySchoolsAdditional, true)}</div>
+                        {renderValue(formData.communityPrimarySchoolsAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Primary Schools Estimated Cost:</strong> {renderValue(formData.communityPrimarySchoolsCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Health Centres Existing:</strong> {renderValue(formData.communityHealthCentresExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Health Centres Additional:</strong> {renderValue(formData.communityHealthCentresAdditional, true)}</div>
+                        {renderValue(formData.communityHealthCentresAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Health Centres Estimated Cost:</strong> {renderValue(formData.communityHealthCentresCost, true)}</div>}
+                        <div className="p-2 bg-slate-800 rounded"><strong>Others Existing:</strong> {renderValue(formData.communityOthersExisting, true)}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Others Additional:</strong> {renderValue(formData.communityOthersAdditional, true)}</div>
+                        {renderValue(formData.communityOthersAdditional, true) > 0 && <div className="p-2 bg-slate-800 rounded col-span-2"><strong>Others Estimated Cost:</strong> {renderValue(formData.communityOthersCost, true)}</div>}
                     </div>
                 </div>
             </div>

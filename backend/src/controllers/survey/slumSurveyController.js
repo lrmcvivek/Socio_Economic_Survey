@@ -1,5 +1,8 @@
 const SlumSurvey = require('../../models/SlumSurvey');
 const Slum = require('../../models/Slum');
+const Ward = require('../../models/Ward');
+const District = require('../../models/District');
+const State = require('../../models/State');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 
 /**
@@ -10,31 +13,112 @@ exports.createOrGetSlumSurvey = async (req, res) => {
         const { slumId } = req.params;
         const userId = req.user.id || req.user._id;
 
-        // Check if slum exists
-        const slum = await Slum.findById(slumId);
+        // Check if slum exists and populate ward information
+        const slum = await Slum.findById(slumId).populate('ward', 'district');
         if (!slum) {
             return sendError(res, 'Slum not found', 404);
+        }
+
+        // If ward is populated but doesn't have district info, fetch it separately
+        let wardData = slum.ward;
+        if (wardData && typeof wardData === 'object' && !wardData.district) {
+            // Re-fetch the ward with district populated
+            const fullWard = await Ward.findById(slum.ward._id).populate('district', 'state');
+            wardData = fullWard;
+        } else if (wardData && typeof wardData === 'object' && wardData.district && typeof wardData.district === 'string') {
+            // If district is just an ID, populate it
+            const fullDistrict = await District.findById(wardData.district).populate('state');
+            wardData = {
+                _id: wardData._id,
+                district: fullDistrict
+            };
         }
 
         // Check if survey already exists
         let survey = await SlumSurvey.findOne({ slum: slumId, surveyor: userId });
 
         if (!survey) {
-            // Create new survey with default values
+            // Validate that slum has required ward reference
+            if (!wardData) {
+                return sendError(res, 'Slum is missing ward information. Please contact administrator.', 400);
+            }
+
+            // Attempt to populate ward data if not already populated
+            let finalWardData = wardData;
+            if (typeof wardData === 'string' || !wardData.district) {
+                // If ward is just an ID or doesn't have district info, fetch the full ward document
+                const fullWard = await Ward.findById(wardData);
+                if (!fullWard) {
+                    return sendError(res, 'Ward information not found. Please contact administrator.', 400);
+                }
+                
+                // Fetch the district for this ward
+                if (!fullWard.district) {
+                    return sendError(res, 'Ward is missing district information. Please contact administrator.', 400);
+                }
+                
+                finalWardData = fullWard;
+            }
+
+            if (!finalWardData.district) {
+                return sendError(res, 'Ward is missing district information. Please contact administrator.', 400);
+            }
+
+            // Try to get the district document to access the state
+            let districtData = finalWardData.district;
+            if (typeof finalWardData.district === 'string') {
+                // If district is just an ID, fetch the full district document
+                districtData = await District.findById(finalWardData.district);
+                if (!districtData) {
+                    return sendError(res, 'District information not found. Please contact administrator.', 400);
+                }
+            }
+
+            if (!districtData.state) {
+                // Try to find the state using the slum's stateCode as a fallback
+                console.log(`[DEBUG] District ${districtData._id} is missing state information. Attempting to find state using slum's stateCode: ${slum.stateCode}`);
+                
+                // First, try to find state by code
+                const stateByCode = await State.findOne({ code: slum.stateCode });
+                if (stateByCode) {
+                    console.log(`[DEBUG] Found state by code: ${stateByCode._id}`);
+                    
+                    // Update the district with the state reference
+                    districtData.state = stateByCode._id;
+                    await District.findByIdAndUpdate(districtData._id, { state: stateByCode._id });
+                } else {
+                    // If we still can't find the state, try to find it by matching the district
+                    const stateForDistrict = await State.findOne({ districts: districtData._id });
+                    if (stateForDistrict) {
+                        console.log(`[DEBUG] Found state by district reference: ${stateForDistrict._id}`);
+                        
+                        // Update the district with the state reference
+                        districtData.state = stateForDistrict._id;
+                        await District.findByIdAndUpdate(districtData._id, { state: stateForDistrict._id });
+                    } else {
+                        return sendError(res, 'Unable to determine state for district. Please contact administrator to fix data integrity.', 400);
+                    }
+                }
+            }
+
+            // Create new survey with default values and populate required references
             survey = new SlumSurvey({
                 slum: slumId,
                 surveyor: userId,
+                ward: finalWardData._id,
+                district: districtData._id,
+                state: districtData.state,
                 surveyStatus: 'DRAFT',
             });
             await survey.save();
             console.log(`Created new slum survey for slum ${slumId}`);
         }
-
+         
         await survey.populate([
-            { path: 'slum', select: 'name location population' },
+            { path: 'slum', select: 'slumName location population' },
             { path: 'surveyor', select: 'name email' },
         ]);
-
+         
         sendSuccess(res, survey, 'Slum survey retrieved/created successfully');
     } catch (error) {
         console.error('Error in createOrGetSlumSurvey:', error.message);
@@ -50,7 +134,7 @@ exports.getSlumSurvey = async (req, res) => {
         const { surveyId } = req.params;
 
         const survey = await SlumSurvey.findById(surveyId).populate([
-            { path: 'slum', select: 'name location population' },
+            { path: 'slum', select: 'slumName location population' },
             { path: 'surveyor', select: 'name email' },
         ]);
 
@@ -93,7 +177,7 @@ exports.updateSlumSurvey = async (req, res) => {
 
         await survey.save();
         await survey.populate([
-            { path: 'slum', select: 'name location population' },
+            { path: 'slum', select: 'slumName location population' },
             { path: 'surveyor', select: 'name email' },
         ]);
 
@@ -178,7 +262,7 @@ exports.submitSlumSurvey = async (req, res) => {
         
         console.log(`Final completion after submission: ${survey.completedSections.length}/16 = ${survey.completionPercentage}%`);
         await survey.populate([
-            { path: 'slum', select: 'name location population' },
+            { path: 'slum', select: 'slumName location population' },
             { path: 'surveyor', select: 'name email' },
         ]);
 
@@ -202,7 +286,7 @@ exports.getSlumSurveyBySlumId = async (req, res) => {
             slum: slumId,
             surveyor: userId,
         }).populate([
-            { path: 'slum', select: 'name location population' },
+            { path: 'slum', select: 'slumName location population' },
             { path: 'surveyor', select: 'name email' },
         ]);
 
@@ -346,7 +430,7 @@ exports.updateSurveySection = async (req, res) => {
 
         await survey.save();
         await survey.populate([
-            { path: 'slum', select: 'name' },
+            { path: 'slum', select: 'slumName' },
             { path: 'surveyor', select: 'name email' },
         ]);
 

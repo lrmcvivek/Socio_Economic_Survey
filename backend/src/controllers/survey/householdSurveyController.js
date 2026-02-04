@@ -46,7 +46,7 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
     }
 
     await survey.populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName location ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -65,7 +65,7 @@ exports.getHouseholdSurvey = async (req, res) => {
     const { surveyId } = req.params;
 
     const survey = await HouseholdSurvey.findById(surveyId).populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName village ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -130,7 +130,7 @@ exports.updateHouseholdSurvey = async (req, res) => {
 
     await survey.save();
     await survey.populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName village ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -241,7 +241,7 @@ exports.submitHouseholdSurvey = async (req, res) => {
     }
     
     await survey.populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName location ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -282,7 +282,7 @@ exports.getHouseholdSurveyByHouseholdId = async (req, res) => {
       houseDoorNo: houseDoorNo,
       surveyor: userId,
     }).populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName location ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -376,7 +376,7 @@ exports.updateSurveySection = async (req, res) => {
 
     await survey.save();
     await survey.populate([
-      { path: 'slum', select: 'name location ward' },
+      { path: 'slum', select: 'slumName location ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -403,7 +403,7 @@ exports.getSurveysSummary = async (req, res) => {
 
     const surveys = await HouseholdSurvey.find(query)
       .select('slum houseDoorNo householdId surveyStatus createdAt submittedAt')
-      .populate('slum', 'name location ward')
+      .populate('slum', 'slumName location ward')
       .sort({ createdAt: -1 });
 
     const summary = {
