@@ -3,6 +3,8 @@ const Slum = require('../../models/Slum');
 const Ward = require('../../models/Ward');
 const District = require('../../models/District');
 const State = require('../../models/State');
+const Assignment = require('../../models/Assignment');
+const { updateSlumStatus, updateAssignmentStatusFromSlumSurvey } = require('../../utils/statusSyncHelper');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 
 /**
@@ -631,6 +633,15 @@ exports.submitSlumSurvey = async (req, res) => {
             console.error('[ERROR] Failed to save survey:', saveError.message);
             console.error('[ERROR] Section data:', JSON.stringify(survey[section], null, 2));
             throw saveError;
+        }
+                
+        // Update assignment status based on slum survey status after submission
+        await updateAssignmentStatusFromSlumSurvey(surveyId);
+        
+        // Update slum status based on comprehensive logic
+        const slumSurvey = await SlumSurvey.findById(surveyId).populate('slum');
+        if (slumSurvey) {
+          await updateSlumStatus(slumSurvey.slum._id);
         }
                 
         console.log(`Final completion after submission: ${survey.completedSections.length}/16 = ${survey.completionPercentage}%`);
@@ -1343,10 +1354,10 @@ exports.updateSurveySection = async (req, res) => {
         if (completionPercentage === 0) {
             survey.surveyStatus = 'DRAFT';
         } else if (completionPercentage > 0 && completionPercentage < 100) {
-            survey.surveyStatus = 'IN_PROGRESS';
+            survey.surveyStatus = 'IN PROGRESS';
         } else if (completionPercentage === 100 && survey.surveyStatus !== 'SUBMITTED' && survey.surveyStatus !== 'COMPLETED') {
-            // When 100% complete but not yet submitted, keep as IN_PROGRESS
-            survey.surveyStatus = 'IN_PROGRESS';
+            // When 100% complete but not yet submitted, keep as IN PROGRESS
+            survey.surveyStatus = 'IN PROGRESS';
         }
         // If already SUBMITTED or COMPLETED, don't change the status
         
@@ -1481,6 +1492,15 @@ exports.updateSurveySection = async (req, res) => {
             { path: 'slum', select: 'slumName' },
             { path: 'surveyor', select: 'name' },
         ]);
+
+        // Update assignment status based on slum survey status
+        await updateAssignmentStatusFromSlumSurvey(surveyId);
+        
+        // Update slum status based on comprehensive logic
+        const slumSurvey = await SlumSurvey.findById(surveyId).populate('slum');
+        if (slumSurvey) {
+          await updateSlumStatus(slumSurvey.slum._id);
+        }
 
         console.log(`Updated survey section: ${section} for survey ${surveyId}. Completion: ${completionPercentage}%`);
         console.log(`Section data saved:`, JSON.stringify(survey[section], null, 2));

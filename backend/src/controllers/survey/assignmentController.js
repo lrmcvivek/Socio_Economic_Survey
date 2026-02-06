@@ -1,6 +1,8 @@
 const Assignment = require('../../models/Assignment');
 const User = require('../../models/User');
 const Slum = require('../../models/Slum');
+const SlumSurvey = require('../../models/SlumSurvey');
+const { initializeAssignmentStatus } = require('../../utils/statusSyncHelper');
 
 // Assign slum to surveyor
 const assignSlumToSurveyor = async (req, res) => {
@@ -65,6 +67,9 @@ const assignSlumToSurveyor = async (req, res) => {
     });
 
     await assignment.save();
+
+    // Initialize assignment status
+    await initializeAssignmentStatus(assignment._id);
 
     // Populate references before returning
     const populatedAssignment = await Assignment.findById(assignment._id)
@@ -186,7 +191,7 @@ const getMyAssignmentsFormatted = async (req, res) => {
       slumId: assignment.slum._id,
       slumName: assignment.slum.name,
       householdCount: assignment.slum.totalHouseholds || 0,
-      surveyStatus: assignment.slumSurveyStatus,
+      surveyStatus: assignment.slumSurveyStatus, // Now this will be properly synchronized
       householdProgress: assignment.householdSurveyProgress || { completed: 0, total: 0 }
     }));
 
@@ -234,13 +239,12 @@ const getMyAssignments = async (req, res) => {
 
       let slumSurveyCompletion = 0;
       if (slumSurvey) {
-        slumSurveyStatus = slumSurvey.surveyStatus || 'COMPLETED';
+        slumSurveyStatus = slumSurvey.surveyStatus || 'DRAFT';
         slumSurveyCompletion = slumSurvey.completionPercentage || 0;
-        if (slumSurveyCompletion >= 100) {
-          slumSurveyStatus = 'COMPLETED';
-        } else if (slumSurveyCompletion > 0) {
-          slumSurveyStatus = 'IN_PROGRESS';
-        }
+        
+        // Use the assignment's stored status which should be kept in sync
+        // This ensures we use the authoritative status from the assignment record
+        slumSurveyStatus = assignment.slumSurveyStatus || slumSurveyStatus;
       }
 
       // Check Household Survey progress
@@ -435,6 +439,8 @@ const updateAssignment = async (req, res) => {
     });
   }
 };
+
+
 
 const deleteAssignment = async (req, res) => {
   try {

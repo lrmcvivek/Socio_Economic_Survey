@@ -1,5 +1,6 @@
 const HouseholdSurvey = require('../../models/HouseholdSurvey');
 const Slum = require('../../models/Slum');
+const { updateStatusesFromHouseholdSurvey } = require('../../utils/statusSyncHelper');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
@@ -245,6 +246,9 @@ exports.submitHouseholdSurvey = async (req, res) => {
       { path: 'surveyor', select: 'name email' },
     ]);
 
+    // Update related statuses after successful submission
+    await updateStatusesFromHouseholdSurvey(surveyId);
+
     console.log(`Submitted household survey ${surveyId}`);
     sendSuccess(res, survey, 'Survey submitted successfully', 200);
   } catch (error) {
@@ -370,7 +374,7 @@ exports.updateSurveySection = async (req, res) => {
         survey[section] = data;
       }
     }
-    survey.surveyStatus = 'IN_PROGRESS';
+    survey.surveyStatus = 'IN PROGRESS';
     survey.lastModifiedBy = userId;
     survey.lastModifiedAt = new Date();
 
@@ -409,7 +413,7 @@ exports.getSurveysSummary = async (req, res) => {
     const summary = {
       total: surveys.length,
       draft: surveys.filter(s => s.surveyStatus === 'DRAFT').length,
-      inProgress: surveys.filter(s => s.surveyStatus === 'IN_PROGRESS').length,
+      inProgress: surveys.filter(s => s.surveyStatus === 'IN PROGRESS').length,
       submitted: surveys.filter(s => s.surveyStatus === 'SUBMITTED').length,
       completed: surveys.filter(s => s.surveyStatus === 'COMPLETED').length,
       surveys: surveys

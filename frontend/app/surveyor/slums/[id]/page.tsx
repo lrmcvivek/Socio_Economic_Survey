@@ -70,7 +70,7 @@ export default function SlumDetailsPage() {
     // Check the survey status to determine the message
     const surveyStatus = slumSurvey?.surveyStatus || "DRAFT";
     
-    if (surveyStatus === "DRAFT" || surveyStatus === "IN_PROGRESS") {
+    if (surveyStatus === "DRAFT" || surveyStatus === "IN PROGRESS") {
       // Show start/continue confirmation
       setShowSlumSurveyConfirm(true);
     } else if (surveyStatus === "SUBMITTED" || surveyStatus === "COMPLETED") {
@@ -199,7 +199,7 @@ export default function SlumDetailsPage() {
             isOpen={showSlumSurveyConfirm}
             surveyType="slum"
             slumName={slum?.slumName || ""}
-            surveyStatus={slumSurvey?.surveyStatus as "DRAFT" | "IN_PROGRESS" | "SUBMITTED" | "COMPLETED" | undefined}
+            surveyStatus={slumSurvey?.surveyStatus as "DRAFT" | "IN PROGRESS" | "SUBMITTED" | "COMPLETED" | undefined}
             onConfirm={handleSlumSurveyConfirm}
             onCancel={handleSlumSurveyCancel}
             onPreview={handleSlumSurveyPreview}

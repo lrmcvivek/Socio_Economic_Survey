@@ -56,7 +56,7 @@ export default function SurveyorDashboard() {
     type: 'slum' | 'household';
     assignmentId: string;
     slumName: string;
-    surveyStatus?: "DRAFT" | "IN_PROGRESS" | "SUBMITTED" | "COMPLETED";
+    surveyStatus?: "DRAFT" | "IN PROGRESS" | "SUBMITTED" | "COMPLETED";
   } | null>(null);
   const [surveyData, setSurveyData] = useState<Record<string, any>>({});
   const [showEditConfirm, setShowEditConfirm] = useState(false);
@@ -125,7 +125,7 @@ export default function SurveyorDashboard() {
       type: 'slum',
       assignmentId,
       slumName,
-      surveyStatus: surveyStatus as "DRAFT" | "IN_PROGRESS" | "SUBMITTED" | "COMPLETED"
+      surveyStatus: surveyStatus as "DRAFT" | "IN PROGRESS" | "SUBMITTED" | "COMPLETED"
     });
     setShowConfirmation(true);
   };
@@ -218,7 +218,7 @@ export default function SurveyorDashboard() {
     (a) => a.status === "PENDING",
   ).length;
   const inProgressSurveys = assignments.filter(
-    (a) => a.status === "IN_PROGRESS",
+    (a) => a.status === "IN PROGRESS",
   ).length;
   return (
     <SurveyorLayout username={user?.name || user?.username}>
@@ -329,7 +329,7 @@ export default function SurveyorDashboard() {
                     className={`px-3 py-1 rounded-full text-xs font-medium border ${
                       assignment.status === "COMPLETED"
                         ? "bg-green-500/10 text-green-400 border-green-500/20"
-                        : assignment.status === "IN_PROGRESS"
+                        : assignment.status === "IN PROGRESS"
                           ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                           : "bg-slate-700/50 text-slate-400 border-slate-600"
                     }`}

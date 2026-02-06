@@ -570,7 +570,7 @@ const slumSurveySchema = new mongoose.Schema({
   // Survey Metadata
   surveyStatus: {
     type: String,
-    enum: ['DRAFT', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED'],
+    enum: ['DRAFT', 'IN PROGRESS', 'SUBMITTED', 'COMPLETED'],
     default: 'DRAFT'
   },
   completionPercentage: {
