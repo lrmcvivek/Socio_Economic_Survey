@@ -16,7 +16,7 @@ exports.createOrGetSlumSurvey = async (req, res) => {
         const userId = req.user.id || req.user._id;
 
         // Check if slum exists and populate ward information
-        const slum = await Slum.findById(slumId).populate('ward', 'district');
+        const slum = await Slum.findById(slumId).populate('ward');
         if (!slum) {
             return sendError(res, 'Slum not found', 404);
         }
