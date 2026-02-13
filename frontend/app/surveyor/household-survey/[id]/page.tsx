@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import SurveyorLayout from "@/components/SurveyorLayout";
 import Card from "@/components/Card";
@@ -114,14 +114,6 @@ const SECTIONS = [
   { id: "additional", title: "Additional Info", icon: "📝" },
 ];
 
-const HOUSING_MATERIALS = [
-  { id: "STONE_BRICK", label: "Stone/Brick" },
-  { id: "WOOD", label: "Wood" },
-  { id: "METAL", label: "Metal/Tin" },
-  { id: "CONCRETE", label: "Concrete" },
-  { id: "MUD", label: "Mud/Clay" },
-];
-
 const CONSUMER_DURABLES = [
   { id: "ELECTRIC_FAN", label: "Electric Fan" },
   { id: "REFRIGERATOR", label: "Refrigerator" },
@@ -166,12 +158,21 @@ export default function HouseholdSurveyPage() {
   const assignmentId = params.id as string;
   const { showToast } = useToast();
 
-  const [slum, setSlum] = useState<{ name: string; ward?: string } | null>(null);
-  const [assignment, setAssignment] = useState<any>(null);
-  const [households, setHouseholds] = useState([]);
-  const [selectedHousehold, setSelectedHousehold] = useState(null);
+  const [slum, setSlum] = useState<{ 
+    slumName: string; 
+    ward?: {
+      number: string;
+      name: string;
+      _id: string;
+      zone: string;
+    } 
+  } | null>(null);
+  const [assignment, setAssignment] = useState<{
+    _id: string;
+    slum: { _id: string; slumName: string; ward: { _id: string; number: string; name: string; zone: string } };
+    householdSurveyProgress?: { completed: number; total: number };
+  }| null>(null);
   const [loading, setLoading] = useState(true);
-  const [householdsLoading, setHouseholdsLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["general", "household"]),
   );
@@ -200,7 +201,10 @@ export default function HouseholdSurveyPage() {
     try {
       const response = await apiService.getMyAssignments();
       if (response.success && response.data) {
-        const currentAssignment = response.data.find((a: any) => a._id === assignmentId);
+        const currentAssignment = response.data.find((a: { 
+          _id: string; 
+          householdSurveyProgress?: { completed: number; total: number } 
+        }) => a._id === assignmentId);
         if (currentAssignment && currentAssignment.householdSurveyProgress) {
           setHouseholdProgress(currentAssignment.householdSurveyProgress);
         }
@@ -213,17 +217,16 @@ export default function HouseholdSurveyPage() {
   const loadHouseholdsForSlum = useCallback(
     async (slumId: string) => {
       try {
-        setHouseholdsLoading(true);
         // TODO: Add API method to fetch households for a slum
         // const response = await apiService.getHouseholdsForSlum(slumId);
         // if (response.success) {
         //   setHouseholds(response.data);
         // }
       } catch (error) {
-        console.error("Error loading households:", error);
+        console.error(`Error loading households for Slum with ID ${slumId}:`, error);
         showToast("Failed to load households", "error");
       } finally {
-        setHouseholdsLoading(false);
+        setLoading(false);
       }
     },
     [showToast],
@@ -248,8 +251,8 @@ export default function HouseholdSurveyPage() {
             // Auto-fill slum details
             setFormData((prev) => ({
               ...prev,
-              slumName: slumData.name || "",
-              ward: slumData.ward || "",
+              slumName: slumData.slumName || "",
+              ward: typeof slumData.ward === 'object' ? `${slumData.ward.number} - ${slumData.ward.name}` : slumData.ward || "",
             }));
 
             // Load households for this slum
@@ -264,7 +267,7 @@ export default function HouseholdSurveyPage() {
           return;
         }
       } catch (error) {
-        console.error("Error loading assignment:", error);
+        console.error(`Error loading assignment with ID ${assignmentId}:`, error);
         showToast("Failed to load assignment data", "error");
         router.push("/surveyor/dashboard");
       } finally {
@@ -273,7 +276,7 @@ export default function HouseholdSurveyPage() {
     };
 
     loadData();
-  }, [assignmentId, router, showToast]);
+  }, [assignmentId, router, showToast, fetchProgress, loadHouseholdsForSlum]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections((prev) => {
@@ -794,7 +797,7 @@ export default function HouseholdSurveyPage() {
 
       // Create or get household survey
       const surveyResponse = await apiService.createOrGetHouseholdSurvey(
-        assignment?.slum?._id,
+        assignment?.slum?._id || "",
         formData.houseDoorNo || "",
       );
 
@@ -824,8 +827,8 @@ export default function HouseholdSurveyPage() {
         setFormData({
           householdId: "",
           houseDoorNo: "",
-          slumName: slum?.name || "",
-          ward: slum?.ward || "",
+          slumName: slum?.slumName || "",
+          ward: typeof slum?.ward === 'object' ? `${slum?.ward.number} - ${slum?.ward.name}` : slum?.ward || "",
           // Reset all other fields to empty/default values
           headName: "",
           fatherName: "",
@@ -942,7 +945,7 @@ export default function HouseholdSurveyPage() {
             </h1>
             <p className="text-slate-400 mt-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              {slum?.name}
+              {slum?.slumName}
             </p>
           </div>
         </div>
@@ -2163,7 +2166,7 @@ export default function HouseholdSurveyPage() {
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">Confirm Submission</h3>
                 <p className="text-slate-300 mb-6">
-                  Are you sure you want to submit this household survey? Once submitted, you won't be able to edit it.
+                  Are you sure you want to submit this household survey? Once submitted, you won&#39;t be able to edit it.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <Button
@@ -2190,7 +2193,7 @@ export default function HouseholdSurveyPage() {
         onClose={() => router.push("/surveyor/dashboard")}
         onSubmit={() => setShowCompletionModal(false)}
         houseDoorNo={lastSubmittedHouseNo}
-        slumName={slum?.name || ""}
+        slumName={slum?.slumName || ""}
         completedCount={householdProgress.completed}
         totalCount={householdProgress.total}
       />

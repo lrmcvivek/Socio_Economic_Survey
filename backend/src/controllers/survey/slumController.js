@@ -213,7 +213,7 @@ const updateSlum = async (req, res) => {
       userRole: req.user.role
     });
     
-    const { name, slumId, location, stateCode, distCode, city, ward, slumType, landOwnership, totalHouseholds, village, area } = req.body;
+    const { name, stateCode, distCode, city, ward, slumType, landOwnership, totalHouseholds, village, area } = req.body;
 
     const slum = await Slum.findById(req.params.id);
     if (!slum) {
