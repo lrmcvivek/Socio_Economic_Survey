@@ -303,7 +303,7 @@ export default function SurveyorDashboard() {
             </button>
           </div>
 
-          {assignments.map((assignment) => (
+          {assignments.filter(assignment => assignment.status !== "COMPLETED").map((assignment) => (
             <div
               key={assignment._id}
               className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-all hover:shadow-xl hover:shadow-blue-900/10 group"

@@ -310,7 +310,15 @@ const slumSurveySchema = new mongoose.Schema({
     connectivityStormWaterDrainage: String,
     connectivitySewerageSystem: String,
     proneToFlooding: String,
-    latrineFacility: String,
+    latrineFacility: {
+      ownSepticTankFlushLatrine: Number,
+      ownDryLatrine: Number,
+      sharedSepticTankFlushLatrine: Number,
+      sharedDryLatrine: Number,
+      communitySepticTankFlushLatrine: Number,
+      communityDryLatrine: Number,
+      openDefecation: Number
+    },
     solidWasteManagement: {
       frequencyOfGarbageDisposal: String,
       arrangementForGarbageDisposal: String,

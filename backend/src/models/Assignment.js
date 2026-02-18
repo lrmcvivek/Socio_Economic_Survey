@@ -41,12 +41,6 @@ const assignmentSchema = new mongoose.Schema({
   },
   completedAt: {
     type: Date
-  },
-  progress: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100
   }
 }, {
   timestamps: true

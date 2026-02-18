@@ -1405,7 +1405,7 @@ export default function HouseholdSurveyPage() {
                             value: "PUBLIC_LAND_ENCROACHED",
                             label: "Public Land Encroached",
                           },
-                          { value: "TENTED", label: "Tented" },
+                          { value: "RENTED", label: "Rented" },
                           { value: "OTHER", label: "Other" },
                         ]}
                       />
