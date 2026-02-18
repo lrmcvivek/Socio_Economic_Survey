@@ -53,28 +53,22 @@ async function updateSlumStatus(slumId) {
     // Determine new status based on comprehensive logic
     let newStatus = 'DRAFT';
 
-    // Case 1: Slum survey is submitted or completed
-    if (slumSurvey.surveyStatus === 'SUBMITTED' || slumSurvey.surveyStatus === 'COMPLETED') {
-      // Case 2: All household surveys are submitted and match total households
-      if (submittedHouseholdCount > 0 && submittedHouseholdCount === totalHouseholds) {
-        newStatus = 'COMPLETED';
-      } else {
-        // Slum survey submitted but household surveys not complete
-        newStatus = 'IN PROGRESS';
-      }
-    } 
-    // Case 3: Slum survey is in progress
-    else if (slumSurvey.surveyStatus === 'IN PROGRESS') {
+    // Case 1: Slum survey is submitted or completed AND all household surveys are submitted
+    if ((slumSurvey.surveyStatus === 'SUBMITTED' || slumSurvey.surveyStatus === 'COMPLETED') 
+        && submittedHouseholdCount > 0 && submittedHouseholdCount === totalHouseholds) {
+      newStatus = 'COMPLETED';
+    }
+    // Case 2: Either slum survey is in progress OR at least one household survey is submitted
+    else if (slumSurvey.surveyStatus === 'IN PROGRESS' || submittedHouseholdCount > 0) {
       newStatus = 'IN PROGRESS';
     }
-    // Case 4: Slum survey is draft
+    // Case 3: Slum survey is submitted but not all household surveys are done
+    else if (slumSurvey.surveyStatus === 'SUBMITTED' || slumSurvey.surveyStatus === 'COMPLETED') {
+      newStatus = 'IN PROGRESS';
+    }
+    // Case 4: Slum survey is draft and no household surveys submitted
     else if (slumSurvey.surveyStatus === 'DRAFT') {
-      // If there are submitted household surveys, mark as in progress
-      if (submittedHouseholdCount > 0) {
-        newStatus = 'IN PROGRESS';
-      } else {
-        newStatus = 'DRAFT';
-      }
+      newStatus = 'DRAFT';
     }
 
     console.log(`[STATUS_SYNC] Determined new slum status: ${newStatus}`);
@@ -249,6 +243,16 @@ async function updateStatusesFromHouseholdSurvey(householdSurveyId) {
     // Update the slum status based on household survey progress
     const result = await updateSlumStatus(slumId);
     
+    // Update the main assignment status
+    const assignment = await Assignment.findOne({
+      slum: slumId,
+      surveyor: surveyorId
+    });
+    
+    if (assignment) {
+      await updateAssignmentMainStatus(assignment._id);
+    }
+    
     // Also update the slum survey status if needed
     const slumSurvey = await SlumSurvey.findOne({ slum: slumId });
     if (slumSurvey) {
@@ -332,37 +336,37 @@ async function updateAssignmentMainStatus(assignmentId) {
     // Determine main assignment status based on comprehensive logic
     let newMainStatus = 'PENDING'; // Default status
 
-    if (!slumSurvey && householdSurveys.length === 0) {
+    if (!slumSurvey && completedHouseholdCount === 0) {
       // No surveys started yet
       newMainStatus = 'PENDING';
       console.log(`[STATUS_SYNC] Condition 1: No surveys started - Status: PENDING`);
-    } else if (slumSurvey?.surveyStatus === 'DRAFT' && householdSurveys.length === 0) {
-      // Slum survey created but not started, no household surveys
-      newMainStatus = 'PENDING';
-      console.log(`[STATUS_SYNC] Condition 2: Draft with no HH surveys - Status: PENDING`);
     } else if (
       slumSurvey?.surveyStatus === 'IN PROGRESS' || 
-      householdSurveys.length > 0
+      completedHouseholdCount > 0
     ) {
-      // Work has started (either slum survey in progress or household surveys exist)
+      // Work has started (either slum survey in progress or at least one household survey is submitted)
       newMainStatus = 'IN PROGRESS';
-      console.log(`[STATUS_SYNC] Condition 3: Work started - Status: IN PROGRESS`);
+      console.log(`[STATUS_SYNC] Condition 2: Work started - Status: IN PROGRESS`);
       console.log(`[STATUS_SYNC]   Slum survey IN PROGRESS: ${slumSurvey?.surveyStatus === 'IN PROGRESS'}`);
-      console.log(`[STATUS_SYNC]   Has household surveys: ${householdSurveys.length > 0}`);
+      console.log(`[STATUS_SYNC]   Has submitted household surveys: ${completedHouseholdCount > 0}`);
     } else if (
       (slumSurvey?.surveyStatus === 'SUBMITTED' || slumSurvey?.surveyStatus === 'COMPLETED') &&
       completedHouseholdCount > 0 && 
       completedHouseholdCount === totalHouseholds
     ) {
-      // Both slum survey and all household surveys are completed
+      // Both slum survey is submitted and all household surveys are completed
       newMainStatus = 'COMPLETED';
-      console.log(`[STATUS_SYNC] Condition 4: All surveys completed - Status: COMPLETED`);
+      console.log(`[STATUS_SYNC] Condition 3: All surveys completed - Status: COMPLETED`);
     } else if (
       slumSurvey?.surveyStatus === 'SUBMITTED' || slumSurvey?.surveyStatus === 'COMPLETED'
     ) {
-      // Slum survey completed but household surveys not done
+      // Slum survey completed but not all household surveys are done
       newMainStatus = 'IN PROGRESS';
-      console.log(`[STATUS_SYNC] Condition 5: Slum survey done, HH pending - Status: IN PROGRESS`);
+      console.log(`[STATUS_SYNC] Condition 4: Slum survey done, HH pending - Status: IN PROGRESS`);
+    } else if (slumSurvey?.surveyStatus === 'DRAFT' && completedHouseholdCount === 0) {
+      // Slum survey is draft and no household surveys submitted
+      newMainStatus = 'PENDING';
+      console.log(`[STATUS_SYNC] Condition 5: Draft with no HH surveys - Status: PENDING`);
     }
 
     console.log(`[STATUS_SYNC] Calculated new main status: ${newMainStatus}`);

@@ -108,7 +108,6 @@ export default function AdminDashboardPage() {
       let totalAssignments = 0;
       let completedAssignmentsCount = 0;
       let activeAssignmentsCount = 0;  // Active = not completed
-      let totalHouseholdsCount = 0;
       let completedHouseholdsCount = 0;
       let completedSlumSurveysCount = 0;
       let inProgressSlumSurveysCount = 0;
@@ -131,15 +130,29 @@ export default function AdminDashboardPage() {
       // Calculate pending assignments (unassigned slums)
       pendingAssignmentsCount = Math.max(0, slumsCount - totalAssignments);
 
-      // Process slums for survey status counts and household counts
-      if (slumsResponse.success && slumsResponse.data) {
-        for (const slum of slumsResponse.data) {
-          if (slum.surveyStatus === 'COMPLETED') {
-            completedSlumSurveysCount++;
-          } else if (slum.surveyStatus === 'IN PROGRESS') {
+      // Process assignments for slum survey status counts and household counts
+      if (assignmentsResponse.success && assignmentsResponse.data) {
+        const assignments = assignmentsResponse.data;
+        
+        // Count slum survey statuses from assignments
+        for (const assignment of assignments) {
+          if (assignment.slumSurveyStatus === 'IN PROGRESS') {
             inProgressSlumSurveysCount++;
+          } else if (assignment.slumSurveyStatus === 'SUBMITTED' || assignment.slumSurveyStatus === 'COMPLETED') {
+            completedSlumSurveysCount++;
           }
           
+          // Calculate completed households from assignments
+          if (assignment.householdSurveyProgress) {
+            completedHouseholdsCount += assignment.householdSurveyProgress.completed;
+          }
+        }
+      }
+      
+      // Calculate total households from slums
+      let totalHouseholdsCount = 0;
+      if (slumsResponse.success && slumsResponse.data) {
+        for (const slum of slumsResponse.data) {
           if (slum.totalHouseholds) {
             totalHouseholdsCount += slum.totalHouseholds;
           }
@@ -216,7 +229,7 @@ export default function AdminDashboardPage() {
           <button
             onClick={loadDashboardStats}
             disabled={statsLoading}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 border border-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 border border-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer"
           >
             {statsLoading ? (
               <>

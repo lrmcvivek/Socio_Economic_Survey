@@ -7,10 +7,8 @@ import Card from "@/components/Card";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import Checkbox from '@/components/Checkbox';
 import Stepper from '@/components/Stepper';
 import BackNavigationDialog from '@/components/BackNavigationDialog';
-import EditConfirmationDialog from '@/components/EditConfirmationDialog';
 import apiService from '@/services/api';
 import { useToast } from '@/components/Toast';
 
@@ -281,7 +279,15 @@ interface SlumSurveyForm {
   proneToFlooding?: string; // Not prone - 01, Upto 15 days - 02, 15-30 Days - 03, More than a Month - 04
   
   // 20. Latrine facility used by Households
-  latrineFacility?: string; // Public Latrine/ Shared latrine/ own latrine
+  latrineFacility?: {
+    ownSepticTankFlushLatrine?: number;
+    ownDryLatrine?: number;
+    sharedSepticTankFlushLatrine?: number;
+    sharedDryLatrine?: number;
+    communitySepticTankFlushLatrine?: number;
+    communityDryLatrine?: number;
+    openDefecation?: number;
+  };
   
   // 21. Solid Waste Management
   // 21a. Frequency of Garbage Disposal
@@ -590,7 +596,15 @@ export default function SlumSurveyPage() {
     connectivityStormWaterDrainage: "",
     connectivitySewerageSystem: "",
     proneToFlooding: "",
-    latrineFacility: "",
+    latrineFacility: {
+      ownSepticTankFlushLatrine: 0,
+      ownDryLatrine: 0,
+      sharedSepticTankFlushLatrine: 0,
+      sharedDryLatrine: 0,
+      communitySepticTankFlushLatrine: 0,
+      communityDryLatrine: 0,
+      openDefecation: 0
+    },
     frequencyOfGarbageDisposal: "",
     arrangementForGarbageDisposal: "",
     frequencyOfClearanceOfOpenDrains: "",
@@ -1162,7 +1176,7 @@ export default function SlumSurveyPage() {
                 connectivityStormWaterDrainage: surveyData.physicalInfrastructure.connectivityStormWaterDrainage || "",
                 connectivitySewerageSystem: surveyData.physicalInfrastructure.connectivitySewerageSystem || "",
                 proneToFlooding: surveyData.physicalInfrastructure.proneToFlooding || "",
-                latrineFacility: surveyData.physicalInfrastructure.latrineFacility || "",
+                latrineFacility: surveyData.physicalInfrastructure.latrineFacility || {},
                 frequencyOfGarbageDisposal: surveyData.physicalInfrastructure.solidWasteManagement?.frequencyOfGarbageDisposal || "",
                 arrangementForGarbageDisposal: surveyData.physicalInfrastructure.solidWasteManagement?.arrangementForGarbageDisposal || "",
                 frequencyOfClearanceOfOpenDrains: surveyData.physicalInfrastructure.solidWasteManagement?.frequencyOfClearanceOfOpenDrains || "",
@@ -2964,7 +2978,15 @@ export default function SlumSurveyPage() {
             data.connectivityStormWaterDrainage = formData.connectivityStormWaterDrainage || "";
             data.connectivitySewerageSystem = formData.connectivitySewerageSystem || "";
             data.proneToFlooding = formData.proneToFlooding || "";
-            data.latrineFacility = formData.latrineFacility || "";
+            data.latrineFacility = {
+              ownSepticTankFlushLatrine: formData.latrineFacility?.ownSepticTankFlushLatrine || 0,
+              ownDryLatrine: formData.latrineFacility?.ownDryLatrine || 0,
+              sharedSepticTankFlushLatrine: formData.latrineFacility?.sharedSepticTankFlushLatrine || 0,
+              sharedDryLatrine: formData.latrineFacility?.sharedDryLatrine || 0,
+              communitySepticTankFlushLatrine: formData.latrineFacility?.communitySepticTankFlushLatrine || 0,
+              communityDryLatrine: formData.latrineFacility?.communityDryLatrine || 0,
+              openDefecation: formData.latrineFacility?.openDefecation || 0
+            };
             data.solidWasteManagement = {
               frequencyOfGarbageDisposal: formData.frequencyOfGarbageDisposal || "",
               arrangementForGarbageDisposal: formData.arrangementForGarbageDisposal || "",
@@ -3299,7 +3321,7 @@ export default function SlumSurveyPage() {
            <div>
               <button
                 onClick={handleBackToDashboard}
-                className="mb-2 text-sm text-slate-400 hover:text-white flex items-center transition-colors"
+                className="mb-2 text-sm text-slate-400 hover:text-white flex items-center transition-colors cursor-pointer"
                >
                 <span className="mr-1">←</span> Back to Dashboard
               </button>
@@ -5267,17 +5289,71 @@ export default function SlumSurveyPage() {
                     {/* Question 20 - Latrine facility used by Households */}
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">20. Latrine facility used by Households</h3>
-                        <Select
-                        label="Latrine Facility"
-                        value={formData.latrineFacility || ""}
-                        onChange={(e) => handleInputChange("latrineFacility", e.target.value)}
-                        required
-                        options={[
-                            { value: "PUBLIC LATRINE", label: "Public Latrine" },
-                            { value: "SHARED LATRINE", label: "Shared Latrine" },
-                            { value: "OWN LATRINE", label: "Own Latrine" },
-                        ]}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                            <Input
+                                label="20a. Own septic tank/flush latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.ownSepticTankFlushLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "ownSepticTankFlushLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.ownSepticTankFlushLatrine"
+                                error={getFieldError("latrineFacility.ownSepticTankFlushLatrine")}
+                            />
+                            <Input
+                                label="20b. Own dry latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.ownDryLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "ownDryLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.ownDryLatrine"
+                                error={getFieldError("latrineFacility.ownDryLatrine")}
+                            />
+                            <Input
+                                label="20c. Shared septic tank/flush latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.sharedSepticTankFlushLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "sharedSepticTankFlushLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.sharedSepticTankFlushLatrine"
+                                error={getFieldError("latrineFacility.sharedSepticTankFlushLatrine")}
+                            />
+                            <Input
+                                label="20d. Shared dry latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.sharedDryLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "sharedDryLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.sharedDryLatrine"
+                                error={getFieldError("latrineFacility.sharedDryLatrine")}
+                            />
+                            <Input
+                                label="20e. Community septic tank/flush latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.communitySepticTankFlushLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "communitySepticTankFlushLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.communitySepticTankFlushLatrine"
+                                error={getFieldError("latrineFacility.communitySepticTankFlushLatrine")}
+                            />
+                            <Input
+                                label="20f. Community dry latrine"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.communityDryLatrine || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "communityDryLatrine", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.communityDryLatrine"
+                                error={getFieldError("latrineFacility.communityDryLatrine")}
+                            />
+                            <Input
+                                label="20g. Open defecation"
+                                type="number"
+                                required
+                                value={formData.latrineFacility?.openDefecation || ""}
+                                onChange={(e) => handleNestedInputChange("latrineFacility", "openDefecation", parseInt(e.target.value) || 0)}
+                                name="latrineFacility.openDefecation"
+                                error={getFieldError("latrineFacility.openDefecation")}
+                            />
+                        </div>
                     </div>
                     
                     {/* Solid Waste Management Section (Questions 21a-21c) */}
@@ -7051,7 +7127,13 @@ export default function SlumSurveyPage() {
                         <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Storm Water Drainage:</strong> {formData.connectivityStormWaterDrainage || 'N/A'}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Connectivity Sewerage System:</strong> {formData.connectivitySewerageSystem || 'N/A'}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Prone to Flooding:</strong> {formData.proneToFlooding || 'N/A'}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility:</strong> {formData.latrineFacility || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Own Septic Tank/Flush Latrine:</strong> {formData.latrineFacility?.ownSepticTankFlushLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Own Dry Latrine:</strong> {formData.latrineFacility?.ownDryLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Shared Septic Tank/Flush Latrine:</strong> {formData.latrineFacility?.sharedSepticTankFlushLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Shared Dry Latrine:</strong> {formData.latrineFacility?.sharedDryLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Community Septic Tank/Flush Latrine:</strong> {formData.latrineFacility?.communitySepticTankFlushLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Community Dry Latrine:</strong> {formData.latrineFacility?.communityDryLatrine || 'N/A'}</div>
+                        <div className="p-2 bg-slate-800 rounded"><strong>Latrine Facility - Open Defecation:</strong> {formData.latrineFacility?.openDefecation || 'N/A'}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Frequency of Garbage Disposal:</strong> {formData.frequencyOfGarbageDisposal || 'N/A'}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Arrangement for Garbage Disposal:</strong> {formData.arrangementForGarbageDisposal || 'N/A'}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Frequency of Clearance of Open Drains:</strong> {formData.frequencyOfClearanceOfOpenDrains || 'N/A'}</div>
@@ -7247,7 +7329,7 @@ export default function SlumSurveyPage() {
                     size="md"
                     onClick={handlePrevious}
                     disabled={currentStep === 0 || submitting || saving || (isPreviewMode && !isEditMode)}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto cursor-pointer"
                 >
                     Previous
                 </Button>
@@ -7259,7 +7341,7 @@ export default function SlumSurveyPage() {
                             size="md"
                             onClick={saveSection}
                             disabled={saving || submitting || (isPreviewMode && !isEditMode)}
-                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 w-full sm:w-auto"
+                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 w-full sm:w-auto cursor-pointer"
                         >
                             {saving ? "Saving..." : (isEditMode ? "Update & Next" : "Save & Next")}
                         </Button>
@@ -7272,7 +7354,7 @@ export default function SlumSurveyPage() {
                               handleSubmit();
                             }}
                             disabled={submitting || saving || (isPreviewMode && !isEditMode)}
-                            className="bg-green-600 hover:bg-green-500 w-full sm:w-auto"
+                            className="bg-green-600 hover:bg-green-500 w-full sm:w-auto cursor-pointer"
                         >
                             {submitting ? "Submitting..." : (isEditMode ? "Update Survey" : "Submit Survey")}
                         </Button>
