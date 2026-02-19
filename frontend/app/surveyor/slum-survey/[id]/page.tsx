@@ -3493,6 +3493,7 @@ export default function SlumSurveyPage() {
                     readOnly
                     className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
+                    <div>
                     <Input
                     label="Slum Population"
                     type="number"
@@ -3501,7 +3502,11 @@ export default function SlumSurveyPage() {
                     required
                     name="slumPopulation"
                     error={getFieldError('slumPopulation')}
+                    readOnly
+                    className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Auto-calculated from household survey data</p>
+                    </div>
                     <Input
                     label="No. of Slum Households"
                     type="number"
@@ -3513,6 +3518,7 @@ export default function SlumSurveyPage() {
                     name="noSlumHouseholds"
                     error={getFieldError('noSlumHouseholds')}
                     />
+                    <div>
                     <Input
                     label="BPL Population"
                     type="number"
@@ -3521,7 +3527,12 @@ export default function SlumSurveyPage() {
                     required
                     name="bplPopulation"
                     error={getFieldError('bplPopulation')}
+                    readOnly
+                    className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Auto-calculated from household survey BPL status</p>
+                    </div>
+                    <div>
                     <Input
                     label="No. of BPL Households"
                     type="number"
@@ -3530,7 +3541,11 @@ export default function SlumSurveyPage() {
                     required
                     name="bplHouseholds"
                     error={getFieldError('bplHouseholds')}
+                    readOnly
+                    className="bg-slate-800/50 cursor-not-allowed opacity-75"
                     />
+                    <p className="text-xs text-gray-400 mt-1">Auto-calculated from household survey BPL status</p>
+                    </div>
                 </div>
             </div>
             )}

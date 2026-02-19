@@ -4,7 +4,7 @@ const Ward = require('../../models/Ward');
 const District = require('../../models/District');
 const State = require('../../models/State');
 const Assignment = require('../../models/Assignment');
-const { updateSlumStatus, updateAssignmentStatusFromSlumSurvey, updateAssignmentMainStatus } = require('../../utils/statusSyncHelper');
+const { updateSlumStatus, updateAssignmentStatusFromSlumSurvey, updateAssignmentMainStatus, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 
 /**
@@ -222,7 +222,19 @@ exports.createOrGetSlumSurvey = async (req, res) => {
             { path: 'slum', select: 'slumName population' },
             { path: 'surveyor', select: 'name ' },
         ]);
-         
+        
+        // Calculate and update slum population from household surveys
+        await updateSlumPopulationFromHouseholdSurveys(slumId);
+                
+        // Calculate and update BPL population from household surveys
+        await updateSlumBplPopulationFromHouseholdSurveys(slumId);
+                
+        // Re-fetch the survey to get updated population and BPL data
+        survey = await SlumSurvey.findById(survey._id).populate([
+            { path: 'slum', select: 'slumName population' },
+            { path: 'surveyor', select: 'name ' },
+        ]);
+                
         sendSuccess(res, survey, 'Slum survey retrieved/created successfully');
     } catch (error) {
         console.error('Error in createOrGetSlumSurvey:', error.message);
@@ -246,13 +258,28 @@ exports.getSlumSurvey = async (req, res) => {
             return sendError(res, 'Survey not found', 404);
         }
 
+        // Calculate and update slum population from household surveys
+        await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
+        
+        // Calculate and update BPL population from household surveys
+        await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
+        
+        // Re-fetch the survey to get updated population and BPL data
+        const updatedSurvey = await SlumSurvey.findById(surveyId).populate([
+            { path: 'slum', select: 'slumName population' },
+            { path: 'surveyor', select: 'name ' },
+        ]);
+        
+        // Use the updated survey for the rest of the function
+        const finalSurvey = updatedSurvey || survey;
+
         // Ensure nested objects are properly initialized to prevent validation errors
-        if (survey.physicalInfrastructure) {
-            if (survey.physicalInfrastructure.sourceDrinkingWater === undefined) {
-                survey.physicalInfrastructure.sourceDrinkingWater = {};
+        if (finalSurvey.physicalInfrastructure) {
+            if (finalSurvey.physicalInfrastructure.sourceDrinkingWater === undefined) {
+                finalSurvey.physicalInfrastructure.sourceDrinkingWater = {};
             }
-            if (survey.physicalInfrastructure.solidWasteManagement === undefined) {
-                survey.physicalInfrastructure.solidWasteManagement = {};
+            if (finalSurvey.physicalInfrastructure.solidWasteManagement === undefined) {
+                finalSurvey.physicalInfrastructure.solidWasteManagement = {};
             }
         }
         
@@ -329,23 +356,23 @@ exports.getSlumSurvey = async (req, res) => {
         }
         
         // Ensure sections 8-14 are properly initialized
-        if (survey.economicStatus === undefined) {
-            survey.economicStatus = {};
+        if (finalSurvey.economicStatus === undefined) {
+            finalSurvey.economicStatus = {};
         }
         
-        if (survey.employmentAndOccupation === undefined) {
-            survey.employmentAndOccupation = {};
+        if (finalSurvey.employmentAndOccupation === undefined) {
+            finalSurvey.employmentAndOccupation = {};
         }
         
-        if (survey.healthFacilities === undefined) {
-            survey.healthFacilities = {};
+        if (finalSurvey.healthFacilities === undefined) {
+            finalSurvey.healthFacilities = {};
         }
         
-        if (survey.socialDevelopment === undefined) {
-            survey.socialDevelopment = {};
+        if (finalSurvey.socialDevelopment === undefined) {
+            finalSurvey.socialDevelopment = {};
         }
         
-        sendSuccess(res, survey, 'Survey retrieved successfully');
+        sendSuccess(res, finalSurvey, 'Survey retrieved successfully');
     } catch (error) {
         console.error('Error in getSlumSurvey:', error.message);
         sendError(res, error.message || 'Failed to get survey', 500);
@@ -382,6 +409,31 @@ exports.updateSlumSurvey = async (req, res) => {
         }
         
         // Handle nested objects to prevent validation errors
+        // Prevent manual updates to slumPopulation as it's auto-calculated
+        if (updateData.cityTownSlumProfile && updateData.cityTownSlumProfile.slumPopulation !== undefined) {
+            console.log('Ignoring manual update to slumPopulation as it is auto-calculated');
+            delete updateData.cityTownSlumProfile.slumPopulation;
+            
+            // If cityTownSlumProfile becomes empty after deletion, remove it
+            if (Object.keys(updateData.cityTownSlumProfile).length === 0) {
+                delete updateData.cityTownSlumProfile;
+            }
+        }
+        
+        // Prevent manual updates to BPL population and households as they're auto-calculated
+        if (updateData.cityTownSlumProfile && 
+            (updateData.cityTownSlumProfile.bplPopulation !== undefined || 
+             updateData.cityTownSlumProfile.bplHouseholds !== undefined)) {
+            console.log('Ignoring manual update to BPL population/households as they are auto-calculated');
+            delete updateData.cityTownSlumProfile.bplPopulation;
+            delete updateData.cityTownSlumProfile.bplHouseholds;
+            
+            // If cityTownSlumProfile becomes empty after deletion, remove it
+            if (Object.keys(updateData.cityTownSlumProfile).length === 0) {
+                delete updateData.cityTownSlumProfile;
+            }
+        }
+        
         Object.assign(survey, updateData);
         
         // Ensure nested objects are properly initialized to prevent validation errors
@@ -672,13 +724,31 @@ exports.getSlumSurveyBySlumId = async (req, res) => {
             return sendError(res, 'Survey not found for this slum', 404);
         }
 
+        // Calculate and update slum population from household surveys
+        await updateSlumPopulationFromHouseholdSurveys(slumId);
+        
+        // Calculate and update BPL population from household surveys
+        await updateSlumBplPopulationFromHouseholdSurveys(slumId);
+        
+        // Re-fetch the survey to get updated population and BPL data
+        const updatedSurvey = await SlumSurvey.findOne({
+            slum: slumId,
+            surveyor: userId,
+        }).populate([
+            { path: 'slum', select: 'slumName population' },
+            { path: 'surveyor', select: 'name ' },
+        ]);
+        
+        // Use the updated survey for the rest of the function
+        const finalSurvey = updatedSurvey || survey;
+
         // Ensure nested objects are properly initialized to prevent validation errors
-        if (survey.physicalInfrastructure) {
-            if (survey.physicalInfrastructure.sourceDrinkingWater === undefined) {
-                survey.physicalInfrastructure.sourceDrinkingWater = {};
+        if (finalSurvey.physicalInfrastructure) {
+            if (finalSurvey.physicalInfrastructure.sourceDrinkingWater === undefined) {
+                finalSurvey.physicalInfrastructure.sourceDrinkingWater = {};
             }
-            if (survey.physicalInfrastructure.solidWasteManagement === undefined) {
-                survey.physicalInfrastructure.solidWasteManagement = {};
+            if (finalSurvey.physicalInfrastructure.solidWasteManagement === undefined) {
+                finalSurvey.physicalInfrastructure.solidWasteManagement = {};
             }
         }
         
@@ -763,15 +833,15 @@ exports.getSlumSurveyBySlumId = async (req, res) => {
             survey.employmentAndOccupation = {};
         }
         
-        if (survey.healthFacilities === undefined) {
-            survey.healthFacilities = {};
+        if (finalSurvey.healthFacilities === undefined) {
+            finalSurvey.healthFacilities = {};
         }
         
-        if (survey.socialDevelopment === undefined) {
-            survey.socialDevelopment = {};
+        if (finalSurvey.socialDevelopment === undefined) {
+            finalSurvey.socialDevelopment = {};
         }
         
-        sendSuccess(res, survey, 'Survey retrieved successfully');
+        sendSuccess(res, finalSurvey, 'Survey retrieved successfully');
     } catch (error) {
         console.error('Error in getSlumSurveyBySlumId:', error.message);
         sendError(res, error.message || 'Failed to get survey', 500);

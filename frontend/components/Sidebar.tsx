@@ -19,6 +19,7 @@ const supervisorItems = [
   { href: "/supervisor/slums", label: "Slums", icon: Map },
   { href: "/supervisor/assignments", label: "Assignments", icon: ClipboardList },
   { href: "/supervisor/reports", label: "Reports", icon: TrendingUp },
+  { href: "/supervisor/hhqc", label: "HHQC", icon: CheckSquare },
 ];
 
 const adminItems = [

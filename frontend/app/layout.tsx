@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Socio-Economic Survey System",
   description: "A comprehensive survey system for socio-economic data collection",
   icons: {
-    icon: "/favicon.ico"
+    icon: "/SES_logo.png"
   },
 };
 

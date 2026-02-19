@@ -197,6 +197,52 @@ export default function HouseholdSurveyPage() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [householdProgress, setHouseholdProgress] = useState({ completed: 0, total: 0 });
 
+  // Auto-calculate totals when male/female fields change
+  useEffect(() => {
+    setFormData(prev => {
+      const updated = { ...prev };
+      
+      // Family members total
+      if (updated.familyMembersMale !== undefined && updated.familyMembersFemale !== undefined) {
+        updated.familyMembersTotal = (updated.familyMembersMale || 0) + (updated.familyMembersFemale || 0);
+      }
+      
+      // Illiterate adults total
+      if (updated.illiterateAdultMale !== undefined && updated.illiterateAdultFemale !== undefined) {
+        updated.illiterateAdultTotal = (updated.illiterateAdultMale || 0) + (updated.illiterateAdultFemale || 0);
+      }
+      
+      // Children not attending school total
+      if (updated.childrenNotAttendingMale !== undefined && updated.childrenNotAttendingFemale !== undefined) {
+        updated.childrenNotAttendingTotal = (updated.childrenNotAttendingMale || 0) + (updated.childrenNotAttendingFemale || 0);
+      }
+      
+      // Handicapped total
+      if (updated.handicappedPhysically !== undefined && updated.handicappedMentally !== undefined) {
+        updated.handicappedTotal = (updated.handicappedPhysically || 0) + (updated.handicappedMentally || 0);
+      }
+      
+      // Earning adults total
+      if (updated.earningAdultMale !== undefined && updated.earningAdultFemale !== undefined) {
+        updated.earningAdultTotal = (updated.earningAdultMale || 0) + (updated.earningAdultFemale || 0);
+      }
+      
+      // Earning non-adults total
+      if (updated.earningNonAdultMale !== undefined && updated.earningNonAdultFemale !== undefined) {
+        updated.earningNonAdultTotal = (updated.earningNonAdultMale || 0) + (updated.earningNonAdultFemale || 0);
+      }
+      
+      return updated;
+    });
+  }, [
+    formData.familyMembersMale, formData.familyMembersFemale,
+    formData.illiterateAdultMale, formData.illiterateAdultFemale,
+    formData.childrenNotAttendingMale, formData.childrenNotAttendingFemale,
+    formData.handicappedPhysically, formData.handicappedMentally,
+    formData.earningAdultMale, formData.earningAdultFemale,
+    formData.earningNonAdultMale, formData.earningNonAdultFemale
+  ]);
+
   const fetchProgress = useCallback(async () => {
     try {
       const response = await apiService.getMyAssignments();
@@ -1154,6 +1200,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("familyMembersFemale")}
                       />
+                      <div>
                       <Input
                         label="11c. Number of Family Members (Total)"
                         type="number"
@@ -1171,6 +1218,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("familyMembersTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                      </div>
                       <Input
                         label="12a. Number of Illiterate Adult Male Members (>14 yrs old)"
                         type="number"
@@ -1205,6 +1254,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("illiterateAdultFemale")}
                       />
+                      <div>
                       <Input
                         label="12c. Number of Illiterate Adult Total Members (>14 yrs old)"
                         type="number"
@@ -1222,6 +1272,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("illiterateAdultTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                      </div>
                       <Input
                         label="13a. Number of Children Aged 6-14 Not Attending School (Male)"
                         type="number"
@@ -1256,6 +1308,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("childrenNotAttendingFemale")}
                       />
+                      <div>
                       <Input
                         label="13c. Number of Children Aged 6-14 Not Attending School (Total)"
                         type="number"
@@ -1273,6 +1326,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("childrenNotAttendingTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                      </div>
                       <Input
                         label="14a. Number of Handicapped Persons (Physically)"
                         type="number"
@@ -1307,6 +1362,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("handicappedMentally")}
                       />
+                      <div>
                       <Input
                         label="14c. Number of Handicapped Persons (Total)"
                         type="number"
@@ -1324,6 +1380,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("handicappedTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Physically + Mentally). Can be manually edited if needed.</p>
+                      </div>
                       <Select
                         label="15. If Major Earning Member is Female, Status"
                         value={formData.femaleEarningStatus || ""}
@@ -1986,6 +2044,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("earningAdultFemale")}
                       />
+                      <div>
                       <Input
                         label="40c. Number of Earning Adult Members (Total)"
                         type="number"
@@ -2003,6 +2062,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("earningAdultTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                      </div>
                       <Input
                         label="41a. Number of Earning Non-Adult Members (Male)"
                         type="number"
@@ -2037,6 +2098,7 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("earningNonAdultFemale")}
                       />
+                      <div>
                       <Input
                         label="41c. Number of Earning Non-Adult Members (Total)"
                         type="number"
@@ -2054,6 +2116,8 @@ export default function HouseholdSurveyPage() {
                         required
                         error={getFieldError("earningNonAdultTotal")}
                       />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                      </div>
                       <Input
                         label="42. Average Monthly Income of Household (in Rs.)"
                         type="number"

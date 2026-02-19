@@ -430,11 +430,140 @@ async function initializeAssignmentStatus(assignmentId) {
   }
 }
 
+/**
+ * Calculate and update slum population based on household survey family members
+ * @param {string} slumId - The ID of the slum
+ * @returns {Promise<boolean>} - Whether the update was successful
+ */
+async function updateSlumPopulationFromHouseholdSurveys(slumId) {
+  try {
+    console.log(`[STATUS_SYNC] Updating slum population from household surveys for slum ID: ${slumId}`);
+    
+    // Get all household surveys for this slum
+    const householdSurveys = await HouseholdSurvey.find({ slum: slumId });
+    
+    // Calculate the sum of family members from all household surveys
+    let totalPopulation = 0;
+    householdSurveys.forEach(hs => {
+      if (hs.familyMembersTotal && typeof hs.familyMembersTotal === 'number') {
+        totalPopulation += hs.familyMembersTotal;
+      }
+    });
+    
+    console.log(`[STATUS_SYNC] Calculated total population: ${totalPopulation} from ${householdSurveys.length} household surveys`);
+    
+    // Find the slum survey for this slum
+    let slumSurvey = await SlumSurvey.findOne({ slum: slumId });
+    
+    if (!slumSurvey) {
+      console.log(`[STATUS_SYNC] No slum survey found for slum: ${slumId}. Creating one if needed elsewhere.`);
+      return true; // Don't fail if no slum survey exists yet
+    }
+    
+    // Update the slum population in the slum survey
+    if (slumSurvey.cityTownSlumProfile) {
+      slumSurvey.cityTownSlumProfile.slumPopulation = totalPopulation;
+    } else {
+      // Initialize cityTownSlumProfile if it doesn't exist
+      slumSurvey.cityTownSlumProfile = {
+        slumPopulation: totalPopulation
+      };
+    }
+    
+    // Save the updated slum survey
+    await slumSurvey.save();
+    
+    console.log(`[STATUS_SYNC] Updated slum population to ${totalPopulation} for slum survey: ${slumSurvey._id}`);
+    
+    return true;
+  } catch (error) {
+    console.error(`[STATUS_SYNC] Error updating slum population from household surveys for slum ${slumId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Calculate and update BPL population based on household survey BPL status
+ * @param {string} slumId - The ID of the slum
+ * @returns {Promise<boolean>} - Whether the update was successful
+ */
+async function updateSlumBplPopulationFromHouseholdSurveys(slumId) {
+  try {
+    console.log(`[STATUS_SYNC] Updating slum BPL population from household surveys for slum ID: ${slumId}`);
+    
+    // Get all household surveys for this slum
+    const householdSurveys = await HouseholdSurvey.find({ slum: slumId });
+    
+    // Calculate BPL population: sum family members only for households with belowPovertyLine = 'YES'
+    let bplPopulation = 0;
+    let bplHouseholds = 0;
+    
+    householdSurveys.forEach(hs => {
+      if (hs.belowPovertyLine === 'YES') {
+        bplHouseholds += 1;
+        if (hs.familyMembersTotal && typeof hs.familyMembersTotal === 'number') {
+          bplPopulation += hs.familyMembersTotal;
+        }
+      }
+    });
+    
+    console.log(`[STATUS_SYNC] Calculated BPL population: ${bplPopulation} from ${bplHouseholds} BPL households out of ${householdSurveys.length} total households`);
+    
+    // Find the slum survey for this slum
+    let slumSurvey = await SlumSurvey.findOne({ slum: slumId });
+    
+    if (!slumSurvey) {
+      console.log(`[STATUS_SYNC] No slum survey found for slum: ${slumId}. Creating one if needed elsewhere.`);
+      return true; // Don't fail if no slum survey exists yet
+    }
+    
+    // Update the BPL population and households in the slum survey
+    if (slumSurvey.cityTownSlumProfile) {
+      slumSurvey.cityTownSlumProfile.bplPopulation = bplPopulation;
+      slumSurvey.cityTownSlumProfile.bplHouseholds = bplHouseholds;
+    } else {
+      // Initialize cityTownSlumProfile if it doesn't exist
+      slumSurvey.cityTownSlumProfile = {
+        bplPopulation: bplPopulation,
+        bplHouseholds: bplHouseholds
+      };
+    }
+    
+    // Also update the demographic profile BPL data
+    if (slumSurvey.demographicProfile) {
+      if (!slumSurvey.demographicProfile.bplPopulation) {
+        slumSurvey.demographicProfile.bplPopulation = {};
+      }
+      if (!slumSurvey.demographicProfile.numberOfBplHouseholds) {
+        slumSurvey.demographicProfile.numberOfBplHouseholds = {};
+      }
+      
+      // Set total values
+      slumSurvey.demographicProfile.bplPopulation.Total = bplPopulation;
+      slumSurvey.demographicProfile.numberOfBplHouseholds.Total = bplHouseholds;
+    }
+    
+    // Save the updated slum survey
+    await slumSurvey.save();
+    
+    console.log(`[STATUS_SYNC] Updated BPL population to ${bplPopulation} and BPL households to ${bplHouseholds} for slum survey: ${slumSurvey._id}`);
+    
+    return true;
+  } catch (error) {
+    console.error(`[STATUS_SYNC] Error updating slum BPL population from household surveys for slum ${slumId}:`, error);
+    return false;
+  }
+}
+
+
+
 module.exports = {
   updateSlumStatus,
   updateAssignmentStatusFromSlumSurvey,
   updateStatusesFromHouseholdSurvey,
   updateAssignmentMainStatus,
   initializeAssignmentStatus,
-  updateHouseholdSurveyProgress
+  updateHouseholdSurveyProgress,
+  updateSlumPopulationFromHouseholdSurveys,
+  updateSlumBplPopulationFromHouseholdSurveys
 };

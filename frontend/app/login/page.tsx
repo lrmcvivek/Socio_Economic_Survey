@@ -93,9 +93,7 @@ export default function LoginPage() {
       <div className="w-full max-w-105 relative z-10">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-tr from-blue-600 to-cyan-500 mb-6 shadow-lg shadow-blue-500/20">
-            <LayoutDashboard className="w-8 h-8 text-white" />
-          </div>
+          <img src="/SES_logo.png" alt="Socio-Economic Survey Logo" className="w-16 h-16 mx-auto mb-6" />
           <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
             Welcome Back
           </h1>

@@ -620,9 +620,14 @@ class ApiService {
     }
   }
 
-  public async getHouseholdSurveysBySlum(slumId: string): Promise<ApiResponse> {
+  public async getHouseholdSurveysBySlum(slumId: string, status?: string): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/surveys/households/${slumId}`, {
+      let url = `${this.baseUrl}/surveys/household-surveys/slum/${slumId}`;
+      if (status) {
+        url += `?status=${encodeURIComponent(status)}`;
+      }
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });

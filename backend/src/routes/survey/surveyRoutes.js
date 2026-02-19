@@ -25,7 +25,8 @@ const {
   getHouseholdSurveyByHouseholdId,
   deleteHouseholdSurvey,
   updateSurveySection: updateHouseholdSurveySection,
-  getSurveysSummary
+  getSurveysSummary,
+  getHouseholdSurveysBySlum
 } = require('../../controllers/survey/householdSurveyController');
 const {
   createOrGetSlumSurvey,
@@ -80,6 +81,8 @@ router.post('/household-surveys/:surveyId/submit', auth, submitHouseholdSurvey);
 router.delete('/household-surveys/:surveyId', auth, deleteHouseholdSurvey);
 // Get all surveys summary for surveyor
 router.get('/household-surveys/summary/all', auth, getSurveysSummary);
+// Get all household surveys for a specific slum
+router.get('/household-surveys/slum/:slumId', auth, authorize('SUPERVISOR', 'ADMIN'), getHouseholdSurveysBySlum);
 
 // ===== ASSIGNMENT ROUTES =====
 // Create new assignment

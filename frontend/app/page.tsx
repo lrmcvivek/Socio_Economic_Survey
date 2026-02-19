@@ -13,9 +13,12 @@ export default function LandingPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-125 h-125 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
       
       <div className="max-w-3xl w-full text-center space-y-8 relative z-10">
-        <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight">
-          Socio-Economic Survey
-        </h1>
+        <div className="flex flex-col items-center justify-center mb-8">
+          <img src="/SES_logo.png" alt="Socio-Economic Survey Logo" className="w-24 h-24 mb-4" />
+          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight">
+            Socio-Economic Survey
+          </h1>
+        </div>
         
         <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
           Advanced digital data collection system for large-scale demographic and infrastructure surveys.

@@ -4,6 +4,7 @@ const CACHE_NAME = 'ses-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
+  '/SES_logo.png',
   '/favicon.ico',
   '/globals.css',
   '/offline.html'

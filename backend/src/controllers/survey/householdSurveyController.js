@@ -1,6 +1,6 @@
 const HouseholdSurvey = require('../../models/HouseholdSurvey');
 const Slum = require('../../models/Slum');
-const { updateStatusesFromHouseholdSurvey } = require('../../utils/statusSyncHelper');
+const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
@@ -50,6 +50,12 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
       { path: 'slum', select: 'slumName location ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
+
+    // Update slum population calculation after creating/retrieving survey
+    await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
+    
+    // Update BPL population calculation after creating/retrieving survey
+    await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
 
     sendSuccess(res, survey, 'Household survey retrieved/created successfully');
   } catch (error) {
@@ -124,6 +130,8 @@ exports.updateHouseholdSurvey = async (req, res) => {
       }
     });
     
+    // Auto-calculation is now handled in the frontend. Backend will accept whatever values are sent.
+    
     Object.assign(survey, sanitizedUpdateData);
     survey.lastModifiedBy = userId;
     survey.lastModifiedAt = new Date();
@@ -134,6 +142,21 @@ exports.updateHouseholdSurvey = async (req, res) => {
       { path: 'slum', select: 'slumName village ward' },
       { path: 'surveyor', select: 'name email' },
     ]);
+
+    // Update slum population if family members count changed
+    if (updateData.familyMembersTotal !== undefined || 
+        updateData.familyMembersMale !== undefined || 
+        updateData.familyMembersFemale !== undefined) {
+      await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
+    }
+    
+    // Update BPL population if BPL status or family members count changed
+    if (updateData.belowPovertyLine !== undefined || 
+        updateData.familyMembersTotal !== undefined || 
+        updateData.familyMembersMale !== undefined || 
+        updateData.familyMembersFemale !== undefined) {
+      await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
+    }
 
     console.log(`Updated household survey ${surveyId}`);
     sendSuccess(res, survey, 'Survey updated successfully');
@@ -205,6 +228,8 @@ exports.submitHouseholdSurvey = async (req, res) => {
       }
     });
     
+    // Auto-calculation is now handled in the frontend. Backend will accept whatever values are sent.
+    
     console.log('Sanitized data:', JSON.stringify(sanitizedData, null, 2));
     console.log('Excluded fields:', { 
       householdId: !!req.body.householdId, 
@@ -248,6 +273,12 @@ exports.submitHouseholdSurvey = async (req, res) => {
 
     // Update related statuses after successful submission
     await updateStatusesFromHouseholdSurvey(surveyId);
+    
+    // Update slum population based on family members count
+    await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
+    
+    // Update BPL population based on BPL status and family members count
+    await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
 
     console.log(`Submitted household survey ${surveyId}`);
     sendSuccess(res, survey, 'Survey submitted successfully', 200);
@@ -324,8 +355,18 @@ exports.deleteHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Not authorized to delete this survey', 403);
     }
 
+    // Save slum reference before deletion
+    const slumId = survey.slum;
+    
     await HouseholdSurvey.findByIdAndDelete(surveyId);
     console.log(`Deleted household survey ${surveyId}`);
+    
+    // Update slum population calculation after deletion
+    if (slumId) {
+      await updateSlumPopulationFromHouseholdSurveys(slumId);
+      await updateSlumBplPopulationFromHouseholdSurveys(slumId);
+    }
+    
     sendSuccess(res, null, 'Survey deleted successfully');
   } catch (error) {
     console.error('Error in deleteHouseholdSurvey:', error.message);
@@ -384,11 +425,51 @@ exports.updateSurveySection = async (req, res) => {
       { path: 'surveyor', select: 'name email' },
     ]);
 
+    // Update slum population if family members section was updated
+    if (section === 'demographics' || section === 'familyMembersTotal' || 
+        section === 'familyMembersMale' || section === 'familyMembersFemale') {
+      await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
+    }
+    
+    // Update BPL population if BPL status or family members section was updated
+    if (section === 'demographics' || section === 'belowPovertyLine' || 
+        section === 'familyMembersTotal' || section === 'familyMembersMale' || 
+        section === 'familyMembersFemale') {
+      await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
+    }
+
     console.log(`Updated survey section: ${section} for survey ${surveyId}`);
     sendSuccess(res, survey, `${section} updated successfully`);
   } catch (error) {
     console.error('Error in updateSurveySection:', error.message);
     sendError(res, error.message || 'Failed to update survey section', 500);
+  }
+};
+
+/**
+ * Get all household surveys for a specific slum
+ */
+exports.getHouseholdSurveysBySlum = async (req, res) => {
+  try {
+    const { slumId } = req.params;
+    const { status } = req.query;
+
+    let query = { slum: slumId };
+    if (status) {
+      query.surveyStatus = status;
+    }
+
+    const surveys = await HouseholdSurvey.find(query)
+      .populate([
+        { path: 'slum', select: 'slumName location ward' },
+        { path: 'surveyor', select: 'name email' },
+      ])
+      .sort({ createdAt: -1 });
+
+    sendSuccess(res, surveys, 'Household surveys retrieved successfully');
+  } catch (error) {
+    console.error('Error in getHouseholdSurveysBySlum:', error.message);
+    sendError(res, error.message || 'Failed to get household surveys', 500);
   }
 };
 
