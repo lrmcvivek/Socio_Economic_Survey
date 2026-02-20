@@ -1,7 +1,6 @@
 const HouseholdSurvey = require('../../models/HouseholdSurvey');
 const Slum = require('../../models/Slum');
 const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys, updateSlumDemographicPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
-const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
 // Placeholder for old exports - will be removed after testing
@@ -81,6 +80,17 @@ exports.getHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Survey not found', 404);
     }
 
+    // Check authorization for supervisors (allow them to view any survey)
+    if (req.user.role === 'SUPERVISOR') {
+      // Supervisors can view all surveys for HHQC purposes
+    } else if (req.user.role === 'SURVEYOR') {
+      // Surveyors can only view their own surveys
+      if (survey.surveyor.toString() !== req.user.id.toString()) {
+        return sendError(res, 'Not authorized to view this survey', 403);
+      }
+    }
+    // Admins can view all surveys by default
+
     sendSuccess(res, survey, 'Survey retrieved successfully');
   } catch (error) {
     console.error('Error in getHouseholdSurvey:', error.message);
@@ -103,8 +113,10 @@ exports.updateHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Survey not found', 404);
     }
 
-    // Check authorization
-    if (survey.surveyor.toString() !== userId.toString() && req.user.role !== 'ADMIN') {
+    // Check authorization - allow original surveyor, admins, and supervisors
+    if (survey.surveyor.toString() !== userId.toString() && 
+        req.user.role !== 'ADMIN' && 
+        req.user.role !== 'SUPERVISOR') {
       return sendError(res, 'Not authorized to update this survey', 403);
     }
 

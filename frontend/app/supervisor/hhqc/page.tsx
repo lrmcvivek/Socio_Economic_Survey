@@ -11,6 +11,10 @@ import { HouseholdSurvey } from "@/types/householdSurvey";
 
 export default function HHQCPage() {
   const router = useRouter();
+
+  const handleBack = () => {
+    router.push("/supervisor/dashboard");
+  };
   const [loading, setLoading] = useState(true);
   const [slums, setSlums] = useState<any[]>([]);
   const [selectedSlum, setSelectedSlum] = useState<string>("");
@@ -73,14 +77,19 @@ export default function HHQCPage() {
   }, [selectedSlum]);
 
   const handleEditRecord = (survey: HouseholdSurvey) => {
-    // Navigate directly to the household survey ID to edit existing data
-    router.push(`/surveyor/household-survey/${survey._id}`);
+    // Navigate to supervisor HHQC edit page
+    router.push(`/supervisor/hhqc/${survey._id}`);
   };
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">HHQC - Household Quality Control</h1>
+        <div className="flex items-center space-x-4">
+          <Button variant="secondary" onClick={handleBack}>
+            ← Back to Dashboard
+          </Button>
+          <h1 className="text-2xl font-bold text-white">HHQC - Household Quality Control</h1>
+        </div>
       </div>
 
       {error && (
