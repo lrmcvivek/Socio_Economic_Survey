@@ -48,7 +48,6 @@ const slumSurveySchema = new mongoose.Schema({
     slumType: String,
     slumIdField: String,
     slumName: String,
-    ownershipLand: String,
     areaSqMtrs: Number,
     slumPopulation: Number,
     noSlumHouseholds: Number,
@@ -116,6 +115,14 @@ const slumSurveySchema = new mongoose.Schema({
       Minorities: Number
     },
     womenHeadedHouseholds: {
+      SC: Number,
+      ST: Number,
+      OBC: Number,
+      Others: Number,
+      Total: Number,
+      Minorities: Number
+    },
+    numberOfWomenHeadedHouseholds: {
       SC: Number,
       ST: Number,
       OBC: Number,

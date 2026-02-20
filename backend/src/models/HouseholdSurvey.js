@@ -174,7 +174,7 @@ const householdSurveySchema = new mongoose.Schema({
   },
   femaleHeadStatus: {
     type: String,
-    enum: FEMALE_HEAD_STATUS_ENUM
+    enum: { values: [...FEMALE_HEAD_STATUS_ENUM, ''], message: '{VALUE} is not a valid female head status' }
   },
 
   // Family Members Count

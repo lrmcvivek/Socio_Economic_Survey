@@ -587,6 +587,16 @@ async function updateSlumDemographicPopulationFromHouseholdSurveys(slumId) {
       Total: { population: 0, households: 0 }
     };
     
+    // Initialize women-headed household demographic counters
+    let womenHeadedDemographicCounts = {
+      SC: { population: 0, households: 0 },
+      ST: { population: 0, households: 0 },
+      OBC: { population: 0, households: 0 },
+      Others: { population: 0, households: 0 },
+      Minorities: { population: 0, households: 0 },
+      Total: { population: 0, households: 0 }
+    };
+    
     // Calculate demographic distribution from all household surveys
     householdSurveys.forEach(hs => {
       const familyMembers = hs.familyMembersTotal || 0;
@@ -641,6 +651,33 @@ async function updateSlumDemographicPopulationFromHouseholdSurveys(slumId) {
         if (hs.minorityStatus === 'MINORITY') {
           bplDemographicCounts.Minorities.population += familyMembers;
           bplDemographicCounts.Minorities.households += 1;
+        }
+      }
+      
+      // Calculate women-headed household demographic distribution (only for households with female head status)
+      if (hs.femaleHeadStatus) { // If femaleHeadStatus has any value (not null/undefined/empty)
+        womenHeadedDemographicCounts.Total.population += familyMembers;
+        womenHeadedDemographicCounts.Total.households += 1;
+        
+        if (hs.caste === 'SC') {
+          womenHeadedDemographicCounts.SC.population += familyMembers;
+          womenHeadedDemographicCounts.SC.households += 1;
+        } else if (hs.caste === 'ST') {
+          womenHeadedDemographicCounts.ST.population += familyMembers;
+          womenHeadedDemographicCounts.ST.households += 1;
+        } else if (hs.caste === 'OBC') {
+          womenHeadedDemographicCounts.OBC.population += familyMembers;
+          womenHeadedDemographicCounts.OBC.households += 1;
+        } else {
+          // General caste maps to Others
+          womenHeadedDemographicCounts.Others.population += familyMembers;
+          womenHeadedDemographicCounts.Others.households += 1;
+        }
+        
+        // Count minorities in women-headed households (regardless of caste)
+        if (hs.minorityStatus === 'MINORITY') {
+          womenHeadedDemographicCounts.Minorities.population += familyMembers;
+          womenHeadedDemographicCounts.Minorities.households += 1;
         }
       }
     });
@@ -698,6 +735,25 @@ async function updateSlumDemographicPopulationFromHouseholdSurveys(slumId) {
       Minorities: bplDemographicCounts.Minorities.households
     };
     
+    // Update the women-headed household demographic profile with calculated values
+    slumSurvey.demographicProfile.womenHeadedHouseholds = {
+      SC: womenHeadedDemographicCounts.SC.population,
+      ST: womenHeadedDemographicCounts.ST.population,
+      OBC: womenHeadedDemographicCounts.OBC.population,
+      Others: womenHeadedDemographicCounts.Others.population,
+      Total: womenHeadedDemographicCounts.Total.population,
+      Minorities: womenHeadedDemographicCounts.Minorities.population
+    };
+    
+    slumSurvey.demographicProfile.numberOfWomenHeadedHouseholds = {
+      SC: womenHeadedDemographicCounts.SC.households,
+      ST: womenHeadedDemographicCounts.ST.households,
+      OBC: womenHeadedDemographicCounts.OBC.households,
+      Others: womenHeadedDemographicCounts.Others.households,
+      Total: womenHeadedDemographicCounts.Total.households,
+      Minorities: womenHeadedDemographicCounts.Minorities.households
+    };
+    
     // Save the updated slum survey
     await slumSurvey.save();
     
@@ -705,6 +761,10 @@ async function updateSlumDemographicPopulationFromHouseholdSurveys(slumId) {
     console.log(`[STATUS_SYNC] Updated BPL demographic population:`, {
       bplPopulation: slumSurvey.demographicProfile.bplPopulation,
       numberOfBplHouseholds: slumSurvey.demographicProfile.numberOfBplHouseholds
+    });
+    console.log(`[STATUS_SYNC] Updated women-headed household demographic population:`, {
+      womenHeadedHouseholds: slumSurvey.demographicProfile.womenHeadedHouseholds,
+      numberOfWomenHeadedHouseholds: slumSurvey.demographicProfile.numberOfWomenHeadedHouseholds
     });
     
     return true;

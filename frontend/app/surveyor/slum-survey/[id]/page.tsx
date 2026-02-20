@@ -33,7 +33,6 @@ interface SlumSurveyForm {
   slumType?: string; // 5 - Notified / Non-Notified / New Identified
   slumIdField?: string; // 6 - Slum ID
   slumName?: string; // 7 - Slum Name
-  ownershipLand?: string; // 8 - Municipal Corporation -01, State Government - 02, Central Government – 03, Private -04, Other - 05
   areaSqMtrs?: number; // 9 - Area in sq Mtrs
   slumPopulation?: number; // 10 - Slum population
   noSlumHouseholds?: number; // 11 - No. of slum House Holds
@@ -585,7 +584,6 @@ export default function SlumSurveyPage() {
     surveyorName: user?.name || "", // Pre-populate with user name
     surveyDate: "", // Will be set after user data is loaded
     slumType: "",
-    ownershipLand: "",
     ownershipLandDetail: "",
     ownershipLandSpecify: "",
     locationCoreOrFringe: "",
@@ -761,7 +759,15 @@ export default function SlumSurveyPage() {
         
     toiletsExisting: 0,
     toiletsAdditional: 0,
-    toiletsCost: 0
+    toiletsCost: 0,
+    
+    // Women-headed households demographics
+    noWomenHeadedHouseholdsSC: 0,
+    noWomenHeadedHouseholdsST: 0,
+    noWomenHeadedHouseholdsOBC: 0,
+    noWomenHeadedHouseholdsOthers: 0,
+    noWomenHeadedHouseholdsTotal: 0,
+    noWomenHeadedHouseholdsMinorities: 0
   });
 
   const steps = [
@@ -1018,12 +1024,12 @@ export default function SlumSurveyPage() {
                 noBplHouseholdsMinorities: surveyData.demographicProfile.noBplHouseholds?.Minorities || 0,
 
                 // Np. of Women-headed Households
-                noWomenHeadedHouseholdsSC: surveyData.demographicProfile.noWomenHeadedHouseholds?.SC || 0,
-                noWomenHeadedHouseholdsST: surveyData.demographicProfile.noWomenHeadedHouseholds?.ST || 0,
-                noWomenHeadedHouseholdsOBC: surveyData.demographicProfile.noWomenHeadedHouseholds?.OBC || 0,
-                noWomenHeadedHouseholdsOthers: surveyData.demographicProfile.noWomenHeadedHouseholds?.Others || 0,
-                noWomenHeadedHouseholdsTotal: surveyData.demographicProfile.noWomenHeadedHouseholds?.Total || 0,
-                noWomenHeadedHouseholdsMinorities: surveyData.demographicProfile.noWomenHeadedHouseholds?.Minorities || 0,
+                noWomenHeadedHouseholdsSC: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.SC || 0,
+                noWomenHeadedHouseholdsST: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.ST || 0,
+                noWomenHeadedHouseholdsOBC: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.OBC || 0,
+                noWomenHeadedHouseholdsOthers: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Others || 0,
+                noWomenHeadedHouseholdsTotal: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Total || 0,
+                noWomenHeadedHouseholdsMinorities: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Minorities || 0,
 
                 // No. of Persons older than 65 Years
                 noPersonsOlder65SC: surveyData.demographicProfile.noPersonsOlder65?.SC || 0,
@@ -1362,13 +1368,13 @@ export default function SlumSurveyPage() {
                 noHouseholdsSlumMinorities: surveyData.demographicProfile.numberOfHouseholds?.Minorities || 0,
                 
                 // Women Headed Households
-                noWomenHeadedHouseholds: surveyData.demographicProfile.womenHeadedHouseholds?.Total || 0,
-                noWomenHeadedHouseholdsSC: surveyData.demographicProfile.womenHeadedHouseholds?.SC || 0,
-                noWomenHeadedHouseholdsST: surveyData.demographicProfile.womenHeadedHouseholds?.ST || 0,
-                noWomenHeadedHouseholdsOBC: surveyData.demographicProfile.womenHeadedHouseholds?.OBC || 0,
-                noWomenHeadedHouseholdsOthers: surveyData.demographicProfile.womenHeadedHouseholds?.Others || 0,
-                noWomenHeadedHouseholdsTotal: surveyData.demographicProfile.womenHeadedHouseholds?.Total || 0,
-                noWomenHeadedHouseholdsMinorities: surveyData.demographicProfile.womenHeadedHouseholds?.Minorities || 0,
+                noWomenHeadedHouseholds: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Total || 0,
+                noWomenHeadedHouseholdsSC: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.SC || 0,
+                noWomenHeadedHouseholdsST: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.ST || 0,
+                noWomenHeadedHouseholdsOBC: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.OBC || 0,
+                noWomenHeadedHouseholdsOthers: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Others || 0,
+                noWomenHeadedHouseholdsTotal: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Total || 0,
+                noWomenHeadedHouseholdsMinorities: surveyData.demographicProfile.numberOfWomenHeadedHouseholds?.Minorities || 0,
                 
                 // Persons Older Than 65 Years
                 noPersonsOlder65: surveyData.demographicProfile.personsOlderThan65Years?.Total || 0,
@@ -1600,7 +1606,6 @@ export default function SlumSurveyPage() {
                 slumType: surveyData.cityTownSlumProfile.slumType || "",
                 slumIdField: surveyData.cityTownSlumProfile.slumIdField || "",
                 slumName: surveyData.cityTownSlumProfile.slumName || "",
-                ownershipLand: surveyData.cityTownSlumProfile.ownershipLand || "",
                 areaSqMtrs: surveyData.cityTownSlumProfile.areaSqMtrs || 0,
                 slumPopulation: surveyData.cityTownSlumProfile.slumPopulation || 0,
                 noSlumHouseholds: surveyData.cityTownSlumProfile.noSlumHouseholds || 0,
@@ -1705,9 +1710,6 @@ export default function SlumSurveyPage() {
     }
     
     // Part B - City/Town Slum Profile
-    if (!formData.ownershipLand) {
-      newErrors.push({ field: 'ownershipLand', message: 'Ownership of Land is required' });
-    }
     if (formData.slumPopulation === undefined || formData.slumPopulation === null || isNaN(formData.slumPopulation) || formData.slumPopulation < 0) {
       newErrors.push({ field: 'slumPopulation', message: 'Slum Population is required' });
     }
@@ -2110,7 +2112,6 @@ export default function SlumSurveyPage() {
           slumType: finalFormData.slumType || "",
           slumIdField: finalFormData.slumIdField || "",
           slumName: finalFormData.slumName || "",
-          ownershipLand: finalFormData.ownershipLand || "",
           areaSqMtrs: finalFormData.areaSqMtrs || 0,
           slumPopulation: finalFormData.slumPopulation || 0,
           noSlumHouseholds: finalFormData.noSlumHouseholds || 0,
@@ -2176,7 +2177,7 @@ export default function SlumSurveyPage() {
             Total: finalFormData.noBplHouseholdsTotal || 0,
             Minorities: finalFormData.noBplHouseholdsMinorities || 0
           },
-          womenHeadedHouseholds: {
+          numberOfWomenHeadedHouseholds: {
             SC: finalFormData.noWomenHeadedHouseholdsSC || 0,
             ST: finalFormData.noWomenHeadedHouseholdsST || 0,
             OBC: finalFormData.noWomenHeadedHouseholdsOBC || 0,
@@ -2732,7 +2733,6 @@ export default function SlumSurveyPage() {
             data.slumType = formData.slumType;
             data.slumIdField = formData.slumIdField;
             data.slumName = formData.slumName;
-            data.ownershipLand = formData.ownershipLand;
             data.areaSqMtrs = formData.areaSqMtrs;
             data.slumPopulation = formData.slumPopulation;
             data.noSlumHouseholds = formData.noSlumHouseholds;
@@ -2791,7 +2791,7 @@ export default function SlumSurveyPage() {
               Total: formData.noBplHouseholdsTotal || 0,
               Minorities: formData.noBplHouseholdsMinorities || 0
             };
-            data.womenHeadedHouseholds = {
+            data.numberOfWomenHeadedHouseholds = {
               SC: formData.noWomenHeadedHouseholdsSC || 0,
               ST: formData.noWomenHeadedHouseholdsST || 0,
               OBC: formData.noWomenHeadedHouseholdsOBC || 0,
@@ -3467,21 +3467,6 @@ export default function SlumSurveyPage() {
                         className="bg-slate-800/50 cursor-not-allowed opacity-75"
                         />
                     </div>
-                    <Select
-                    label="Ownership of Land"
-                    value={formData.ownershipLand || ""}
-                    onChange={(e) => handleInputChange("ownershipLand", e.target.value)}
-                    required
-                    name="ownershipLand"
-                    error={getFieldError('ownershipLand')}
-                    options={[
-                        { value: "MUNICIPAL_CORPORATION", label: "Municipal Corporation" },
-                        { value: "STATE_GOVERNMENT", label: "State Government" },
-                        { value: "CENTRAL_GOVERNMENT", label: "Central Government" },
-                        { value: "PRIVATE", label: "Private" },
-                        { value: "OTHER", label: "Other" },
-                    ]}
-                    />
                     <Input
                     label="Area (sq Mtrs)"
                     type="number"
@@ -3978,6 +3963,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsSC", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsSC"
                             error={getFieldError('noWomenHeadedHouseholdsSC')}
+                            disabled
                             />
                             <Input
                             label="ST"
@@ -3986,6 +3972,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsST", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsST"
                             error={getFieldError('noWomenHeadedHouseholdsST')}
+                            disabled
                             />
                             <Input
                             label="OBC"
@@ -3994,6 +3981,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsOBC", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsOBC"
                             error={getFieldError('noWomenHeadedHouseholdsOBC')}
+                            disabled
                             />
                             <Input
                             label="Others"
@@ -4002,6 +3990,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsOthers", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsOthers"
                             error={getFieldError('noWomenHeadedHouseholdsOthers')}
+                            disabled
                             />
                             <Input
                             label="Minorities"
@@ -4010,6 +3999,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsMinorities", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsMinorities"
                             error={getFieldError('noWomenHeadedHouseholdsMinorities')}
+                            disabled
                             />
                             <Input
                             label="Total"
@@ -4018,6 +4008,7 @@ export default function SlumSurveyPage() {
                             onChange={(e) => handleInputChange("noWomenHeadedHouseholdsTotal", parseInt(e.target.value) || 0)}
                             name="noWomenHeadedHouseholdsTotal"
                             error={getFieldError('noWomenHeadedHouseholdsTotal')}
+                            disabled
                             />
                         </div>
                     </div>
@@ -6922,7 +6913,6 @@ export default function SlumSurveyPage() {
                         <div className="p-2 bg-slate-800 rounded"><strong>Slum Type:</strong> {renderValue(formData.slumType)}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Slum ID:</strong> {renderValue(formData.slumIdField)}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Slum Name:</strong> {renderValue(formData.slumName)}</div>
-                        <div className="p-2 bg-slate-800 rounded"><strong>Ownership of Land:</strong> {renderValue(formData.ownershipLand)}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Area (sq mtrs):</strong> {renderValue(formData.areaSqMtrs, true)}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>Slum Population:</strong> {renderValue(formData.slumPopulation, true)}</div>
                         <div className="p-2 bg-slate-800 rounded"><strong>No. of Slum Households:</strong> {renderValue(formData.noSlumHouseholds, true)}</div>
