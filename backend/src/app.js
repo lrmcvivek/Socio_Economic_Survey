@@ -52,14 +52,12 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const surveyRoutes = require('./routes/survey/surveyRoutes');
 const exportRoutes = require('./routes/exportRoutes');
-const logRoutes = require('./routes/logRoutes');
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/surveys', surveyRoutes);
 app.use('/api/export', exportRoutes);
-app.use('/api/logs', logRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

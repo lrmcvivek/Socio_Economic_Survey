@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import apiService from "@/services/api";
-import FrontendLogger from "@/utils/logger";
 // Ensure you have lucide-react installed: npm install lucide-react
 import {
   User,
@@ -29,37 +28,25 @@ export default function LoginPage() {
   // Load remembered credentials and toggle state on page load
   useEffect(() => {
     const loadCredentialsAndState = () => {
-      FrontendLogger.info("LoginPage: useEffect triggered");
       
       // Load remembered credentials
       const rememberedCredentials = localStorage.getItem("rememberedCredentials");
-      FrontendLogger.info("LoginPage: rememberedCredentials from localStorage:", rememberedCredentials);
       
       // Load remembered toggle state
       const rememberedToggleState = localStorage.getItem("rememberMeState") === 'true';
-      FrontendLogger.info("LoginPage: rememberedToggleState from localStorage:", rememberedToggleState);
       
       if (rememberedCredentials && rememberedToggleState) {
         try {
           const { username, password } = JSON.parse(rememberedCredentials);
-          FrontendLogger.info("LoginPage: parsed credentials:", { 
-            username, 
-            password: password ? '[HIDDEN]' : 'undefined' 
-          });
           if (username && password) {
             setFormData({ username, password });
             setRememberMe(true);
-            FrontendLogger.info("LoginPage: Loaded remembered credentials and set form data");
-          } else {
-            FrontendLogger.info("LoginPage: Username or password missing in stored credentials");
           }
         } catch (error) {
-          FrontendLogger.error("LoginPage: Failed to load remembered credentials:", error);
           localStorage.removeItem("rememberedCredentials");
           localStorage.removeItem("rememberMeState");
+          console.error("Error parsing remembered credentials:", error);
         }
-      } else {
-        FrontendLogger.info("LoginPage: No remembered credentials or toggle state found");
       }
     };
     
@@ -102,13 +89,10 @@ export default function LoginPage() {
             username: formData.username,
             password: formData.password
           };
-          FrontendLogger.info("LoginPage: Saving credentials:", credentialsToSave);
           localStorage.setItem("rememberedCredentials", JSON.stringify(credentialsToSave));
           localStorage.setItem("rememberMeState", "true");
-          FrontendLogger.info("LoginPage: Credentials and toggle state saved for future use");
         } else {
           // Clear any previously saved credentials and toggle state
-          FrontendLogger.info("LoginPage: Remember Me disabled, clearing saved credentials and toggle state");
           localStorage.removeItem("rememberedCredentials");
           localStorage.removeItem("rememberMeState");
         }
@@ -132,7 +116,6 @@ export default function LoginPage() {
         );
       }
     } catch (err: unknown) {
-      FrontendLogger.error("LoginPage: Login exception caught:", err);
       setError("An unexpected error occurred. " + ((err as Error).message || ""));
     } finally {
       setLoading(false);
