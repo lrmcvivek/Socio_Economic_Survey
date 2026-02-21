@@ -37,6 +37,12 @@ const {
   deleteSlumSurvey,
   updateSurveySection: updateSlumSurveySection
 } = require('../../controllers/survey/slumSurveyController');
+const {
+  getParcelsBySlum,
+  getPropertiesBySlumAndParcel,
+  getHouseholdSurveyByParcel,
+  importHouseholds
+} = require('../../controllers/survey/householdSurveyController');
 
 const router = express.Router();
 
@@ -83,6 +89,16 @@ router.delete('/household-surveys/:surveyId', auth, deleteHouseholdSurvey);
 router.get('/household-surveys/summary/all', auth, getSurveysSummary);
 // Get all household surveys for a specific slum
 router.get('/household-surveys/slum/:slumId', auth, authorize('SUPERVISOR', 'ADMIN'), getHouseholdSurveysBySlum);
+
+// ===== PARCEL-BASED HOUSEHOLD ROUTES =====
+// Get all distinct parcel IDs for a slum
+router.get('/household-surveys/parcels/:slumId', auth, authorize('SURVEYOR', 'SUPERVISOR', 'ADMIN'), getParcelsBySlum);
+// Get all property numbers for a specific slum and parcel
+router.get('/household-surveys/properties/:slumId/:parcelId', auth, authorize('SURVEYOR', 'SUPERVISOR', 'ADMIN'), getPropertiesBySlumAndParcel);
+// Get household survey by slum, parcelId, and propertyNo
+router.get('/household-surveys/by-parcel/:slumId/:parcelId/:propertyNo', auth, authorize('SURVEYOR'), getHouseholdSurveyByParcel);
+// Import household data in bulk
+router.post('/household-surveys/import', auth, authorize('ADMIN', 'SUPERVISOR'), importHouseholds);
 
 // ===== ASSIGNMENT ROUTES =====
 // Create new assignment

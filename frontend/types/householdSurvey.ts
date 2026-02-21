@@ -3,6 +3,10 @@ export interface HouseholdSurvey {
   householdId?: string;
   slum?: any;
   houseDoorNo?: string;
+  // New parcel-based fields
+  parcelId?: number;
+  propertyNo?: number;
+  source?: 'CREATED' | 'IMPORTED';
   surveyor?: any;
   surveyStatus?: string;
   submittedAt?: string;

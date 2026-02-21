@@ -143,6 +143,20 @@ const householdSurveySchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Parcel-based identification (new fields)
+  parcelId: {
+    type: Number,
+    required: false  // Not required for backward compatibility
+  },
+  propertyNo: {
+    type: Number,
+    required: false  // Not required for backward compatibility
+  },
+  source: {
+    type: String,
+    enum: ['CREATED', 'IMPORTED'],
+    default: 'CREATED'
+  },
   surveyor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -353,5 +367,10 @@ const householdSurveySchema = new mongoose.Schema({
 // Compound indexes for uniqueness
 householdSurveySchema.index({ slum: 1, householdId: 1 }, { unique: true });
 householdSurveySchema.index({ slum: 1, houseDoorNo: 1 }, { unique: true });
+
+// New indexes for parcel-based uniqueness and performance
+householdSurveySchema.index({ slum: 1, parcelId: 1, propertyNo: 1 }, { unique: true, partialFilterExpression: { parcelId: { $exists: true }, propertyNo: { $exists: true } } });
+householdSurveySchema.index({ slum: 1, parcelId: 1 }); // For parcel lookups
+householdSurveySchema.index({ surveyStatus: 1 }); // For performance
 
 module.exports = mongoose.model('HouseholdSurvey', householdSurveySchema);

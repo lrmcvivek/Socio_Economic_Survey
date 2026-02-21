@@ -4,6 +4,10 @@ const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurv
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
+// Import the sample data for bulk imports
+const fs = require('fs');
+const path = require('path');
+
 // Placeholder for old exports - will be removed after testing
 const _exports = {};
 
@@ -12,11 +16,11 @@ const _exports = {};
  */
 exports.createOrGetHouseholdSurvey = async (req, res) => {
   try {
-    const { slumId, houseDoorNo } = req.body;
+    const { slumId, houseDoorNo, parcelId, propertyNo } = req.body;
     const userId = req.user.id || req.user._id;
 
-    if (!slumId || !houseDoorNo) {
-      return sendError(res, 'slumId and houseDoorNo are required', 400);
+    if (!slumId) {
+      return sendError(res, 'slumId is required', 400);
     }
 
     // Check if slum exists
@@ -25,25 +29,80 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Slum not found', 404);
     }
 
-    // Check if survey already exists for this slum and house door number
-    let survey = await HouseholdSurvey.findOne({ 
-      slum: slumId, 
-      houseDoorNo: houseDoorNo,
-      surveyor: userId 
-    });
+    let survey;
+
+    // Check if parcelId and propertyNo are provided (new workflow)
+    if (parcelId !== undefined && propertyNo !== undefined) {
+      // Check if survey already exists for this slum, parcelId and propertyNo
+      survey = await HouseholdSurvey.findOne({ 
+        slum: slumId, 
+        parcelId: parseInt(parcelId),
+        propertyNo: parseInt(propertyNo),
+        surveyor: userId 
+      });
+    } else if (houseDoorNo) {
+      // Check if survey already exists for this slum and house door number (legacy workflow)
+      survey = await HouseholdSurvey.findOne({ 
+        slum: slumId, 
+        houseDoorNo: houseDoorNo,
+        surveyor: userId 
+      });
+    }
 
     if (!survey) {
-      // Create new survey with auto-generated householdId
-      const householdId = uuidv4();
-      survey = new HouseholdSurvey({
-        slum: slumId,
-        householdId: householdId,
-        houseDoorNo: houseDoorNo,
-        surveyor: userId,
-        surveyStatus: 'DRAFT',
-      });
+      // Check if there's an imported record for this parcel/property combination
+      if (parcelId !== undefined && propertyNo !== undefined) {
+        const importedRecord = await HouseholdSurvey.findOne({ 
+          slum: slumId, 
+          parcelId: parseInt(parcelId),
+          propertyNo: parseInt(propertyNo)
+        });
+        
+        if (importedRecord) {
+          // Use the imported record if it exists (copy its prefilled data)
+          survey = new HouseholdSurvey({
+            slum: slumId,
+            householdId: uuidv4(),
+            houseDoorNo: `${parseInt(parcelId)}-${parseInt(propertyNo)}`, // Generate houseDoorNo from parcel and property
+            parcelId: parseInt(parcelId),
+            propertyNo: parseInt(propertyNo),
+            source: 'CREATED', // New record created from imported data
+            surveyor: userId,
+            surveyStatus: 'DRAFT',
+            // Copy prefilled data from imported record
+            headName: importedRecord.headName,
+            fatherName: importedRecord.fatherName,
+            landTenureStatus: importedRecord.landTenureStatus,
+            houseStructure: importedRecord.houseStructure
+          });
+        } else {
+          // Create new survey with auto-generated householdId and parcel info
+          survey = new HouseholdSurvey({
+            slum: slumId,
+            householdId: uuidv4(),
+            houseDoorNo: `${parseInt(parcelId)}-${parseInt(propertyNo)}`, // Generate houseDoorNo from parcel and property
+            parcelId: parseInt(parcelId),
+            propertyNo: parseInt(propertyNo),
+            source: 'CREATED',
+            surveyor: userId,
+            surveyStatus: 'DRAFT',
+          });
+        }
+      } else if (houseDoorNo) {
+        // Legacy workflow - create survey with houseDoorNo only
+        survey = new HouseholdSurvey({
+          slum: slumId,
+          householdId: uuidv4(),
+          houseDoorNo: houseDoorNo,
+          surveyor: userId,
+          surveyStatus: 'DRAFT',
+        });
+      } else {
+        return sendError(res, 'Either houseDoorNo or both parcelId and propertyNo must be provided', 400);
+      }
+      
       await survey.save();
-      console.log(`Created new household survey for slum ${slumId}, house ${houseDoorNo}`);
+      console.log(`Created new household survey for slum ${slumId}, parcel ${parcelId}, property ${propertyNo}, house ${houseDoorNo}`);
     }
 
     await survey.populate([
@@ -538,5 +597,187 @@ exports.getSurveysSummary = async (req, res) => {
   } catch (error) {
     console.error('Error in getSurveysSummary:', error.message);
     sendError(res, error.message || 'Failed to get surveys summary', 500);
+  }
+};
+
+/**
+ * Get all distinct parcelIds for a given slum
+ */
+exports.getParcelsBySlum = async (req, res) => {
+  try {
+    const { slumId } = req.params;
+
+    if (!slumId) {
+      return sendError(res, 'slumId is required', 400);
+    }
+
+    // Find all distinct parcelIds for the given slum
+    const parcels = await HouseholdSurvey.distinct('parcelId', { 
+      slum: slumId, 
+      parcelId: { $exists: true, $ne: null } 
+    });
+
+    // Filter out undefined/null values and sort numerically
+    const validParcels = parcels.filter(p => p !== undefined && p !== null).sort((a, b) => a - b);
+
+    sendSuccess(res, validParcels, 'Parcel IDs retrieved successfully');
+  } catch (error) {
+    console.error('Error in getParcelsBySlum:', error.message);
+    sendError(res, error.message || 'Failed to get parcels', 500);
+  }
+};
+
+/**
+ * Get all propertyNos for a given slum and parcelId
+ */
+exports.getPropertiesBySlumAndParcel = async (req, res) => {
+  try {
+    const { slumId, parcelId } = req.params;
+
+    if (!slumId || !parcelId) {
+      return sendError(res, 'slumId and parcelId are required', 400);
+    }
+
+    // Find all propertyNos for the given slum and parcelId
+    const properties = await HouseholdSurvey.distinct('propertyNo', { 
+      slum: slumId, 
+      parcelId: parseInt(parcelId),
+      propertyNo: { $exists: true, $ne: null } 
+    });
+
+    // Filter out undefined/null values and sort numerically
+    const validProperties = properties.filter(p => p !== undefined && p !== null).sort((a, b) => a - b);
+
+    sendSuccess(res, validProperties, 'Property numbers retrieved successfully');
+  } catch (error) {
+    console.error('Error in getPropertiesBySlumAndParcel:', error.message);
+    sendError(res, error.message || 'Failed to get properties', 500);
+  }
+};
+
+/**
+ * Get household survey by slum, parcelId, and propertyNo
+ */
+exports.getHouseholdSurveyByParcel = async (req, res) => {
+  try {
+    const { slumId, parcelId, propertyNo } = req.params;
+    const userId = req.user.id || req.user._id;
+
+    if (!slumId || !parcelId || !propertyNo) {
+      return sendError(res, 'slumId, parcelId, and propertyNo are required', 400);
+    }
+
+    // Find the household survey by slum, parcel, and property
+    // For imported surveys, the surveyor might be null initially
+    // Allow access to current user's surveys, or to admins/supervisors who can view all
+    const userRole = req.user.role;
+    let queryConditions = {
+      slum: slumId,
+      parcelId: parseInt(parcelId),
+      propertyNo: parseInt(propertyNo),
+    };
+    
+    // If user is not admin/supervisor, restrict to their own surveys
+    if (!['ADMIN', 'SUPERVISOR'].includes(userRole)) {
+      queryConditions.$or = [
+        { surveyor: userId },  // Surveys assigned to current user
+        { surveyor: null }     // Unassigned imported surveys
+      ];
+    }
+    
+    const survey = await HouseholdSurvey.findOne(queryConditions).populate([
+      { path: 'slum', select: 'slumName location ward' },
+      { path: 'surveyor', select: 'name email' },
+    ]);
+
+    if (!survey) {
+      return sendError(res, 'Survey not found for this slum and parcel/property combination', 404);
+    }
+
+    sendSuccess(res, survey, 'Survey retrieved successfully');
+  } catch (error) {
+    console.error('Error in getHouseholdSurveyByParcel:', error.message);
+    sendError(res, error.message || 'Failed to get survey', 500);
+  }
+};
+
+/**
+ * Bulk import household data from external dataset
+ */
+exports.importHouseholds = async (req, res) => {
+  try {
+    const { data, slumId } = req.body;
+
+    if (!data || !Array.isArray(data)) {
+      return sendError(res, 'Data array is required', 400);
+    }
+
+    if (!slumId) {
+      return sendError(res, 'slumId is required', 400);
+    }
+
+    // Validate slum exists
+    const slum = await Slum.findById(slumId);
+    if (!slum) {
+      return sendError(res, 'Slum not found', 404);
+    }
+
+    // Validate and sanitize input data
+    const validatedData = [];
+    for (const item of data) {
+      if (
+        item.parcelId === undefined || 
+        item.propertyNo === undefined ||
+        item.headName === undefined
+      ) {
+        continue; // Skip invalid records
+      }
+
+      validatedData.push({
+        slum: slumId,
+        householdId: uuidv4(), // Generate new householdId for imported records
+        houseDoorNo: `${item.parcelId}-${item.propertyNo}`,
+        parcelId: parseInt(item.parcelId),
+        propertyNo: parseInt(item.propertyNo),
+        source: 'IMPORTED',
+        surveyStatus: 'DRAFT', // Imported records start as draft
+        // Prefill data from import
+        headName: item.headName || '',
+        fatherName: item.fatherName || '',
+        landTenureStatus: item.landTenureStatus || '',
+        houseStructure: item.houseStructure || ''
+      });
+    }
+
+    if (validatedData.length === 0) {
+      return sendError(res, 'No valid records to import', 400);
+    }
+
+    // Use bulkWrite for efficient insertion with upsert to avoid duplicates
+    const bulkOps = validatedData.map(record => ({
+      updateOne: {
+        filter: {
+          slum: record.slum,
+          parcelId: record.parcelId,
+          propertyNo: record.propertyNo
+        },
+        update: record,
+        upsert: true
+      }
+    }));
+
+    const result = await HouseholdSurvey.bulkWrite(bulkOps);
+
+    console.log(`Imported ${result.upsertedCount || 0} new records and modified ${result.modifiedCount || 0} existing records`);
+
+    sendSuccess(res, {
+      imported: result.upsertedCount || 0,
+      updated: result.modifiedCount || 0,
+      totalProcessed: validatedData.length
+    }, 'Households imported successfully');
+
+  } catch (error) {
+    console.error('Error in importHouseholds:', error.message);
+    sendError(res, error.message || 'Failed to import households', 500);
   }
 };

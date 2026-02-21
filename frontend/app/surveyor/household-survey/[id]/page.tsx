@@ -20,6 +20,9 @@ interface HouseholdSurveyForm {
   slumName?: string;
   ward?: string;
   houseDoorNo?: string;
+  // Parcel-based identification (new fields)
+  parcelId?: number;
+  propertyNo?: number;
 
   // Section II - Household Level General Information
   headName?: string;
@@ -160,6 +163,8 @@ export default function HouseholdSurveyPage() {
   const { showToast } = useToast();
 
   const [slum, setSlum] = useState<{ 
+    _id: string;
+    slumId: string;
     slumName: string; 
     ward?: {
       number: string;
@@ -197,6 +202,20 @@ export default function HouseholdSurveyPage() {
   // Completion Modal State
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [householdProgress, setHouseholdProgress] = useState({ completed: 0, total: 0 });
+  
+  // Parcel-based workflow state
+  const [parcels, setParcels] = useState<number[]>([]);
+  const [properties, setProperties] = useState<number[]>([]);
+  const [selectedParcel, setSelectedParcel] = useState<number | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
+  const [loadingParcels, setLoadingParcels] = useState(false);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [autoSelectedProperty, setAutoSelectedProperty] = useState<number | null>(null);
+  
+  // State for manual parcel entry and confirmation
+  const [showParcelConfirmation, setShowParcelConfirmation] = useState(false);
+  const [manualParcelInput, setManualParcelInput] = useState("");
+  const [isCheckingParcel, setIsCheckingParcel] = useState(false);
 
   // Auto-calculate totals when male/female fields change
   useEffect(() => {
@@ -331,6 +350,9 @@ export default function HouseholdSurveyPage() {
               // Load households for this slum
               await loadHouseholdsForSlum(slumId);
               
+              // Load parcels for parcel-based workflow
+              await loadParcels(slumId);
+              
               // Fetch initial progress
               await fetchProgress();
             }
@@ -351,6 +373,232 @@ export default function HouseholdSurveyPage() {
 
     loadData();
   }, [assignmentId, router, showToast, fetchProgress, loadHouseholdsForSlum]);
+
+  // Functions for parcel-based workflow
+  const loadParcels = async (slumId: string) => {
+    try {
+      setLoadingParcels(true);
+      const response = await apiService.getParcelsBySlum(slumId);
+      
+      if (response.success) {
+        setParcels(response.data || []);
+      } else {
+        showToast(response.message || "Failed to load parcels", "error");
+      }
+    } catch (error) {
+      console.error("Error loading parcels:", error);
+      showToast("Failed to load parcels", "error");
+    } finally {
+      setLoadingParcels(false);
+    }
+  };
+
+  const loadProperties = async (slumId: string, parcelId: number) => {
+    try {
+      setLoadingProperties(true);
+      setProperties([]);
+      setAutoSelectedProperty(null);
+      
+      const response = await apiService.getPropertiesBySlumAndParcel(slumId, parcelId);
+      
+      if (response.success) {
+        const propertyList = response.data || [];
+        setProperties(propertyList);
+        
+        // Auto-select property if there's only one
+        if (propertyList.length === 1) {
+          setAutoSelectedProperty(propertyList[0]);
+          setSelectedProperty(propertyList[0]);
+          setFormData(prev => ({
+            ...prev,
+            parcelId,
+            propertyNo: propertyList[0],
+            houseDoorNo: `${parcelId}-${propertyList[0]}` // Generate houseDoorNo from parcel and property
+          }));
+        } else {
+          setSelectedProperty(null);
+          setFormData(prev => ({
+            ...prev,
+            parcelId,
+            propertyNo: undefined
+          }));
+        }
+      } else {
+        showToast(response.message || "Failed to load properties", "error");
+      }
+    } catch (error) {
+      console.error("Error loading properties:", error);
+      showToast("Failed to load properties", "error");
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
+
+  // Function to check if parcel has existing data
+  const checkParcelExists = async (parcelId: number) => {
+    if (!slum) return false;
+    
+    try {
+      setIsCheckingParcel(true);
+      const response = await apiService.getPropertiesBySlumAndParcel(slum._id, parcelId);
+      
+      if (response.success) {
+        const propertyList = response.data || [];
+        return propertyList.length > 0;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking parcel:", error);
+      return false;
+    } finally {
+      setIsCheckingParcel(false);
+    }
+  };
+
+  // Handle manual parcel input
+  const handleManualParcelInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setManualParcelInput(value);
+    
+    if (value && !isNaN(parseInt(value))) {
+      const parcelId = parseInt(value);
+      setSelectedParcel(parcelId);
+      
+      if (slum) {
+        const hasExistingData = await checkParcelExists(parcelId);
+        
+        if (!hasExistingData) {
+          setShowParcelConfirmation(true);
+        } else {
+          // Load properties for existing parcel
+          loadProperties(slum._id, parcelId);
+        }
+      }
+    } else {
+      setSelectedParcel(null);
+      setProperties([]);
+      setSelectedProperty(null);
+      setAutoSelectedProperty(null);
+      setFormData(prev => ({
+        ...prev,
+        parcelId: undefined,
+        propertyNo: undefined,
+        houseDoorNo: ""
+      }));
+    }
+  };
+
+  // Handle confirmation for new parcel
+  const handleConfirmNewParcel = () => {
+    setShowParcelConfirmation(false);
+    if (selectedParcel && slum) {
+      // Initialize with empty properties for new parcel
+      setProperties([]);
+      setSelectedProperty(null);
+      setAutoSelectedProperty(null);
+      setFormData(prev => ({
+        ...prev,
+        parcelId: selectedParcel,
+        propertyNo: undefined,
+        houseDoorNo: `${selectedParcel}-` // Partial houseDoorNo
+      }));
+    }
+  };
+
+  // Handle cancel new parcel
+  const handleCancelNewParcel = () => {
+    setShowParcelConfirmation(false);
+    setManualParcelInput("");
+    setSelectedParcel(null);
+    setProperties([]);
+    setSelectedProperty(null);
+    setAutoSelectedProperty(null);
+    setFormData(prev => ({
+      ...prev,
+      parcelId: undefined,
+      propertyNo: undefined,
+      houseDoorNo: ""
+    }));
+  };
+
+  // Handle search for existing data for the selected parcel and property
+  const handleIdentifyParcel = async () => {
+    if (!selectedParcel || !selectedProperty || !slum) {
+      showToast("Please select both Parcel ID and Property Number", "error");
+      return;
+    }
+
+    try {
+      // Call the API to get household survey by parcel and property
+      const response = await apiService.getHouseholdSurveyByParcel(slum._id, selectedParcel, selectedProperty);
+      
+      if (response.success && response.data) {
+        // Populate form with the existing data
+        const surveyData = response.data;
+        setFormData(prev => ({
+          ...prev,
+          ...surveyData,
+          parcelId: selectedParcel,
+          propertyNo: selectedProperty,
+          houseDoorNo: `${selectedParcel}-${selectedProperty}`
+        }));
+        
+        showToast(`Data loaded for Parcel ${selectedParcel}, Property ${selectedProperty}`, "success");
+      } else {
+        // If no data found, clear the form except for parcel and property
+        setFormData(prev => ({
+          ...prev,
+          parcelId: selectedParcel,
+          propertyNo: selectedProperty,
+          houseDoorNo: `${selectedParcel}-${selectedProperty}`,
+          headName: "",
+          fatherName: "",
+          sex: "",
+          caste: "",
+          religion: "",
+          minorityStatus: "",
+          // ... and other fields cleared to empty
+        }));
+        
+        showToast(`No existing data found for Parcel ${selectedParcel}, Property ${selectedProperty}. Form is ready for new entry.`, "info");
+      }
+    } catch (error) {
+      console.error("Error fetching household data:", error);
+      showToast("Failed to fetch household data", "error");
+    }
+  };
+
+  const handleParcelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedParcel = e.target.value ? parseInt(e.target.value) : undefined;
+    setSelectedParcel(selectedParcel ? selectedParcel : null);
+    
+    if (selectedParcel && slum) {
+      loadProperties(slum._id, selectedParcel);
+    } else {
+      setProperties([]);
+      setSelectedProperty(null);
+      setAutoSelectedProperty(null);
+      setFormData(prev => ({
+        ...prev,
+        parcelId: undefined,
+        propertyNo: undefined,
+        houseDoorNo: ""
+      }));
+    }
+  };
+
+  const handlePropertyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedProperty = e.target.value ? parseInt(e.target.value) : undefined;
+    setSelectedProperty(selectedProperty ? selectedProperty : null);
+    
+    if (selectedProperty !== undefined && selectedParcel) {
+      setFormData(prev => ({
+        ...prev,
+        propertyNo: selectedProperty,
+        houseDoorNo: `${selectedParcel}-${selectedProperty}` // Generate houseDoorNo from parcel and property
+      }));
+    }
+  };
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections((prev) => {
@@ -406,10 +654,12 @@ export default function HouseholdSurveyPage() {
     const newErrors: FieldError[] = [];
 
     // General Information (except Additional Notes)
-    if (!formData.houseDoorNo?.trim()) {
+    // Either houseDoorNo or both parcelId and propertyNo must be provided
+    if (!formData.houseDoorNo?.trim() && 
+        (formData.parcelId === undefined || formData.propertyNo === undefined)) {
       newErrors.push({
         field: "houseDoorNo",
-        message: "House/Flat/Door No. is required",
+        message: "House/Flat/Door No. is required or both Parcel ID and Property No. are required",
       });
     }
 
@@ -907,11 +1157,24 @@ export default function HouseholdSurveyPage() {
         }
       } else {
         // This is a new survey from an assignment, create it
-        const surveyResponse = await apiService.createOrGetHouseholdSurvey(
-          assignment?.slum?._id || "",
-          formData.houseDoorNo || "",
-        );
-  
+        let surveyResponse;
+              
+        if (formData.parcelId !== undefined && formData.propertyNo !== undefined) {
+          // Use parcel-based workflow
+          surveyResponse = await apiService.createOrGetHouseholdSurvey(
+            assignment?.slum?._id || "",
+            formData.houseDoorNo || "",
+            formData.parcelId,
+            formData.propertyNo
+          );
+        } else {
+          // Use traditional workflow
+          surveyResponse = await apiService.createOrGetHouseholdSurvey(
+            assignment?.slum?._id || "",
+            formData.houseDoorNo || "",
+          );
+        }
+      
         if (!surveyResponse.success) {
           showToast(
             surveyResponse.message || "Failed to initialize survey",
@@ -919,9 +1182,9 @@ export default function HouseholdSurveyPage() {
           );
           return;
         }
-  
+      
         surveyId = surveyResponse.data._id;
-  
+      
         // Submit the new survey
         const response = await apiService.submitHouseholdSurvey(
           surveyId,
@@ -938,6 +1201,8 @@ export default function HouseholdSurveyPage() {
           setFormData({
             householdId: "",
             houseDoorNo: "",
+            parcelId: undefined,
+            propertyNo: undefined,
             slumName: slum?.slumName || "",
             ward: typeof slum?.ward === 'object' ? `${slum?.ward.number} - ${slum?.ward.name}` : slum?.ward || "",
             // Reset all other fields to empty/default values
@@ -1001,7 +1266,13 @@ export default function HouseholdSurveyPage() {
             
           // Reset expanded sections
           setExpandedSections(new Set(["general", "household"]));
-            
+                    
+          // Reset parcel-based selections
+          setSelectedParcel(null);
+          setSelectedProperty(null);
+          setProperties([]);
+          setAutoSelectedProperty(null);
+                    
           // Show completion modal instead of browser alert
           await fetchProgress(); // Fetch updated progress
           setShowCompletionModal(true);
@@ -1022,6 +1293,65 @@ export default function HouseholdSurveyPage() {
       <SurveyorLayout fullScreen>
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          {/* Parcel Confirmation Dialog */}
+          {showParcelConfirmation && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-slate-900 rounded-lg max-w-md w-full border border-slate-700">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-2">New Parcel ID</h3>
+                  <p className="text-slate-300 mb-4">
+                    No existing data found for Parcel ID <span className="font-medium text-blue-400">{selectedParcel}</span>. 
+                    Would you like to continue creating a new household survey for this parcel?
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={handleCancelNewParcel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleConfirmNewParcel}
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+  
+          {/* Parcel Confirmation Dialog */}
+          {showParcelConfirmation && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-slate-900 rounded-lg max-w-md w-full border border-slate-700">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-2">New Parcel ID</h3>
+                  <p className="text-slate-300 mb-4">
+                    No existing data found for Parcel ID <span className="font-medium text-blue-400">{selectedParcel}</span>. 
+                    Would you like to continue creating a new household survey for this parcel?
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={handleCancelNewParcel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleConfirmNewParcel}
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </SurveyorLayout>
     );
@@ -1061,9 +1391,83 @@ export default function HouseholdSurveyPage() {
             </p>
           </div>
         </div>
+        {/* Parcel-based identification section */}
+        <div className="col-span-full bg-blue-500/10 p-4 rounded-lg border border-blue-500/20 pb-4">
+          <h3 className="font-medium text-blue-300 mb-3">Parcel-Based Household Identification</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">
+                Parcel ID
+              </label>
+              <Input
+                type="number"
+                value={manualParcelInput}
+                onChange={handleManualParcelInput}
+                placeholder="Enter parcel ID"
+                required
+              />
+              {isCheckingParcel && <p className="text-xs text-slate-500 mt-1">Checking parcel data...</p>}
+              {parcels.length === 0 && !isCheckingParcel && manualParcelInput && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  No existing data found for this parcel.
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1 ">
+                Property Number
+              </label>
+              {properties.length > 0 ? (
+                <Select
+                  value={selectedProperty?.toString() || ""}
+                  onChange={handlePropertyChange}
+                  disabled={loadingProperties}
+                  required
+                  options={[
+                    ...properties.map(property => ({ value: property.toString(), label: property.toString() }))
+                  ]}
+                />
+              ) : (
+                <Input
+                  type="number"
+                  value={selectedProperty?.toString() || ""}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    setSelectedProperty(value || null);
+                    if (value && selectedParcel) {
+                      setFormData(prev => ({
+                        ...prev,
+                        propertyNo: value,
+                        houseDoorNo: `${selectedParcel}-${value}`
+                      }));
+                    }
+                  }}
+                  placeholder="Enter property number"
+                  required
+                />
+              )}
+              {loadingProperties && <p className="text-xs text-slate-500 mt-1">Loading properties...</p>}
+              {properties.length === 0 && !loadingProperties && selectedParcel && (
+                <p className="text-xs text-blue-600 mt-1">
+                  No existing properties found. You can enter a new property number.
+                </p>
+              )}
+            </div>
+            <div>
+              <button
+                onClick={handleIdentifyParcel}
+                className="w-full mt-4 bg-blue-500 text-white rounded-lg py-2 transition-colors hover:bg-blue-600"
+              >
+                Search Parcel ID
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Accordion Sections */}
-        <div className="space-y-4 mb-6">
+        <div className="space-y-4 my-6 ">
           {SECTIONS.map((section) => (
             <Card
               key={`section-${section.id}`}
@@ -1110,6 +1514,10 @@ export default function HouseholdSurveyPage() {
                         readOnly
                         className="bg-slate-800/50 cursor-not-allowed opacity-75"
                       />
+                      
+
+                      
+                      {/* Traditional house door number input */}
                       <Input
                         label="3. House/Flat/Door No."
                         placeholder="Enter door number"

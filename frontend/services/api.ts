@@ -567,12 +567,20 @@ class ApiService {
     }
   }
 
-  public async createOrGetHouseholdSurvey(slumId: string, houseDoorNo: string): Promise<ApiResponse> {
+  public async createOrGetHouseholdSurvey(slumId: string, houseDoorNo: string, parcelId?: number, propertyNo?: number): Promise<ApiResponse> {
     try {
+      const requestBody: any = { slumId };
+      if (parcelId !== undefined && propertyNo !== undefined) {
+        requestBody.parcelId = parcelId;
+        requestBody.propertyNo = propertyNo;
+      } else {
+        requestBody.houseDoorNo = houseDoorNo;
+      }
+      
       const response = await fetch(`${this.baseUrl}/surveys/household-surveys`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({ slumId, houseDoorNo }),
+        body: JSON.stringify(requestBody),
       });
 
       return await this.handleResponse(response);
@@ -630,6 +638,76 @@ class ApiService {
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
+      });
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        user: undefined,
+        error: error.message || 'Network error occurred',
+      };
+    }
+  }
+
+  // Parcel-based household survey methods
+  public async getParcelsBySlum(slumId: string): Promise<ApiResponse<number[]>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/surveys/household-surveys/parcels/${slumId}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        user: undefined,
+        error: error.message || 'Network error occurred',
+      };
+    }
+  }
+
+  public async getPropertiesBySlumAndParcel(slumId: string, parcelId: number): Promise<ApiResponse<number[]>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/surveys/household-surveys/properties/${slumId}/${parcelId}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        user: undefined,
+        error: error.message || 'Network error occurred',
+      };
+    }
+  }
+
+  public async getHouseholdSurveyByParcel(slumId: string, parcelId: number, propertyNo: number): Promise<ApiResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/surveys/household-surveys/by-parcel/${slumId}/${parcelId}/${propertyNo}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      return await this.handleResponse(response);
+    } catch (error: any) {
+      return {
+        success: false,
+        user: undefined,
+        error: error.message || 'Network error occurred',
+      };
+    }
+  }
+
+  public async importHouseholds(data: any[], slumId: string): Promise<ApiResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/surveys/household-surveys/import`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ data, slumId }),
       });
 
       return await this.handleResponse(response);
