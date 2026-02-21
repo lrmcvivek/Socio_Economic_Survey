@@ -354,6 +354,49 @@ Headers: Authorization: Bearer {token}
 Response: { success: true, data: [...] }
 ```
 
+## HHQC Routes - Household Quality Control
+
+### List All Household Survey Records (Supervisor - HHQC)
+
+```
+GET /api/surveys/household-survey
+Headers: Authorization: Bearer {token}
+Query params:
+  - slumId: optional, filter by slum
+  - status: optional, filter by survey status
+  - page: optional, pagination
+  - limit: optional, results per page
+Response: {
+  success: true,
+  data: [...],
+  total: number,
+  totalPages: number,
+  currentPage: number
+}
+```
+
+### Get Household Survey for HHQC Editing (Supervisor)
+
+```
+GET /api/surveys/household-survey/:id
+Headers: Authorization: Bearer {token}
+Response: { success: true, data: {...} }
+```
+
+### Update Household Survey with Quality Control (Supervisor)
+
+```
+PUT /api/surveys/household-survey/:id
+Headers: Authorization: Bearer {token}
+Body: {
+  ...householdSurveyData,
+  lastModifiedBy: "supervisor",
+  qcNotes: "Quality control comments",
+  qualityControlStatus: "REVIEWED" | "APPROVED" | "REJECTED"
+}
+Response: { success: true, data: {...} }
+```
+
 ## Error Responses
 
 All endpoints may return:

@@ -193,7 +193,18 @@ Surveyor:
    - All linked to same slum and assignment
    - Dashboard shows 100% complete
 
-### Step 9: Admin Views Final Results
+### Step 9: Supervisor Performs Quality Control
+
+1. Login as **supervisor** (supervisor1 / sup@123)
+2. Navigate to HHQC dashboard (`/supervisor/hhqc`)
+3. Select "ABC Nagar" from slum dropdown
+4. View all 50 household survey records in table
+5. Click "Edit Record" for any household needing quality control
+6. Review and correct any survey data issues
+7. Save changes with supervisor attribution
+8. System tracks all modifications in audit trail
+
+### Step 10: Admin Views Final Results
 
 1. Login as **admin**
 2. Dashboard shows:
@@ -202,7 +213,7 @@ Surveyor:
    - 1 completed assignment
 3. Navigate to `/admin/slums`
 4. See ABC Nagar with status "SUBMITTED"
-5. View all survey data collected
+5. View all survey data collected including quality control history
 
 ## 📊 Database Records Created
 
@@ -225,6 +236,14 @@ Surveyor:
   - status: COMPLETED
   - progress: 100
 
+**Quality Control Tracking:**
+
+- Supervisor modifications tracked with:
+  - lastModifiedBy: "supervisor"
+  - qcNotes: "Quality control comments"
+  - qcTimestamp: ISODate
+  - modificationHistory: [array of changes]
+
 ## 📱 UI Features
 
 ### Admin Dashboard
@@ -236,8 +255,9 @@ Surveyor:
 ### Supervisor Dashboard
 
 - Statistics cards (Surveyors, Slums, Assignments)
-- Quick action buttons (Create Slum, Assign Slums, View Progress)
+- Quick action buttons (Create Slum, Assign Slums, View Progress, HHQC)
 - Collapsible sidebar navigation
+- HHQC dashboard for quality control operations
 
 ### Surveyor Dashboard
 
@@ -264,6 +284,8 @@ GET    /api/admin/slums
 POST   /api/surveys/assignments
 GET    /api/surveys/assignments/my
 PUT    /api/surveys/assignments/:id/slum-survey
+GET    /api/surveys/household-survey/slum/:slumId
+PUT    /api/surveys/household-survey/:id
 ```
 
 ## 🛠️ Troubleshooting
@@ -304,6 +326,8 @@ PUT    /api/surveys/assignments/:id/slum-survey
 - [COMPLETE_IMPLEMENTATION_GUIDE.md](COMPLETE_IMPLEMENTATION_GUIDE.md) - Full guide with API endpoints
 - [PRD.md](PRD.md) - Product requirements
 - [UI_Specification.md](UI_Specification.md) - UI/UX design specs
+- [HHQC_IMPLEMENTATION.md](HHQC_IMPLEMENTATION.md) - HHQC feature implementation
+- [HHQC_USER_GUIDE.md](HHQC_USER_GUIDE.md) - Supervisor user guide for HHQC
 
 ## 🎓 Form References
 
@@ -419,6 +443,7 @@ frontend/
 ├── app/
 │   ├── admin/                     # Admin pages
 │   ├── supervisor/                # Supervisor pages
+│   │   └── hhqc/                  # HHQC pages
 │   ├── surveyor/                  # Surveyor pages
 │   └── login/                     # Login page
 ├── components/                    # React components

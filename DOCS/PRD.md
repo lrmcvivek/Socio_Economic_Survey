@@ -220,6 +220,7 @@ Dashboard
 Slums
 Assignments
 Progress
+HHQC
 Users (Admin only)
 Exports (Admin only)
 
@@ -270,12 +271,37 @@ Copy code
 
 ---
 
+## 8.5 Household Quality Control (HHQC)
+
+### 8.5.1 Purpose
+- Provide supervisors with quality control capabilities
+- Allow editing of submitted household survey data
+- Maintain data integrity and accuracy standards
+- Track all modifications with supervisor attribution
+
+### 8.5.2 Access Control
+- HHQC dashboard accessible to Supervisor role only
+- Full audit trail of all supervisor modifications
+- No surveyor access to HHQC functions
+
+### 8.5.3 Workflow
+1. Supervisor navigates to HHQC dashboard
+2. Selects slum to review household records
+3. Reviews submitted household surveys
+4. Edits survey data as needed for quality control
+5. Saves changes with supervisor attribution
+6. System tracks all modifications in audit trail
+
+---
+
 ## 9. Data Integrity Rules
 - Submitted surveys are immutable
 - Draft surveys are editable
 - No duplicate household entries per slum
 - Slum survey cannot be edited after submission
 - Household survey cannot change slum association
+- Supervisor edits are tracked with attribution
+- Quality control changes are logged for audit purposes
 
 ---
 

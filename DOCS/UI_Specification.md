@@ -101,6 +101,7 @@ Dashboard
 Slums
 Assignments
 Progress
+HHQC
 
 yaml
 Copy code
@@ -185,6 +186,8 @@ Copy code
 - Multiple sections
 - High-volume entry
 - Optimized for speed
+- Supervisor editing capabilities
+- Quality control focused interface
 
 ### UI Rules
 - Accordion sections must NOT unmount on open/close

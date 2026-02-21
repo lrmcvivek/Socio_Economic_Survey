@@ -119,6 +119,29 @@ Fill Household Survey Form (from HouseHold_Survey_Form.md)
 Submit Survey → Status changes to SUBMITTED/COMPLETED
 ```
 
+### Household Quality Control Workflow
+```
+Supervisor Dashboard
+   ↓
+Click "HHQC" → /supervisor/hhqc
+   ↓
+Select Slum from Dropdown
+   ↓
+View Household Survey Records Table
+   ↓
+Click "Edit Record" for specific survey
+   ↓
+Navigate to HHQC Edit Page → /supervisor/hhqc/{surveyId}
+   ↓
+Review and Edit Survey Data
+   ↓
+Save Changes with Supervisor Attribution
+   ↓
+System Tracks Modification in Audit Trail
+   ↓
+Return to HHQC Dashboard
+```
+
 ### Data Storage
 
 **Slum Survey Data:**
@@ -217,8 +240,23 @@ DRAFT
 IN PROGRESS
   ↓ (User submits form)
 SUBMITTED
-  ↓ (Supervisor approves - future feature)
+  ↓ (Supervisor performs QC)
+REVIEWED
+  ↓ (Supervisor approves)
 COMPLETED
+```
+
+### Quality Control Status
+```
+PENDING
+  ↓ (Supervisor selects record)
+IN REVIEW
+  ↓ (Supervisor makes edits)
+REVIEWED
+  ↓ (Supervisor approves changes)
+APPROVED
+  ↓ (Final quality check)
+FINALIZED
 ```
 
 ### Slum Survey Status

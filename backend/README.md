@@ -139,6 +139,7 @@ The server will start on `http://localhost:5000` (or the port specified in your 
 - `POST /api/surveys/household-surveys` - Submit household survey
 - `GET /api/surveys/household-surveys/:householdId` - Get household survey
 - `GET /api/surveys/household-surveys/slum/:slumId` - Get all household surveys for a slum
+- `PUT /api/surveys/household-surveys/:id` - Update household survey with quality control (HHQC)
 
 ### Data Export
 - `GET /api/export/slums` - Export slum data to CSV
@@ -177,7 +178,7 @@ backend/
 │   │   └── survey/
 │   │       ├── assignmentController.js      # Assignment management
 │   │       ├── slumSurveyController.js      # Slum survey operations
-│   │       └── householdSurveyController.js # Household survey operations
+│   │       └── householdSurveyController.js # Household survey operations (includes HHQC functionality)
 │   ├── middlewares/            # Custom middleware
 │   │   └── auth.js             # Authentication middleware
 │   ├── models/                 # Mongoose models

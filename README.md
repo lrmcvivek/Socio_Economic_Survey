@@ -111,15 +111,19 @@ The system maintains data integrity through role-based access control and ensure
   - Housing Condition (materials used)
   - Amenities (electricity, water, toilet, TV, phone, etc.)
   - Additional Info (income, notes)
+  - Economic Status (female earning status, poverty line, BPL card)
 - Progress tracking per slum
 - Full-screen mode for focused surveying
+- Supervisor editing capabilities through HHQC module
 
 ### 6. **Dashboard & Analytics**
 
 - **Surveyor Dashboard**: View assigned slums, survey progress, KPI cards
+- **Supervisor HHQC Dashboard**: Review and edit household survey records
 - Assignment statistics: total, completed, in progress, pending
 - Real-time progress bars showing household survey completion
 - Slum survey status indicator (Completed / Not Started)
+- Household Quality Control (HHQC) module for data validation
 
 ### 7. **Location Hierarchy**
 
@@ -213,7 +217,10 @@ Socio_Economic_Survey/
 │   │   │   ├── dashboard/page.tsx        # Supervisor dashboard
 │   │   │   ├── slums/page.tsx            # Slum management CRUD
 │   │   │   ├── assignments/page.tsx      # Create slum assignments
-│   │   │   └── progress/page.tsx         # Progress tracking
+│   │   │   ├── progress/page.tsx         # Progress tracking
+│   │   │   └── hhqc/
+│   │   │       ├── page.tsx              # HHQC dashboard
+│   │   │       └── [id]/page.tsx         # HHQC edit page
 │   │   ├── surveyor/
 │   │   │   ├── dashboard/page.tsx        # Surveyor dashboard (assigned slums)
 │   │   │   ├── slums/page.tsx            # Surveyor slum list

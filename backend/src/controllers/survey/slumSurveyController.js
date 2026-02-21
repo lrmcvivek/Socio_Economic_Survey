@@ -5,6 +5,7 @@ const District = require('../../models/District');
 const State = require('../../models/State');
 const Assignment = require('../../models/Assignment');
 const { updateSlumStatus, updateAssignmentStatusFromSlumSurvey, updateAssignmentMainStatus, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys, updateSlumDemographicPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
+const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 
 /**
  * Create or initialize a slum survey

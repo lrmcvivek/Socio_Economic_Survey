@@ -1,6 +1,7 @@
 const HouseholdSurvey = require('../../models/HouseholdSurvey');
 const Slum = require('../../models/Slum');
 const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys, updateSlumDemographicPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
+const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
 // Placeholder for old exports - will be removed after testing

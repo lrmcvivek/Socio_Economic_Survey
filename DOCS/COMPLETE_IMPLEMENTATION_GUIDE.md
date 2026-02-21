@@ -56,6 +56,7 @@ This document provides a comprehensive guide to the newly implemented survey app
 - Slums - Create and manage slums
 - Assignments - Create slum assignments
 - Progress - Track team progress
+- HHQC - Household Quality Control (review and edit survey records)
 
 #### Surveyor Navigation
 
@@ -253,6 +254,15 @@ GET    /api/surveys/household-survey/:id   Get household survey
 - Quick action buttons for starting surveys
 - Bottom navigation for mobile app feel
 
+### 4. Supervisor HHQC Dashboard
+
+- View all household survey records across slums
+- Filter records by slum selection
+- Edit existing survey records
+- Quality control and data validation
+- Track supervisor modifications
+- Maintain data integrity
+
 ### 4. Slum Management
 
 - Create slums with:
@@ -336,6 +346,16 @@ GET    /api/surveys/household-survey/:id   Get household survey
    - One record created in HouseholdSurvey collection
 4. Progress bar updates with completed count
 5. After all households, mark assignment as complete
+
+### Supervisor Performs Quality Control
+
+1. Navigate to HHQC dashboard (`/supervisor/hhqc`)
+2. Select slum from dropdown to filter records
+3. View table of household surveys for selected slum
+4. Click "Edit Record" for specific survey
+5. Review and modify survey data as needed
+6. Save changes with supervisor attribution
+7. System tracks all modifications for audit purposes
 
 ## 🚀 Getting Started
 
