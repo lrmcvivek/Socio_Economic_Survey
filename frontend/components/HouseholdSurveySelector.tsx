@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '@/services/api';
+import { HouseholdSurvey } from '@/types/householdSurvey';
 import Button from './Button';
 import Input from './Input';
 import Select from './Select';
@@ -32,24 +33,8 @@ export const HouseholdSurveySelector = ({
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingParcelId, setIsGeneratingParcelId] = useState(false);
-
-  // Load properties when parcel ID changes
-  useEffect(() => {
-    if (parcelId && !isNaN(parseInt(parcelId)) && mode === 'search') {
-      loadProperties(parseInt(parcelId));
-    }
-  }, [parcelId, mode, slumId]);
-
-  // Reset form when mode changes
-  useEffect(() => {
-    setParcelId('');
-    setPropertyNo('');
-    setProperties([]);
-    setError(null);
-    if (mode === 'new') {
-      generateNewParcelId();
-    }
-  }, [mode]);
+  const [prefetchedData, setPrefetchedData] = useState<HouseholdSurvey | null>(null);
+  const [showPrefetchPreview, setShowPrefetchPreview] = useState(false);
 
   const loadProperties = async (parcelIdNum: number) => {
     if (!slumId) return;
@@ -122,6 +107,8 @@ export const HouseholdSurveySelector = ({
     
     setLoading(true);
     setError(null);
+    setPrefetchedData(null);
+    setShowPrefetchPreview(false);
     
     try {
       const response = await apiService.getHouseholdSurveyByParcel(
@@ -131,12 +118,12 @@ export const HouseholdSurveySelector = ({
       );
       
       if (response.success && response.data) {
-        // Found existing household survey - redirect to edit it with surveyId
+        // Found existing household survey - show pre-fetch preview
         const surveyData = response.data;
-        // Use the survey ID for the URL, but ensure we're using the assignment ID from the survey if available
-        // This may help with authorization if the survey belongs to a different assignment
-        const targetAssignmentId = surveyData.assignment?._id || assignmentId;
-        router.push(`/surveyor/household-survey/${targetAssignmentId}?surveyId=${surveyData._id}`);
+        setPrefetchedData(surveyData);
+        setShowPrefetchPreview(true);
+        
+        // Don't redirect immediately, let user see the pre-fetched data first
       } else {
         setError('No household survey found for this Parcel ID and Property Number combination');
       }
@@ -187,12 +174,141 @@ export const HouseholdSurveySelector = ({
     }
   };
 
+  const handleContinueToSurvey = () => {
+    if (prefetchedData) {
+      // Use the survey ID for the URL, but ensure we're using the assignment ID from the survey if available
+      const targetAssignmentId = prefetchedData.assignment?._id || assignmentId;
+      router.push(`/surveyor/household-survey/${targetAssignmentId}?surveyId=${prefetchedData._id}`);
+    }
+  };
+
+  const handleBackToSearch = () => {
+    setShowPrefetchPreview(false);
+    setPrefetchedData(null);
+    setError(null);
+  };
+
+  // Load properties when parcel ID changes
+  useEffect(() => {
+    if (parcelId && !isNaN(parseInt(parcelId)) && mode === 'search') {
+      loadProperties(parseInt(parcelId));
+    }
+  }, [parcelId, mode, slumId]);
+
+  // Reset form when mode changes
+  useEffect(() => {
+    setParcelId('');
+    setPropertyNo('');
+    setProperties([]);
+    setError(null);
+    setPrefetchedData(null);
+    setShowPrefetchPreview(false);
+    if (mode === 'new') {
+      generateNewParcelId();
+    }
+  }, [mode]);
+
   const handleParcelIdChange = (value: string) => {
     // Allow manual editing of parcel ID in both modes
     setParcelId(value);
   };
 
   if (!isOpen) return null;
+
+  // Show pre-fetch preview if available and in search mode
+  if (showPrefetchPreview && prefetchedData && mode === 'search') {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-lg bg-slate-800 border border-slate-700">
+          <div className="p-6">
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-white mb-2">
+                Household Found
+              </h2>
+              <p className="text-slate-400 text-sm">
+                Pre-fetched data for this household
+              </p>
+              <p className="text-slate-300 text-sm mt-1">
+                Slum: {slumName}
+              </p>
+            </div>
+
+            {/* Pre-fetched Data Preview */}
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-700/50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-3">Household Details</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      House/Flat/Door No.
+                    </label>
+                    <div className="text-white font-medium">
+                      {prefetchedData.houseDoorNo || `${prefetchedData.parcelId}-${prefetchedData.propertyNo}`}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Head of Household Name
+                    </label>
+                    <div className="text-white">
+                      {prefetchedData.headName || 'Not available'}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Father/ Husband/ Guardian&apos;s Name
+                    </label>
+                    <div className="text-white">
+                      {prefetchedData.fatherName || 'Not available'}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Land Tenure Status
+                    </label>
+                    <div className="text-white">
+                      {prefetchedData.landTenureStatus || 'Not available'}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      House Structure/Type
+                    </label>
+                    <div className="text-white">
+                      {prefetchedData.houseStructure || 'Not available'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={handleBackToSearch}
+                className="flex-1"
+              >
+                Back to Search
+              </Button>
+              <Button
+                onClick={handleContinueToSurvey}
+                className="flex-1"
+              >
+                Continue to Survey
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
