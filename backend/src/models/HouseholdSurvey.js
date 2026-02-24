@@ -145,7 +145,7 @@ const householdSurveySchema = new mongoose.Schema({
   },
   // Parcel-based identification (new fields)
   parcelId: {
-    type: Number,
+    type: String,
     required: false  // Not required for backward compatibility
   },
   propertyNo: {

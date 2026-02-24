@@ -22,7 +22,7 @@ export default function LandingPage() {
               className="w-32 h-32 md:w-40 md:h-40 relative z-10 drop-shadow-2xl hover:scale-105 transition-transform duration-300"
             />
           </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+          <h1 className="text-xl md:text-2xl lg:text-xl font-bold text-white tracking-tight">
             Socio-Economic Survey
           </h1>
         <div className="w-60 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mx-auto"></div>
@@ -40,7 +40,7 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
           <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700 backdrop-blur-xl transition-all hover:bg-slate-800/80 hover:border-slate-600">
             <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-4">
               <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">

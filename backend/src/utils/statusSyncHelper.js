@@ -219,6 +219,72 @@ async function updateHouseholdSurveyProgress(slumId, surveyorId) {
 }
 
 /**
+ * Auto-sync slum totalHouseholds and assignment progress when household records change
+ * @param {string} slumId - The ID of the slum
+ * @param {string} surveyorId - The ID of the surveyor (optional)
+ * @returns {Promise<boolean>} - Whether the sync was successful
+ */
+async function autoSyncHouseholdCounts(slumId, surveyorId = null) {
+  try {
+    console.log(`[AUTO_SYNC] Auto-syncing household counts for slum: ${slumId}`);
+    
+    // Get the slum
+    const slum = await Slum.findById(slumId);
+    if (!slum) {
+      console.error(`[AUTO_SYNC] Slum not found: ${slumId}`);
+      return false;
+    }
+
+    // Count all household surveys for this slum (regardless of surveyor)
+    const totalHouseholdCount = await HouseholdSurvey.countDocuments({ slum: slumId });
+    
+    console.log(`[AUTO_SYNC] Actual household count: ${totalHouseholdCount}, Current slum totalHouseholds: ${slum.totalHouseholds}`);
+    
+    // Update slum totalHouseholds if it doesn't match actual count
+    if (slum.totalHouseholds !== totalHouseholdCount) {
+      const oldCount = slum.totalHouseholds;
+      slum.totalHouseholds = totalHouseholdCount;
+      await slum.save();
+      console.log(`[AUTO_SYNC] Updated slum totalHouseholds from ${oldCount} to ${totalHouseholdCount}`);
+    }
+    
+    // Update assignments for this slum
+    const assignments = surveyorId 
+      ? await Assignment.find({ slum: slumId, surveyor: surveyorId })
+      : await Assignment.find({ slum: slumId });
+    
+    console.log(`[AUTO_SYNC] Found ${assignments.length} assignments to update`);
+    
+    for (const assignment of assignments) {
+      const householdSurveys = await HouseholdSurvey.find({
+        slum: slumId,
+        surveyor: assignment.surveyor
+      });
+      
+      const completedCount = householdSurveys.filter(hs =>
+        hs.surveyStatus === 'SUBMITTED' || hs.surveyStatus === 'COMPLETED'
+      ).length;
+      
+      const prevProgress = assignment.householdSurveyProgress;
+      const newProgress = {
+        completed: completedCount,
+        total: totalHouseholdCount
+      };
+      
+      assignment.householdSurveyProgress = newProgress;
+      await assignment.save();
+      
+      console.log(`[AUTO_SYNC] Updated assignment ${assignment._id} progress from ${prevProgress?.completed}/${prevProgress?.total} to ${newProgress.completed}/${newProgress.total}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`[AUTO_SYNC] Error in auto-sync:`, error);
+    return false;
+  }
+}
+
+/**
  * Update statuses when household survey is submitted
  * @param {string} householdSurveyId - The ID of the household survey
  * @returns {Promise<boolean>} - Whether the update was successful
@@ -784,5 +850,6 @@ module.exports = {
   updateHouseholdSurveyProgress,
   updateSlumPopulationFromHouseholdSurveys,
   updateSlumBplPopulationFromHouseholdSurveys,
-  updateSlumDemographicPopulationFromHouseholdSurveys
+  updateSlumDemographicPopulationFromHouseholdSurveys,
+  autoSyncHouseholdCounts
 };

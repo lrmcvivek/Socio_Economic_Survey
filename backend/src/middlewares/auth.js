@@ -34,8 +34,12 @@ const auth = async (req, res, next) => {
     console.log('[AUTH-MIDDLEWARE] Authentication successful, user:', user.username, 'role:', user.role);
     next();
   } catch (error) {
-    console.error('[AUTH-MIDDLEWARE] Authentication error:', error.message);
+    console.error('[AUTH-MIDDLEWARE] ❌ Authentication error:', error.message);
+    console.error('[AUTH-MIDDLEWARE] Error name:', error.name);
+    console.error('[AUTH-MIDDLEWARE] Error stack:', error.stack);
+    console.error('[AUTH-MIDDLEWARE] Token preview:', req.header('Authorization')?.substring(0, 50) + '...');
     if (error.name === 'JsonWebTokenError') {
+      console.error('[AUTH-MIDDLEWARE] JWT validation failed:', error.message);
       return res.status(401).json({
         success: false,
         message: 'Invalid token.'

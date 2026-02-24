@@ -6,11 +6,17 @@ import Button from "@/components/Button";
 interface HHSCompletionWarningModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onAddNew?: () => void;
+  slumId?: string;
+  assignmentId?: string;
 }
 
 export default function HHSCompletionWarningModal({
   isOpen,
   onClose,
+  onAddNew,
+  slumId,
+  assignmentId,
 }: HHSCompletionWarningModalProps) {
   if (!isOpen) return null;
 
@@ -21,21 +27,32 @@ export default function HHSCompletionWarningModal({
           <div className="bg-green-500/20 p-3 rounded-lg">
             <CheckCircle className="w-5 h-5 text-green-400" />
           </div>
-          <h2 className="text-lg font-bold text-white">All Households Surveyed</h2>
+          <h2 className="text-lg font-bold text-white">
+            All Households Surveyed
+          </h2>
         </div>
 
         <p className="text-slate-400 mb-6 leading-relaxed">
-          All HHS have been done if you have more houses to survey, update it through slum survey page or reach your supervisor for the query.
+          All household surveys have been completed for this slum. If you've
+          found a new household that wasn't previously recorded, you can add it
+          directly.
         </p>
 
-        <div className="flex justify-end">          
+        <div className="flex gap-3">
           <Button
             variant="secondary"
             size="md"
             onClick={onClose}
-            className="w-full sm:w-auto"
+            className="flex-1"
           >
             Close
+          </Button>
+          <Button
+            size="md"
+            onClick={onAddNew}
+            className="flex-1 bg-green-600 hover:bg-green-500"
+          >
+            Add New Household
           </Button>
         </div>
       </div>

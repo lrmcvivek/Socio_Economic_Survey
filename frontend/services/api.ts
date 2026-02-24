@@ -29,7 +29,7 @@ class ApiService {
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
-    
+
     console.log('ApiService: Headers prepared', headers);
 
     return headers;
@@ -40,9 +40,9 @@ class ApiService {
       // Check if response body is non-empty and content-type is application/json
       const contentType = response.headers.get('content-type');
       const contentLength = response.headers.get('content-length');
-      
+
       let errorData: any = {};
-      
+
       // Only try to parse as JSON if content-type is JSON and body is not empty
       if (contentType && contentType.includes('application/json') && contentLength !== '0') {
         try {
@@ -63,7 +63,7 @@ class ApiService {
           errorData = { message: `HTTP error! status: ${response.status}` };
         }
       }
-      
+
       return {
         success: false,
         user: undefined,
@@ -101,17 +101,17 @@ class ApiService {
         headers: { ...this.getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
-      console.log('ApiService: Login response received', { 
-        status: response.status, 
+
+      console.log('ApiService: Login response received', {
+        status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         url: response.url
       });
-      
+
       const result: ApiResponse<{ user: { _id: string; username: string; name: string; role: string }; token: string }> = await this.handleResponse(response);
       console.log('ApiService: Login response processed', { success: result.success, result });
-      
+
       return result;
     } catch (error: any) {
       // Better error logging to capture network errors
@@ -123,7 +123,7 @@ class ApiService {
         errorType: typeof error,
         rawError: JSON.stringify(error, Object.getOwnPropertyNames(error)) // This captures all properties
       });
-      
+
       return {
         success: false,
         user: undefined,
@@ -173,7 +173,7 @@ class ApiService {
       if (role) {
         url += `?role=${encodeURIComponent(role)}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -246,7 +246,7 @@ class ApiService {
       if (role) {
         url += `?role=${encodeURIComponent(role)}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -331,9 +331,9 @@ class ApiService {
         headers: this.getHeaders(),
         body: JSON.stringify(data),
       });
-      
-      console.log('ApiService: Create slum response received', { 
-        status: response.status, 
+
+      console.log('ApiService: Create slum response received', {
+        status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         url: response.url
@@ -349,7 +349,7 @@ class ApiService {
         errorType: typeof error,
         rawError: JSON.stringify(error, Object.getOwnPropertyNames(error))
       });
-      
+
       return {
         success: false,
         user: undefined,
@@ -366,9 +366,9 @@ class ApiService {
         headers: this.getHeaders(),
         body: JSON.stringify(data),
       });
-      
-      console.log('ApiService: Update slum response received', { 
-        status: response.status, 
+
+      console.log('ApiService: Update slum response received', {
+        status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         url: response.url
@@ -384,7 +384,7 @@ class ApiService {
         errorType: typeof error,
         rawError: JSON.stringify(error, Object.getOwnPropertyNames(error))
       });
-      
+
       return {
         success: false,
         user: undefined,
@@ -400,9 +400,9 @@ class ApiService {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
-      
-      console.log('ApiService: Delete slum response received', { 
-        status: response.status, 
+
+      console.log('ApiService: Delete slum response received', {
+        status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         url: response.url
@@ -418,7 +418,7 @@ class ApiService {
         errorType: typeof error,
         rawError: JSON.stringify(error, Object.getOwnPropertyNames(error))
       });
-      
+
       return {
         success: false,
         user: undefined,
@@ -450,15 +450,15 @@ class ApiService {
         page: page.toString(),
         limit: limit.toString()
       });
-        
+
       if (loadAll) {
         queryParams.append('loadAll', 'true');
       }
-        
+
       if (search) {
         queryParams.append('search', search);
       }
-      
+
       const response = await fetch(`${this.baseUrl}/surveys/slums?${queryParams.toString()}`, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -498,7 +498,7 @@ class ApiService {
       if (stateId) {
         url += `?stateId=${encodeURIComponent(stateId)}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -567,7 +567,7 @@ class ApiService {
     }
   }
 
-  public async createOrGetHouseholdSurvey(slumId: string, houseDoorNo: string, parcelId?: number, propertyNo?: number): Promise<ApiResponse> {
+  public async createOrGetHouseholdSurvey(slumId: string, houseDoorNo: string, parcelId?: string, propertyNo?: number): Promise<ApiResponse> {
     try {
       const requestBody: any = { slumId };
       if (parcelId !== undefined && propertyNo !== undefined) {
@@ -576,7 +576,7 @@ class ApiService {
       } else {
         requestBody.houseDoorNo = houseDoorNo;
       }
-      
+
       const response = await fetch(`${this.baseUrl}/surveys/household-surveys`, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -634,7 +634,7 @@ class ApiService {
       if (status) {
         url += `?status=${encodeURIComponent(status)}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -668,7 +668,7 @@ class ApiService {
     }
   }
 
-  public async getPropertiesBySlumAndParcel(slumId: string, parcelId: number): Promise<ApiResponse<number[]>> {
+  public async getPropertiesBySlumAndParcel(slumId: string, parcelId: string): Promise<ApiResponse<number[]>> {
     try {
       const response = await fetch(`${this.baseUrl}/surveys/household-surveys/properties/${slumId}/${parcelId}`, {
         method: 'GET',
@@ -685,7 +685,7 @@ class ApiService {
     }
   }
 
-  public async getHouseholdSurveyByParcel(slumId: string, parcelId: number, propertyNo: number): Promise<ApiResponse> {
+  public async getHouseholdSurveyByParcel(slumId: string, parcelId: string, propertyNo: number): Promise<ApiResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/surveys/household-surveys/by-parcel/${slumId}/${parcelId}/${propertyNo}`, {
         method: 'GET',
@@ -742,13 +742,13 @@ class ApiService {
     try {
       console.log('assignSlumToSurveyor called with:', { surveyorId, slumId });
       const url = `${this.baseUrl}/surveys/assignments/assign-slum`;
-      const body = JSON.stringify({ 
-        surveyorId, 
+      const body = JSON.stringify({
+        surveyorId,
         slumId,
       });
       console.log('Request URL:', url);
       console.log('Request Body:', body);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -758,7 +758,7 @@ class ApiService {
       console.log('Response Status:', response.status, 'OK:', response.ok);
       const result = await this.handleResponse(response);
       console.log('assignSlumToSurveyor Result:', result);
-      
+
       return result;
     } catch (error: any) {
       console.error('assignSlumToSurveyor Network Error:', error);
@@ -777,9 +777,9 @@ class ApiService {
         method: 'GET',
         headers: this.getHeaders(),
       });
-      
+
       console.log('Response status:', response.status, 'Response OK:', response.ok);
-      
+
       return await this.handleResponse(response);
     } catch (error: any) {
       console.error('getAssignedSlums error:', error);
@@ -797,7 +797,7 @@ class ApiService {
         method: 'GET',
         headers: this.getHeaders(),
       });
-      
+
       return await this.handleResponse(response);
     } catch (error: any) {
       return {
@@ -1065,15 +1065,60 @@ class ApiService {
   }
 
   public async submitHouseholdSurvey(surveyId: string, data: any): Promise<ApiResponse> {
+    console.log('[API_SERVICE] 🚀 submitHouseholdSurvey called with:', { surveyId, dataKeys: Object.keys(data) });
+
     try {
-      const response = await fetch(`${this.baseUrl}/surveys/household-surveys/${surveyId}/submit`, {
+      const url = `${this.baseUrl}/surveys/household-surveys/${surveyId}/submit`;
+      const headers = this.getHeaders();
+
+      console.log('[API_SERVICE] Request details:', {
+        url,
         method: 'POST',
-        headers: this.getHeaders(),
+        hasToken: !!headers['Authorization'],
+        tokenPreview: headers['Authorization'] ? headers['Authorization'].substring(0, 20) + '...' : 'NONE'
+      });
+
+      console.log('[API_SERVICE] 📡 Sending fetch request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
         body: JSON.stringify(data),
       });
 
-      return await this.handleResponse(response);
+      console.log('[API_SERVICE] 📡 Response received:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
+      if (!response.ok) {
+        console.error('[API_SERVICE] ❌ HTTP error:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+
+        // Try to get error details
+        try {
+          const errorText = await response.text();
+          console.error('[API_SERVICE] ❌ Error response body:', errorText);
+        } catch (e) {
+          console.error('[API_SERVICE] ❌ Could not read error response body');
+        }
+      }
+
+      const result = await this.handleResponse(response);
+      console.log('[API_SERVICE] Final result:', {
+        success: result.success,
+        hasData: !!result.data
+      });
+
+      return result;
     } catch (error: any) {
+      console.error('[API_SERVICE] ❌ Network error occurred:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       return {
         success: false,
         user: undefined,
@@ -1081,7 +1126,7 @@ class ApiService {
       };
     }
   }
-  
+
   public async updateSurveySection(surveyId: string, section: string, data: any): Promise<ApiResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/surveys/slum-surveys/${surveyId}/section`, {
@@ -1099,7 +1144,7 @@ class ApiService {
       };
     }
   }
-  
+
   // Health check method to test backend connectivity
   public async checkHealth(): Promise<ApiResponse> {
     try {
@@ -1108,9 +1153,9 @@ class ApiService {
         method: 'GET',
         headers: this.getHeaders(),
       });
-      
+
       console.log('ApiService: Health check response', { status: response.status, ok: response.ok });
-      
+
       if (!response.ok) {
         const errorData = await response.text();
         console.error('Health check error response:', errorData);
@@ -1119,7 +1164,7 @@ class ApiService {
           error: errorData || `HTTP error! status: ${response.status}`,
         };
       }
-      
+
       const data = await response.json();
       console.log('Health check success:', data);
       return {

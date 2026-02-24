@@ -4,17 +4,17 @@ export interface HouseholdSurvey {
   slum?: any;
   houseDoorNo?: string;
   // New parcel-based fields
-  parcelId?: number;
+  parcelId?: string;
   propertyNo?: number;
   source?: 'CREATED' | 'IMPORTED';
   surveyor?: any;
   surveyStatus?: string;
   submittedAt?: string;
-  
+
   // SECTION I: General Information
   slumName?: string;
   ward?: string;
-  
+
   // SECTION II: Household Level General Information
   headName?: string;
   fatherName?: string;
@@ -23,32 +23,32 @@ export interface HouseholdSurvey {
   religion?: string;
   minorityStatus?: string;
   femaleHeadStatus?: string;
-  
+
   // Family Members Count
   familyMembersMale?: number;
   familyMembersFemale?: number;
   familyMembersTotal?: number;
-  
+
   // Illiterate Adult Members
   illiterateAdultMale?: number;
   illiterateAdultFemale?: number;
   illiterateAdultTotal?: number;
-  
+
   // Children Not Attending School (6-14 years)
   childrenNotAttendingMale?: number;
   childrenNotAttendingFemale?: number;
   childrenNotAttendingTotal?: number;
-  
+
   // Handicapped Persons
   handicappedPhysically?: number;
   handicappedMentally?: number;
   handicappedTotal?: number;
-  
+
   // Economic Status
   femaleEarningStatus?: string;
   belowPovertyLine?: string;
   bplCard?: string;
-  
+
   // SECTION III: Housing & Infrastructure
   landTenureStatus?: string;
   houseStructure?: string;
@@ -56,7 +56,7 @@ export interface HouseholdSurvey {
   flooringType?: string;
   houseLighting?: string;
   cookingFuel?: string;
-  
+
   // Water & Sanitation
   waterSource?: string;
   waterSupplyDuration?: string;
@@ -64,7 +64,7 @@ export interface HouseholdSurvey {
   toiletFacility?: string;
   bathroomFacility?: string;
   roadFrontType?: string;
-  
+
   // SECTION IV: Education & Health Facilities
   preschoolType?: string;
   primarySchoolType?: string;
@@ -73,14 +73,14 @@ export interface HouseholdSurvey {
   welfareBenefits?: string[];
   consumerDurables?: string[];
   livestock?: string[];
-  
+
   // SECTION V: Migration Details
   yearsInTown?: string;
   migrated?: string;
   migratedFrom?: string;
   migrationType?: string;
   migrationReasons?: string[];
-  
+
   // SECTION VI: Income & Expenditure
   earningAdultMale?: number;
   earningAdultFemale?: number;
@@ -91,14 +91,14 @@ export interface HouseholdSurvey {
   monthlyIncome?: number;
   monthlyExpenditure?: number;
   debtOutstanding?: number;
-  
+
   // Additional Information
   notes?: string;
-  
+
   // Survey Metadata
   submittedBy?: any;
   lastModifiedBy?: any;
   lastModifiedAt?: string;
-  
+
   [key: string]: any; // Allow additional properties
 }

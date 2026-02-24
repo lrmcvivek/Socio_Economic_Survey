@@ -15,6 +15,7 @@ interface HouseholdSurveySelectorProps {
   assignmentId: string;
   slumId: string;
   slumName: string;
+  initialMode?: 'search' | 'new';
 }
 
 export const HouseholdSurveySelector = ({
@@ -22,10 +23,19 @@ export const HouseholdSurveySelector = ({
   onClose,
   assignmentId,
   slumId,
-  slumName
+  slumName,
+  initialMode = 'search'
 }: HouseholdSurveySelectorProps) => {
   const router = useRouter();
-  const [mode, setMode] = useState<'search' | 'new'>('search');
+  const [mode, setMode] = useState<'search' | 'new'>(initialMode);
+
+  // Update mode when initialMode changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
+
   const [parcelId, setParcelId] = useState<string>('');
   const [propertyNo, setPropertyNo] = useState<string>('');
   const [properties, setProperties] = useState<number[]>([]);
@@ -36,19 +46,19 @@ export const HouseholdSurveySelector = ({
   const [prefetchedData, setPrefetchedData] = useState<HouseholdSurvey | null>(null);
   const [showPrefetchPreview, setShowPrefetchPreview] = useState(false);
 
-  const loadProperties = async (parcelIdNum: number) => {
+  const loadProperties = async (parcelIdStr: string) => {
     if (!slumId) return;
-    
+
     setLoadingProperties(true);
     setProperties([]);
-    
+
     try {
-      const response = await apiService.getPropertiesBySlumAndParcel(slumId, parcelIdNum);
-      
+      const response = await apiService.getPropertiesBySlumAndParcel(slumId, parcelIdStr);
+
       if (response.success) {
         const propertyList = response.data || [];
         setProperties(propertyList);
-        
+
         // Auto-select property if there's only one
         if (propertyList.length === 1) {
           setPropertyNo(propertyList[0].toString());
@@ -68,7 +78,7 @@ export const HouseholdSurveySelector = ({
   // Auto-generate new parcel ID when in New mode
   const generateNewParcelId = async () => {
     if (mode !== 'new') return;
-    
+
     setIsGeneratingParcelId(true);
     try {
       const response = await apiService.getNextNewParcelId(slumId);
@@ -104,25 +114,25 @@ export const HouseholdSurveySelector = ({
 
   const handleSearch = async () => {
     if (!validateInputs()) return;
-    
+
     setLoading(true);
     setError(null);
     setPrefetchedData(null);
     setShowPrefetchPreview(false);
-    
+
     try {
       const response = await apiService.getHouseholdSurveyByParcel(
         slumId,
-        parseInt(parcelId),
+        parcelId,
         parseInt(propertyNo)
       );
-      
+
       if (response.success && response.data) {
         // Found existing household survey - show pre-fetch preview
         const surveyData = response.data;
         setPrefetchedData(surveyData);
         setShowPrefetchPreview(true);
-        
+
         // Don't redirect immediately, let user see the pre-fetched data first
       } else {
         setError('No household survey found for this Parcel ID and Property Number combination');
@@ -137,18 +147,18 @@ export const HouseholdSurveySelector = ({
 
   const handleCreateNew = async () => {
     if (!validateInputs()) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiService.createOrGetHouseholdSurvey(
         slumId,
         `${parcelId}-${propertyNo}`,
-        parseInt(parcelId),
+        parcelId,
         parseInt(propertyNo)
       );
-      
+
       if (response.success && response.data) {
         // Successfully created new household survey - redirect to it
         const surveyData = response.data;
@@ -188,10 +198,9 @@ export const HouseholdSurveySelector = ({
     setError(null);
   };
 
-  // Load properties when parcel ID changes
   useEffect(() => {
-    if (parcelId && !isNaN(parseInt(parcelId)) && mode === 'search') {
-      loadProperties(parseInt(parcelId));
+    if (parcelId && mode === 'search') {
+      loadProperties(parcelId);
     }
   }, [parcelId, mode, slumId]);
 
@@ -226,9 +235,6 @@ export const HouseholdSurveySelector = ({
               <h2 className="text-xl font-bold text-white mb-2">
                 Household Found
               </h2>
-              <p className="text-slate-400 text-sm">
-                Pre-fetched data for this household
-              </p>
               <p className="text-slate-300 text-sm mt-1">
                 Slum: {slumName}
               </p>
@@ -238,7 +244,7 @@ export const HouseholdSurveySelector = ({
             <div className="space-y-4 mb-6">
               <div className="bg-slate-700/50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold text-white mb-3">Household Details</h3>
-                
+
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -248,7 +254,7 @@ export const HouseholdSurveySelector = ({
                       {prefetchedData.houseDoorNo || `${prefetchedData.parcelId}-${prefetchedData.propertyNo}`}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Head of Household Name
@@ -257,7 +263,7 @@ export const HouseholdSurveySelector = ({
                       {prefetchedData.headName || 'Not available'}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Father/ Husband/ Guardian&apos;s Name
@@ -266,7 +272,7 @@ export const HouseholdSurveySelector = ({
                       {prefetchedData.fatherName || 'Not available'}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Land Tenure Status
@@ -275,7 +281,7 @@ export const HouseholdSurveySelector = ({
                       {prefetchedData.landTenureStatus || 'Not available'}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       House Structure/Type
@@ -320,8 +326,8 @@ export const HouseholdSurveySelector = ({
               {mode === 'search' ? 'Search Household' : 'Create New Household'}
             </h2>
             <p className="text-slate-400 text-sm">
-              {mode === 'search' 
-                ? 'Find an existing household to continue surveying' 
+              {mode === 'search'
+                ? 'Find an existing household to continue surveying'
                 : 'Create a new household record for surveying'}
             </p>
             <p className="text-slate-300 text-sm mt-1">
@@ -334,21 +340,19 @@ export const HouseholdSurveySelector = ({
             <div className="flex bg-slate-700 rounded-lg p-1">
               <button
                 onClick={() => setMode('search')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-                  mode === 'search'
-                    ? 'bg-slate-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-300'
-                }`}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'search'
+                  ? 'bg-slate-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+                  }`}
               >
                 Search Existing
               </button>
               <button
                 onClick={() => setMode('new')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-                  mode === 'new'
-                    ? 'bg-slate-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-300'
-                }`}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'new'
+                  ? 'bg-slate-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+                  }`}
               >
                 Create New
               </button>
@@ -398,14 +402,13 @@ export const HouseholdSurveySelector = ({
                   value={propertyNo}
                   onChange={(e) => setPropertyNo(e.target.value)}
                   placeholder={
-                    loadingProperties 
-                      ? "Loading properties..." 
+                    loadingProperties
+                      ? "Loading properties..."
                       : properties.length === 0 && parcelId && mode === 'search'
                         ? "Enter new property number"
                         : "Enter Property Number"
                   }
                   min="1"
-                  disabled={mode === 'new'}
                   className="w-full"
                 />
               )}

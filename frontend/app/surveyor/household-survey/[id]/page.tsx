@@ -21,7 +21,7 @@ interface HouseholdSurveyForm {
   ward?: string;
   houseDoorNo?: string;
   // Parcel-based identification (new fields)
-  parcelId?: number;
+  parcelId?: string;
   propertyNo?: number;
 
   // Section II - Household Level General Information
@@ -162,27 +162,27 @@ export default function HouseholdSurveyPage() {
   const searchParams = useSearchParams();
   const assignmentId = params.id as string;
   const { showToast } = useToast();
-  
+
   // Get surveyId from query parameter, fallback to assignmentId
   const surveyIdFromQuery = searchParams.get('surveyId');
   const surveyIdToUse = surveyIdFromQuery || assignmentId;
 
-  const [slum, setSlum] = useState<{ 
+  const [slum, setSlum] = useState<{
     _id: string;
     slumId: string;
-    slumName: string; 
+    slumName: string;
     ward?: {
       number: string;
       name: string;
       _id: string;
       zone: string;
-    } 
+    }
   } | null>(null);
   const [assignment, setAssignment] = useState<{
     _id: string;
     slum: { _id: string; slumName: string; ward: { _id: string; number: string; name: string; zone: string } };
     householdSurveyProgress?: { completed: number; total: number };
-  }| null>(null);
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["general", "household"]),
@@ -208,7 +208,6 @@ export default function HouseholdSurveyPage() {
     childrenNotAttendingMale: 0,
     childrenNotAttendingFemale: 0,
     childrenNotAttendingTotal: 0,
-    surveyStatus: "",
     // Parcel-based identification
     parcelId: undefined,
     propertyNo: undefined,
@@ -221,15 +220,15 @@ export default function HouseholdSurveyPage() {
   // Back navigation confirmation
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [backDestination, setBackDestination] = useState<string>("");
-  
+
   // Submit confirmation
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [lastSubmittedHouseNo, setLastSubmittedHouseNo] = useState("");
-  
+
   // Completion Modal State
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [householdProgress, setHouseholdProgress] = useState({ completed: 0, total: 0 });
-  
+
 
 
   // Auto-calculate totals when male/female fields change
@@ -237,49 +236,49 @@ export default function HouseholdSurveyPage() {
     setFormData(prev => {
       const updated = { ...prev };
       let hasChanges = false;
-      
+
       // Family members total
       const familyTotal = (updated.familyMembersMale || 0) + (updated.familyMembersFemale || 0);
       if (updated.familyMembersTotal !== familyTotal) {
         updated.familyMembersTotal = familyTotal;
         hasChanges = true;
       }
-      
+
       // Illiterate adults total
       const illiterateTotal = (updated.illiterateAdultMale || 0) + (updated.illiterateAdultFemale || 0);
       if (updated.illiterateAdultTotal !== illiterateTotal) {
         updated.illiterateAdultTotal = illiterateTotal;
         hasChanges = true;
       }
-      
+
       // Children not attending school total
       const childrenTotal = (updated.childrenNotAttendingMale || 0) + (updated.childrenNotAttendingFemale || 0);
       if (updated.childrenNotAttendingTotal !== childrenTotal) {
         updated.childrenNotAttendingTotal = childrenTotal;
         hasChanges = true;
       }
-      
+
       // Handicapped total
       const handicappedTotal = (updated.handicappedPhysically || 0) + (updated.handicappedMentally || 0);
       if (updated.handicappedTotal !== handicappedTotal) {
         updated.handicappedTotal = handicappedTotal;
         hasChanges = true;
       }
-      
+
       // Earning adults total
       const earningAdultTotal = (updated.earningAdultMale || 0) + (updated.earningAdultFemale || 0);
       if (updated.earningAdultTotal !== earningAdultTotal) {
         updated.earningAdultTotal = earningAdultTotal;
         hasChanges = true;
       }
-      
+
       // Earning non-adults total
       const earningNonAdultTotal = (updated.earningNonAdultMale || 0) + (updated.earningNonAdultFemale || 0);
       if (updated.earningNonAdultTotal !== earningNonAdultTotal) {
         updated.earningNonAdultTotal = earningNonAdultTotal;
         hasChanges = true;
       }
-      
+
       // Only return updated object if there were actual changes
       return hasChanges ? updated : prev;
     });
@@ -296,9 +295,9 @@ export default function HouseholdSurveyPage() {
     try {
       const response = await apiService.getMyAssignments();
       if (response.success && response.data) {
-        const currentAssignment = response.data.find((a: { 
-          _id: string; 
-          householdSurveyProgress?: { completed: number; total: number } 
+        const currentAssignment = response.data.find((a: {
+          _id: string;
+          householdSurveyProgress?: { completed: number; total: number }
         }) => a._id === assignmentId);
         if (currentAssignment && currentAssignment.householdSurveyProgress) {
           setHouseholdProgress(currentAssignment.householdSurveyProgress);
@@ -325,19 +324,19 @@ export default function HouseholdSurveyPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
         // Load specific household survey by ID from query params
         const householdSurveyResponse = await apiService.getHouseholdSurvey(surveyIdToUse);
-        
+
         if (householdSurveyResponse.success && householdSurveyResponse.data) {
           // This is an existing household survey, populate the form with its data
           const surveyData = householdSurveyResponse.data;
-          
+
           // Set slum information
           if (surveyData.slum) {
             setSlum(surveyData.slum);
           }
-          
+
           // Set assignment info if available
           if (surveyData.surveyor) {
             setAssignment({
@@ -345,29 +344,29 @@ export default function HouseholdSurveyPage() {
               slum: surveyData.slum,
             });
           }
-          
+
           // Set form data with the existing survey data, ensuring all fields are properly mapped
           setFormData(prev => {
             const updatedData = {
               ...prev, // Start with existing form data
               ...surveyData, // Override with survey data
               slumName: surveyData.slum?.slumName || prev.slumName || "",
-              ward: typeof surveyData.slum?.ward === 'object' 
-                ? `${surveyData.slum.ward.number} - ${surveyData.slum.ward.name}` 
+              ward: typeof surveyData.slum?.ward === 'object'
+                ? `${surveyData.slum.ward.number} - ${surveyData.slum.ward.name}`
                 : surveyData.slum?.ward || prev.ward || "",
             };
-            
+
             // Ensure required fields mentioned in requirements are properly displayed
             // Construct houseDoorNo as {Parcel Id}-{Property Number} if not already set
             if (!updatedData.houseDoorNo && updatedData.parcelId !== undefined && updatedData.propertyNo !== undefined) {
               updatedData.houseDoorNo = `${updatedData.parcelId}-${updatedData.propertyNo}`;
             }
-            
+
             return updatedData;
           });
         } else {
           // Check if the API call failed due to authorization error
-          if (householdSurveyResponse.error && householdSurveyResponse.message?.includes('403')) {
+          if (householdSurveyResponse.error && (householdSurveyResponse.error.includes('403') || householdSurveyResponse.error.includes('authorized'))) {
             showToast("Access denied. You don't have permission to view this survey.", "error");
             router.push("/surveyor/dashboard");
             return; // Exit early to prevent further execution
@@ -393,10 +392,10 @@ export default function HouseholdSurveyPage() {
 
               // Load households for this slum
               await loadHouseholdsForSlum(slumId);
-              
-              
-              
-              
+
+
+
+
               // Fetch initial progress
               await fetchProgress();
             }
@@ -408,7 +407,7 @@ export default function HouseholdSurveyPage() {
         }
       } catch (error) {
         console.error(`Error loading data with ID ${assignmentId}:`, error);
-        
+
         // Check if it's a 403 error (authorization) and handle gracefully
         if (error instanceof Error && (error.message.includes('403') || error.message.includes('Forbidden'))) {
           showToast("Access denied. You don't have permission to view this survey.", "error");
@@ -424,7 +423,7 @@ export default function HouseholdSurveyPage() {
     };
 
     loadData();
-  }, [assignmentId, router, showToast, fetchProgress, loadHouseholdsForSlum]);
+  }, [assignmentId, surveyIdFromQuery, router, showToast, fetchProgress, loadHouseholdsForSlum]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections((prev) => {
@@ -481,8 +480,8 @@ export default function HouseholdSurveyPage() {
 
     // General Information (except Additional Notes)
     // Either houseDoorNo or both parcelId and propertyNo must be provided
-    if (!formData.houseDoorNo?.trim() && 
-        (formData.parcelId === undefined || formData.propertyNo === undefined)) {
+    if (!formData.houseDoorNo?.trim() &&
+      (formData.parcelId === undefined || formData.propertyNo === undefined)) {
       newErrors.push({
         field: "houseDoorNo",
         message: "House/Flat/Door No. is required or both Parcel ID and Property No. are required",
@@ -919,38 +918,46 @@ export default function HouseholdSurveyPage() {
 
   const handleSubmit = async () => {
     try {
+      console.log('[HOUSEHOLD_SURVEY] 🚀 handleSubmit called');
+
       // Validate form
       const validationErrors = validateForm();
       setErrors(validationErrors);
 
       if (validationErrors.length > 0) {
+        console.log('[HOUSEHOLD_SURVEY] ❌ Form validation failed:', validationErrors);
         showToast("Please fill all required fields", "error");
         scrollToFirstError();
         return;
       }
 
-      // Show confirmation dialog
-      setShowSubmitConfirm(true);
+      console.log('[HOUSEHOLD_SURVEY] ✅ Form validation passed, proceeding to submit');
+
+      // Directly call submit function instead of showing confirmation
+      await handleConfirmSubmit();
+
     } catch (error) {
-      console.error("Error preparing submission:", error);
+      console.error("[HOUSEHOLD_SURVEY] ❌ Error in handleSubmit:", error);
       showToast("Failed to prepare submission", "error");
     }
   };
 
   const handleConfirmSubmit = async () => {
     try {
+      console.log('[HOUSEHOLD_SURVEY] 🚀 handleConfirmSubmit called');
       setSubmitting(true);
       setShowSubmitConfirm(false);
-  
+
       // Clear previous errors
       setErrors([]);
-  
+
       // Check if we're working with an existing survey (editing mode)
       // Get surveyId from query params
       const surveyIdFromQuery = searchParams.get('surveyId');
       let surveyIdToUse = surveyIdFromQuery || assignmentId;
+      console.log('[HOUSEHOLD_SURVEY] Survey ID to use:', surveyIdToUse);
       let isExistingSurvey = false;
-      
+
       // Check if this is an existing survey
       try {
         const existingSurveyResponse = await apiService.getHouseholdSurvey(surveyIdToUse);
@@ -959,38 +966,44 @@ export default function HouseholdSurveyPage() {
         console.error('Error checking existing survey:', error);
         isExistingSurvey = false;
       }
-      
+
       if (isExistingSurvey && surveyIdToUse) {
-          
-        // Extract surveyStatus to handle separately
-        const { surveyStatus, ...otherFormData } = formData;
-                
-        // Update the existing survey
-        const response = await apiService.updateHouseholdSurvey(
+        console.log('[HOUSEHOLD_SURVEY] 🎯 Submitting existing survey');
+
+        // Submit the existing survey
+        // Remove surveyStatus from formData as it should be controlled by backend
+        const { surveyStatus, ...submitData } = formData;
+        console.log('[HOUSEHOLD_SURVEY] Submitting existing survey with formData (excluding surveyStatus):', submitData);
+
+        console.log('[HOUSEHOLD_SURVEY] 📡 Calling API service submitHouseholdSurvey...');
+        const response = await apiService.submitHouseholdSurvey(
           surveyIdToUse,
-          {
-            ...otherFormData,
-            surveyStatus: surveyStatus || 'IN PROGRESS', // Use existing status or set to IN PROGRESS
-          }
+          submitData
         );
-                
+        console.log('[HOUSEHOLD_SURVEY] 📡 API service response received:', response);
+        console.log('[HOUSEHOLD_SURVEY] Existing survey submit response:', response);
+
         if (response.success) {
-          showToast("Household survey updated successfully", "success");
-                  
+          showToast("Household survey submitted successfully", "success");
+
           // Save house number for modal
           setLastSubmittedHouseNo(formData.houseDoorNo || "");
-                  
+
           // Show completion modal instead of browser alert
           await fetchProgress(); // Fetch updated progress
           setShowCompletionModal(true);
         } else {
-          showToast(response.message || "Failed to update survey", "error");
+          console.error('[HOUSEHOLD_SURVEY] ❌ Submission failed:', {
+            message: response.message,
+            error: response.error
+          });
+          showToast(response.message || "Failed to submit survey", "error");
           return;
         }
       } else {
         // This is a new survey from an assignment, create it
         let surveyResponse;
-              
+
         if (formData.parcelId !== undefined && formData.propertyNo !== undefined) {
           // Use parcel-based workflow
           surveyResponse = await apiService.createOrGetHouseholdSurvey(
@@ -1006,7 +1019,7 @@ export default function HouseholdSurveyPage() {
             formData.houseDoorNo || "",
           );
         }
-      
+
         if (!surveyResponse.success) {
           showToast(
             surveyResponse.message || "Failed to initialize survey",
@@ -1014,21 +1027,39 @@ export default function HouseholdSurveyPage() {
           );
           return;
         }
-      
+
         surveyIdToUse = surveyResponse.data._id;
-      
+        console.log('[HOUSEHOLD_SURVEY] 🎯 Submitting new survey with ID:', surveyIdToUse);
+
         // Submit the new survey
+        // Remove surveyStatus from formData as it should be controlled by backend
+        const { surveyStatus, ...submitData } = formData;
+        console.log('[HOUSEHOLD_SURVEY] 🚀 Starting submission for survey ID:', surveyIdToUse);
+        console.log('[HOUSEHOLD_SURVEY] Form data keys being sent:', Object.keys(submitData));
+        console.log('[HOUSEHOLD_SURVEY] Excluded fields:', { surveyStatus: surveyStatus ? 'present' : 'absent' });
+
+        console.log('[HOUSEHOLD_SURVEY] 📡 Calling API service submitHouseholdSurvey for new survey...');
         const response = await apiService.submitHouseholdSurvey(
           surveyIdToUse,
-          formData,
+          submitData,
         );
-          
+        console.log('[HOUSEHOLD_SURVEY] 📡 API service response received for new survey:', response);
+
+        console.log('[HOUSEHOLD_SURVEY] 📡 API Response received:', {
+          success: response.success,
+          message: response.message,
+          hasData: !!response.data,
+          dataKeys: response.data ? Object.keys(response.data) : []
+        });
+
         if (response.success) {
+          console.log('[HOUSEHOLD_SURVEY] ✅ Submission successful!');
+          console.log('[HOUSEHOLD_SURVEY] Response data:', response.data);
           showToast("Household survey submitted successfully", "success");
-            
+
           // Save house number for modal
           setLastSubmittedHouseNo(formData.houseDoorNo || "");
-  
+
           // Reset form for next household
           setFormData({
             householdId: "",
@@ -1095,12 +1126,12 @@ export default function HouseholdSurveyPage() {
             debtOutstanding: undefined,
             notes: ""
           });
-            
+
           // Reset expanded sections
           setExpandedSections(new Set(["general", "household"]));
-                    
-          
-                    
+
+
+
           // Show completion modal instead of browser alert
           await fetchProgress(); // Fetch updated progress
           setShowCompletionModal(true);
@@ -1122,7 +1153,7 @@ export default function HouseholdSurveyPage() {
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
 
-  
+
 
         </div>
       </SurveyorLayout>
@@ -1164,7 +1195,7 @@ export default function HouseholdSurveyPage() {
           </div>
         </div>
 
-            
+
 
         {/* Accordion Sections */}
         <div className="space-y-4 my-6 ">
@@ -1214,9 +1245,9 @@ export default function HouseholdSurveyPage() {
                         readOnly
                         className="bg-slate-800/50 cursor-not-allowed opacity-75"
                       />
-                      
 
-                      
+
+
                       {/* Traditional house door number input */}
                       <Input
                         label="3. House/Flat/Door No."
@@ -1375,24 +1406,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("familyMembersFemale")}
                       />
                       <div>
-                      <Input
-                        label="11c. Number of Family Members (Total)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.familyMembersTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "familyMembersTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="familyMembersTotal"
-                        required
-                        error={getFieldError("familyMembersTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <Input
+                          label="11c. Number of Family Members (Total)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.familyMembersTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "familyMembersTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="familyMembersTotal"
+                          required
+                          error={getFieldError("familyMembersTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
                       </div>
                       <Input
                         label="12a. Number of Illiterate Adult Male Members (>14 yrs old)"
@@ -1429,24 +1460,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("illiterateAdultFemale")}
                       />
                       <div>
-                      <Input
-                        label="12c. Number of Illiterate Adult Total Members (>14 yrs old)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.illiterateAdultTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "illiterateAdultTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="illiterateAdultTotal"
-                        required
-                        error={getFieldError("illiterateAdultTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <Input
+                          label="12c. Number of Illiterate Adult Total Members (>14 yrs old)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.illiterateAdultTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "illiterateAdultTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="illiterateAdultTotal"
+                          required
+                          error={getFieldError("illiterateAdultTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
                       </div>
                       <Input
                         label="13a. Number of Children Aged 6-14 Not Attending School (Male)"
@@ -1483,24 +1514,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("childrenNotAttendingFemale")}
                       />
                       <div>
-                      <Input
-                        label="13c. Number of Children Aged 6-14 Not Attending School (Total)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.childrenNotAttendingTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "childrenNotAttendingTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="childrenNotAttendingTotal"
-                        required
-                        error={getFieldError("childrenNotAttendingTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <Input
+                          label="13c. Number of Children Aged 6-14 Not Attending School (Total)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.childrenNotAttendingTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "childrenNotAttendingTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="childrenNotAttendingTotal"
+                          required
+                          error={getFieldError("childrenNotAttendingTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
                       </div>
                       <Input
                         label="14a. Number of Handicapped Persons (Physically)"
@@ -1537,24 +1568,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("handicappedMentally")}
                       />
                       <div>
-                      <Input
-                        label="14c. Number of Handicapped Persons (Total)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.handicappedTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "handicappedTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="handicappedTotal"
-                        required
-                        error={getFieldError("handicappedTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Physically + Mentally). Can be manually edited if needed.</p>
+                        <Input
+                          label="14c. Number of Handicapped Persons (Total)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.handicappedTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "handicappedTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="handicappedTotal"
+                          required
+                          error={getFieldError("handicappedTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Physically + Mentally). Can be manually edited if needed.</p>
                       </div>
                       <Select
                         label="15. If Major Earning Member is Female, Status"
@@ -2219,24 +2250,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("earningAdultFemale")}
                       />
                       <div>
-                      <Input
-                        label="40c. Number of Earning Adult Members (Total)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.earningAdultTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "earningAdultTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="earningAdultTotal"
-                        required
-                        error={getFieldError("earningAdultTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <Input
+                          label="40c. Number of Earning Adult Members (Total)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.earningAdultTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "earningAdultTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="earningAdultTotal"
+                          required
+                          error={getFieldError("earningAdultTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
                       </div>
                       <Input
                         label="41a. Number of Earning Non-Adult Members (Male)"
@@ -2273,24 +2304,24 @@ export default function HouseholdSurveyPage() {
                         error={getFieldError("earningNonAdultFemale")}
                       />
                       <div>
-                      <Input
-                        label="41c. Number of Earning Non-Adult Members (Total)"
-                        type="number"
-                        placeholder="Enter number"
-                        value={formData.earningNonAdultTotal ?? ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "earningNonAdultTotal",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined,
-                          )
-                        }
-                        name="earningNonAdultTotal"
-                        required
-                        error={getFieldError("earningNonAdultTotal")}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <Input
+                          label="41c. Number of Earning Non-Adult Members (Total)"
+                          type="number"
+                          placeholder="Enter number"
+                          value={formData.earningNonAdultTotal ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "earningNonAdultTotal",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            )
+                          }
+                          name="earningNonAdultTotal"
+                          required
+                          error={getFieldError("earningNonAdultTotal")}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
                       </div>
                       <Input
                         label="42. Average Monthly Income of Household (in Rs.)"
@@ -2408,7 +2439,7 @@ export default function HouseholdSurveyPage() {
                 </p>
                 <div className="flex gap-3 justify-center">
                   <Button
-                    variant="secondary" 
+                    variant="secondary"
                     className="cursor-pointer"
                     onClick={() => setShowSubmitConfirm(false)}
                     disabled={submitting}
@@ -2428,7 +2459,7 @@ export default function HouseholdSurveyPage() {
           </div>
         )}
       </div>
-    <HouseholdSurveyModal
+      <HouseholdSurveyModal
         isOpen={showCompletionModal}
         onClose={() => router.push("/surveyor/dashboard")}
         onSubmit={() => {

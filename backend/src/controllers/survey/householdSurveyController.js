@@ -1,6 +1,6 @@
 const HouseholdSurvey = require('../../models/HouseholdSurvey');
 const Slum = require('../../models/Slum');
-const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys, updateSlumDemographicPopulationFromHouseholdSurveys } = require('../../utils/statusSyncHelper');
+const { updateStatusesFromHouseholdSurvey, updateSlumPopulationFromHouseholdSurveys, updateSlumBplPopulationFromHouseholdSurveys, updateSlumDemographicPopulationFromHouseholdSurveys, autoSyncHouseholdCounts } = require('../../utils/statusSyncHelper');
 const { sendSuccess, sendError } = require('../../utils/helpers/responseHelper');
 const { v4: uuidv4 } = require('uuid');
 
@@ -34,38 +34,38 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
     // Check if parcelId and propertyNo are provided (new workflow)
     if (parcelId !== undefined && propertyNo !== undefined) {
       // Check if survey already exists for this slum, parcelId and propertyNo
-      survey = await HouseholdSurvey.findOne({ 
-        slum: slumId, 
-        parcelId: parseInt(parcelId),
-        propertyNo: parseInt(propertyNo),
-        surveyor: userId 
+      survey = await HouseholdSurvey.findOne({
+        slum: slumId,
+        parcelId: parcelId,
+        propertyNo: propertyNo,
+        surveyor: userId
       });
     } else if (houseDoorNo) {
       // Check if survey already exists for this slum and house door number (legacy workflow)
-      survey = await HouseholdSurvey.findOne({ 
-        slum: slumId, 
+      survey = await HouseholdSurvey.findOne({
+        slum: slumId,
         houseDoorNo: houseDoorNo,
-        surveyor: userId 
+        surveyor: userId
       });
     }
 
     if (!survey) {
       // Check if there's an imported record for this parcel/property combination
       if (parcelId !== undefined && propertyNo !== undefined) {
-        const importedRecord = await HouseholdSurvey.findOne({ 
-          slum: slumId, 
-          parcelId: parseInt(parcelId),
-          propertyNo: parseInt(propertyNo)
+        const importedRecord = await HouseholdSurvey.findOne({
+          slum: slumId,
+          parcelId: parcelId,
+          propertyNo: propertyNo
         });
-        
+
         if (importedRecord) {
           // Use the imported record if it exists (copy its prefilled data)
           survey = new HouseholdSurvey({
             slum: slumId,
             householdId: uuidv4(),
-            houseDoorNo: `${parseInt(parcelId)}-${parseInt(propertyNo)}`, // Generate houseDoorNo from parcel and property
-            parcelId: parseInt(parcelId),
-            propertyNo: parseInt(propertyNo),
+            houseDoorNo: `${parcelId}-${propertyNo}`, // Generate houseDoorNo from parcel and property
+            parcelId: parcelId,
+            propertyNo: propertyNo,
             source: 'CREATED', // New record created from imported data
             surveyor: userId,
             surveyStatus: 'DRAFT',
@@ -80,9 +80,9 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
           survey = new HouseholdSurvey({
             slum: slumId,
             householdId: uuidv4(),
-            houseDoorNo: `${parseInt(parcelId)}-${parseInt(propertyNo)}`, // Generate houseDoorNo from parcel and property
-            parcelId: parseInt(parcelId),
-            propertyNo: parseInt(propertyNo),
+            houseDoorNo: `${parcelId}-${propertyNo}`, // Generate houseDoorNo from parcel and property
+            parcelId: parcelId,
+            propertyNo: propertyNo,
             source: 'CREATED',
             surveyor: userId,
             surveyStatus: 'DRAFT',
@@ -100,18 +100,21 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
       } else {
         return sendError(res, 'Either houseDoorNo or both parcelId and propertyNo must be provided', 400);
       }
-      
+
       await survey.save();
+
+      // Auto-sync household counts when creating new survey
+      await autoSyncHouseholdCounts(slumId, userId);
     }
 
     await survey.populate([
-      { path: 'slum', select: 'slumName location ward' },
+      { path: 'slum', select: 'slumName location ward village', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
     // Update slum population calculation after creating/retrieving survey
     await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
-    
+
     // Update BPL population calculation after creating/retrieving survey
     await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
     await updateSlumDemographicPopulationFromHouseholdSurveys(survey.slum._id);
@@ -129,26 +132,56 @@ exports.createOrGetHouseholdSurvey = async (req, res) => {
 exports.getHouseholdSurvey = async (req, res) => {
   try {
     const { surveyId } = req.params;
+    console.log('[DEBUG] getHouseholdSurvey called with:', { surveyId, userId: req.user._id, userRole: req.user.role });
 
     const survey = await HouseholdSurvey.findById(surveyId).populate([
-      { path: 'slum', select: 'slumName village ward' },
+      { path: 'slum', select: 'slumName village ward', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
     if (!survey) {
+      console.log('[DEBUG] Survey not found:', surveyId);
       return sendError(res, 'Survey not found', 404);
     }
 
-    // Check authorization for supervisors (allow them to view any survey)
-    if (req.user.role === 'SUPERVISOR') {
-      // Supervisors can view all surveys for HHQC purposes
-    } else if (req.user.role === 'SURVEYOR') {
-      // Surveyors can only view their own surveys
-      if (survey.surveyor.toString() !== req.user.id.toString()) {
-        return sendError(res, 'Not authorized to view this survey', 403);
+    console.log('[DEBUG] Found survey:', {
+      surveyId: survey._id,
+      surveyor: survey.surveyor ? survey.surveyor.toString() : null,
+      slum: survey.slum?.slumName
+    });
+
+    // Check authorization - allow:
+    // 1. Admins to view all surveys
+    // 2. Supervisors to view all surveys (HHQC)
+    // 3. Surveyors to view their own surveys
+    // 4. Surveyors to view unassigned imported surveys (surveyor: null)
+    // 5. Surveyors to view surveys in their assigned slums (enhanced access)
+    if (req.user.role === 'SURVEYOR') {
+      const surveyorId = survey.surveyor ? survey.surveyor.toString() : null;
+      const currentUserId = req.user.id.toString();
+
+      // Allow access if:
+      // - Survey is assigned to current user, OR
+      // - Survey is unassigned (imported surveys), OR
+      // - User has assignment to this slum
+      if (surveyorId !== currentUserId && surveyorId !== null) {
+        // Additional check: verify user has assignment to this slum
+        const Assignment = require('../../models/Assignment');
+        const assignment = await Assignment.findOne({
+          surveyor: currentUserId,
+          slum: survey.slum._id,
+          status: { $in: ['PENDING', 'IN PROGRESS'] }
+        });
+
+        if (!assignment) {
+          console.log('[DEBUG] ACCESS DENIED - No assignment to slum');
+          return sendError(res, 'Not authorized to view this survey. You are not assigned to this slum.', 403);
+        }
+
+        console.log('[DEBUG] ACCESS GRANTED - User assigned to slum');
       }
     }
-    // Admins can view all surveys by default
+    // Admins and supervisors can view all surveys by default
 
     sendSuccess(res, survey, 'Survey retrieved successfully');
   } catch (error) {
@@ -173,16 +206,16 @@ exports.updateHouseholdSurvey = async (req, res) => {
     }
 
     // Check authorization - allow original surveyor, admins, and supervisors
-    if (survey.surveyor.toString() !== userId.toString() && 
-        req.user.role !== 'ADMIN' && 
-        req.user.role !== 'SUPERVISOR') {
+    if (survey.surveyor && survey.surveyor.toString() !== userId.toString() &&
+      req.user.role !== 'ADMIN' &&
+      req.user.role !== 'SUPERVISOR') {
       return sendError(res, 'Not authorized to update this survey', 403);
     }
 
     // Update survey fields directly (flat structure)
     // Ensure numeric fields have proper values
     const sanitizedUpdateData = { ...updateData };
-    
+
     // Sanitize numeric fields
     const numericFields = [
       'familyMembersMale', 'familyMembersFemale', 'familyMembersTotal',
@@ -193,7 +226,7 @@ exports.updateHouseholdSurvey = async (req, res) => {
       'earningNonAdultMale', 'earningNonAdultFemale', 'earningNonAdultTotal',
       'monthlyIncome', 'monthlyExpenditure', 'debtOutstanding'
     ];
-    
+
     numericFields.forEach(field => {
       if (sanitizedUpdateData[field] === undefined || sanitizedUpdateData[field] === null || sanitizedUpdateData[field] === '') {
         sanitizedUpdateData[field] = 0;
@@ -201,50 +234,54 @@ exports.updateHouseholdSurvey = async (req, res) => {
         sanitizedUpdateData[field] = parseInt(sanitizedUpdateData[field]) || 0;
       }
     });
-    
+
     // Auto-calculation is now handled in the frontend. Backend will accept whatever values are sent.
-    
+
     Object.assign(survey, sanitizedUpdateData);
     survey.lastModifiedBy = userId;
     survey.lastModifiedAt = new Date();
     survey.surveyStatus = updateData.surveyStatus || survey.surveyStatus;
 
+    if (!survey.surveyor) {
+      survey.surveyor = userId;
+    }
+
     await survey.save();
     await survey.populate([
-      { path: 'slum', select: 'slumName village ward' },
+      { path: 'slum', select: 'slumName village ward', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
     // Update slum population if family members count changed
-    if (updateData.familyMembersTotal !== undefined || 
-        updateData.familyMembersMale !== undefined || 
-        updateData.familyMembersFemale !== undefined) {
+    if (updateData.familyMembersTotal !== undefined ||
+      updateData.familyMembersMale !== undefined ||
+      updateData.familyMembersFemale !== undefined) {
       await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
     }
-    
+
     // Update BPL population if BPL status or family members count changed
-    if (updateData.belowPovertyLine !== undefined || 
-        updateData.familyMembersTotal !== undefined || 
-        updateData.familyMembersMale !== undefined || 
-        updateData.familyMembersFemale !== undefined) {
+    if (updateData.belowPovertyLine !== undefined ||
+      updateData.familyMembersTotal !== undefined ||
+      updateData.familyMembersMale !== undefined ||
+      updateData.familyMembersFemale !== undefined) {
       await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
       await updateSlumDemographicPopulationFromHouseholdSurveys(survey.slum._id);
     }
-    
+
     // Update demographic population if caste or minority status changed
-    if (updateData.caste !== undefined || updateData.minorityStatus !== undefined || 
-        updateData.familyMembersTotal !== undefined || 
-        updateData.familyMembersMale !== undefined || 
-        updateData.familyMembersFemale !== undefined) {
+    if (updateData.caste !== undefined || updateData.minorityStatus !== undefined ||
+      updateData.familyMembersTotal !== undefined ||
+      updateData.familyMembersMale !== undefined ||
+      updateData.familyMembersFemale !== undefined) {
       await updateSlumDemographicPopulationFromHouseholdSurveys(survey.slum._id);
     }
 
-    
+
     sendSuccess(res, survey, 'Survey updated successfully');
   } catch (error) {
     console.error('Error in updateHouseholdSurvey:', error.message);
     console.error('Error stack:', error.stack);
-    
+
     // Handle validation errors specifically
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => ({
@@ -253,12 +290,12 @@ exports.updateHouseholdSurvey = async (req, res) => {
       }));
       return sendError(res, 'Validation failed', 400, { validationErrors: errors });
     }
-    
+
     // Handle enum validation errors
     if (error.message && error.message.includes('`enum`')) {
       return sendError(res, `Invalid value provided: ${error.message}`, 400);
     }
-    
+
     sendError(res, error.message || 'Failed to update survey', 500);
   }
 };
@@ -267,6 +304,11 @@ exports.updateHouseholdSurvey = async (req, res) => {
  * Submit household survey (mark as SUBMITTED)
  */
 exports.submitHouseholdSurvey = async (req, res) => {
+  console.log(`[SUBMIT_HOUSEHOLD_SURVEY] 🚀 Function started for survey ID: ${req.params.surveyId}`);
+  console.log(`[SUBMIT_HOUSEHOLD_SURVEY] User ID: ${req.user?.id || req.user?._id}`);
+  console.log(`[SUBMIT_HOUSEHOLD_SURVEY] User role: ${req.user?.role}`);
+  console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Request body keys:`, Object.keys(req.body || {}));
+
   try {
     const { surveyId } = req.params;
     const userId = req.user.id || req.user._id;
@@ -276,19 +318,29 @@ exports.submitHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Survey not found', 404);
     }
 
-    // Check authorization
-    if (survey.surveyor.toString() !== userId.toString() && req.user.role !== 'ADMIN') {
+    // Check authorization - allow if assigned to user, or if unassigned (imported), or admin
+    if (survey.surveyor && survey.surveyor.toString() !== userId.toString() && req.user.role !== 'ADMIN') {
       return sendError(res, 'Not authorized to submit this survey', 403);
     }
 
+    // Assign to current surveyor if it was unassigned
+    if (!survey.surveyor) {
+      survey.surveyor = userId;
+    }
 
-    
+
+
     // Update survey with form data directly (flat structure)
     // Ensure numeric fields have proper values
     // Exclude system fields that shouldn't be overwritten
-    const { householdId, houseDoorNo, slum, surveyor, ...formData } = req.body;
+    const { householdId, houseDoorNo, slum, surveyor, surveyStatus, submittedBy, submittedAt, ...formData } = req.body;
     const sanitizedData = { ...formData };
-    
+
+    // Explicitly exclude status fields that should be controlled by the backend
+    delete sanitizedData.surveyStatus;
+    delete sanitizedData.submittedBy;
+    delete sanitizedData.submittedAt;
+
     // Sanitize numeric fields
     const numericFields = [
       'familyMembersMale', 'familyMembersFemale', 'familyMembersTotal',
@@ -299,7 +351,7 @@ exports.submitHouseholdSurvey = async (req, res) => {
       'earningNonAdultMale', 'earningNonAdultFemale', 'earningNonAdultTotal',
       'monthlyIncome', 'monthlyExpenditure', 'debtOutstanding'
     ];
-    
+
     numericFields.forEach(field => {
       if (sanitizedData[field] === undefined || sanitizedData[field] === null || sanitizedData[field] === '') {
         sanitizedData[field] = 0;
@@ -307,50 +359,117 @@ exports.submitHouseholdSurvey = async (req, res) => {
         sanitizedData[field] = parseInt(sanitizedData[field]) || 0;
       }
     });
-    
-    // Auto-calculation is now handled in the frontend. Backend will accept whatever values are sent.
-    
 
-    
+    // Sanitize enum fields - remove empty strings and undefined values
+    const enumFields = [
+      'landTenureStatus', 'houseStructure', 'roofType', 'flooringType',
+      'houseLighting', 'cookingFuel', 'waterSource', 'waterSupplyDuration',
+      'waterSourceDistance', 'toiletFacility', 'bathroomFacility', 'roadFrontType',
+      'preschoolType', 'primarySchoolType', 'highSchoolType', 'healthFacilityType',
+      'sex', 'caste', 'religion', 'minorityStatus', 'femaleHeadStatus',
+      'femaleEarningStatus', 'belowPovertyLine', 'bplCard', 'yearsInTown',
+      'migrated', 'migratedFrom', 'migrationType'
+    ];
+
+    enumFields.forEach(field => {
+      if (sanitizedData[field] === undefined || sanitizedData[field] === null || sanitizedData[field] === '') {
+        delete sanitizedData[field]; // Remove invalid enum values
+      }
+    });
+
+    // Auto-calculation is now handled in the frontend. Backend will accept whatever values are sent.
+
+
+
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Before Object.assign - survey.surveyStatus: ${survey.surveyStatus}`);
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Sanitized data keys:`, Object.keys(sanitizedData));
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Excluded fields from sanitized data:`, { surveyStatus: surveyStatus in req.body ? 'present' : 'absent' });
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Sanitized data sample:`, {
+      headName: sanitizedData.headName,
+      familyMembersMale: sanitizedData.familyMembersMale,
+      familyMembersFemale: sanitizedData.familyMembersFemale
+    });
+
     // Try assignment with error handling
     try {
       Object.assign(survey, sanitizedData);
-      
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] After Object.assign - survey.surveyStatus: ${survey.surveyStatus}`);
+
     } catch (assignError) {
       console.error('Error during Object.assign:', assignError);
       console.error('Survey object:', survey);
       console.error('Sanitized data:', sanitizedData);
       throw assignError;
     }
-    
+
     survey.surveyStatus = 'SUBMITTED';
     survey.submittedBy = userId;
     survey.submittedAt = new Date();
     survey.lastModifiedBy = userId;
     survey.lastModifiedAt = new Date();
 
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Setting surveyStatus to SUBMITTED for survey ID: ${surveyId}`);
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Survey status before save: ${survey.surveyStatus}`);
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Setting submittedBy: ${userId}`);
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Setting submittedAt: ${new Date()}`);
+
     // Try save with error handling
     try {
-      await survey.save();
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] About to save survey. Survey object before save:`, {
+        _id: survey._id,
+        surveyStatus: survey.surveyStatus,
+        submittedBy: survey.submittedBy,
+        submittedAt: survey.submittedAt,
+        headName: survey.headName,
+        familyMembersMale: survey.familyMembersMale,
+        familyMembersFemale: survey.familyMembersFemale
+      });
+
+      const saveResult = await survey.save();
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] ✅ Survey saved successfully!`);
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Status after save: ${survey.surveyStatus}`);
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Submitted By after save: ${survey.submittedBy}`);
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Submitted At after save: ${survey.submittedAt}`);
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Save result keys:`, Object.keys(saveResult || {}));
+
+      console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Survey object after save:`, {
+        _id: survey._id,
+        surveyStatus: survey.surveyStatus,
+        submittedBy: survey.submittedBy,
+        submittedAt: survey.submittedAt,
+        headName: survey.headName,
+        familyMembersMale: survey.familyMembersMale,
+        familyMembersFemale: survey.familyMembersFemale
+      });
     } catch (saveError) {
-      console.error('Error during survey.save():', saveError.message);
+      console.error('❌ Error during survey.save():', saveError.message);
+      console.error('Error stack:', saveError.stack);
+      console.error('Validation errors:', saveError.errors);
+      if (saveError.errors) {
+        Object.keys(saveError.errors).forEach(key => {
+          console.error(`  Field ${key}:`, saveError.errors[key].message);
+        });
+      }
       throw saveError;
     }
-    
+
     await survey.populate([
-      { path: 'slum', select: 'slumName location ward' },
+      { path: 'slum', select: 'slumName location ward village', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
-    // Update related statuses after successful submission
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Updating related statuses...`);
     await updateStatusesFromHouseholdSurvey(surveyId);
-    
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Auto-syncing household counts...`);
+    await autoSyncHouseholdCounts(survey.slum._id, userId);
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] Status updates completed`);
+
     // Update slum population based on family members count
     await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
-    
+
     // Update BPL population based on BPL status and family members count
     await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
-    
+
     // Update demographic population based on caste and minority status
     await updateSlumDemographicPopulationFromHouseholdSurveys(survey.slum._id);
 
@@ -359,7 +478,7 @@ exports.submitHouseholdSurvey = async (req, res) => {
   } catch (error) {
     console.error('Error in submitHouseholdSurvey:', error.message);
     console.error('Error stack:', error.stack);
-    
+
     // Handle validation errors specifically
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => ({
@@ -368,12 +487,13 @@ exports.submitHouseholdSurvey = async (req, res) => {
       }));
       return sendError(res, 'Validation failed', 400, { validationErrors: errors });
     }
-    
+
     // Handle enum validation errors
     if (error.message && error.message.includes('`enum`')) {
       return sendError(res, `Invalid value provided: ${error.message}`, 400);
     }
-    
+
+    console.log(`[SUBMIT_HOUSEHOLD_SURVEY] ❌ Function failed for survey ID: ${req.params.surveyId}`);
     sendError(res, error.message || 'Failed to submit survey', 500);
   }
 };
@@ -431,17 +551,17 @@ exports.deleteHouseholdSurvey = async (req, res) => {
 
     // Save slum reference before deletion
     const slumId = survey.slum;
-    
+
     await HouseholdSurvey.findByIdAndDelete(surveyId);
 
-    
+
     // Update slum population calculation after deletion
     if (slumId) {
       await updateSlumPopulationFromHouseholdSurveys(slumId);
       await updateSlumBplPopulationFromHouseholdSurveys(slumId);
       await updateSlumDemographicPopulationFromHouseholdSurveys(slumId);
     }
-    
+
     sendSuccess(res, null, 'Survey deleted successfully');
   } catch (error) {
     console.error('Error in deleteHouseholdSurvey:', error.message);
@@ -466,7 +586,7 @@ exports.updateSurveySection = async (req, res) => {
     if (!survey) {
       return sendError(res, 'Survey not found', 404);
     }
-    
+
 
 
     // Check authorization
@@ -494,27 +614,27 @@ exports.updateSurveySection = async (req, res) => {
 
     await survey.save();
     await survey.populate([
-      { path: 'slum', select: 'slumName location ward' },
+      { path: 'slum', select: 'slumName location ward village', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
     // Update slum population if family members section was updated
-    if (section === 'demographics' || section === 'familyMembersTotal' || 
-        section === 'familyMembersMale' || section === 'familyMembersFemale') {
+    if (section === 'demographics' || section === 'familyMembersTotal' ||
+      section === 'familyMembersMale' || section === 'familyMembersFemale') {
       await updateSlumPopulationFromHouseholdSurveys(survey.slum._id);
     }
-    
+
     // Update BPL population if BPL status or family members section was updated
-    if (section === 'demographics' || section === 'belowPovertyLine' || 
-        section === 'familyMembersTotal' || section === 'familyMembersMale' || 
-        section === 'familyMembersFemale') {
+    if (section === 'demographics' || section === 'belowPovertyLine' ||
+      section === 'familyMembersTotal' || section === 'familyMembersMale' ||
+      section === 'familyMembersFemale') {
       await updateSlumBplPopulationFromHouseholdSurveys(survey.slum._id);
     }
-    
+
     // Update demographic population if caste, minority status, or family members section was updated
-    if (section === 'demographics' || section === 'caste' || section === 'minorityStatus' || 
-        section === 'familyMembersTotal' || section === 'familyMembersMale' || 
-        section === 'familyMembersFemale') {
+    if (section === 'demographics' || section === 'caste' || section === 'minorityStatus' ||
+      section === 'familyMembersTotal' || section === 'familyMembersMale' ||
+      section === 'familyMembersFemale') {
       await updateSlumDemographicPopulationFromHouseholdSurveys(survey.slum._id);
     }
 
@@ -541,7 +661,7 @@ exports.getHouseholdSurveysBySlum = async (req, res) => {
 
     const surveys = await HouseholdSurvey.find(query)
       .populate([
-        { path: 'slum', select: 'slumName location ward' },
+        { path: 'slum', select: 'slumName location ward village', populate: { path: 'ward', select: 'number name zone' } },
         { path: 'surveyor', select: 'name email' },
       ])
       .sort({ createdAt: -1 });
@@ -599,9 +719,9 @@ exports.getParcelsBySlum = async (req, res) => {
     }
 
     // Find all distinct parcelIds for the given slum
-    const parcels = await HouseholdSurvey.distinct('parcelId', { 
-      slum: slumId, 
-      parcelId: { $exists: true, $ne: null } 
+    const parcels = await HouseholdSurvey.distinct('parcelId', {
+      slum: slumId,
+      parcelId: { $exists: true, $ne: null }
     });
 
     // Filter out undefined/null values and sort numerically
@@ -626,10 +746,10 @@ exports.getPropertiesBySlumAndParcel = async (req, res) => {
     }
 
     // Find all propertyNos for the given slum and parcelId
-    const properties = await HouseholdSurvey.distinct('propertyNo', { 
-      slum: slumId, 
-      parcelId: parseInt(parcelId),
-      propertyNo: { $exists: true, $ne: null } 
+    const properties = await HouseholdSurvey.distinct('propertyNo', {
+      slum: slumId,
+      parcelId: parcelId,
+      propertyNo: { $exists: true, $ne: null }
     });
 
     // Filter out undefined/null values and sort numerically
@@ -660,10 +780,10 @@ exports.getHouseholdSurveyByParcel = async (req, res) => {
     const userRole = req.user.role;
     let queryConditions = {
       slum: slumId,
-      parcelId: parseInt(parcelId),
+      parcelId: parcelId,
       propertyNo: parseInt(propertyNo),
     };
-    
+
     // If user is not admin/supervisor, restrict to their own surveys
     if (!['ADMIN', 'SUPERVISOR'].includes(userRole)) {
       queryConditions.$or = [
@@ -671,9 +791,9 @@ exports.getHouseholdSurveyByParcel = async (req, res) => {
         { surveyor: null }     // Unassigned imported surveys
       ];
     }
-    
+
     const survey = await HouseholdSurvey.findOne(queryConditions).populate([
-      { path: 'slum', select: 'slumName location ward' },
+      { path: 'slum', select: 'slumName location ward village', populate: { path: 'ward', select: 'number name zone' } },
       { path: 'surveyor', select: 'name email' },
     ]);
 
@@ -732,7 +852,7 @@ exports.getNextNewParcelId = async (req, res) => {
     }
 
     const nextParcelId = `N${nextNumber.toString().padStart(3, '0')}`;
-    
+
     sendSuccess(res, { nextParcelId }, 'Next new parcel ID retrieved successfully');
   } catch (error) {
     console.error('Error in getNextNewParcelId:', error.message);
@@ -765,7 +885,7 @@ exports.importHouseholds = async (req, res) => {
     const validatedData = [];
     for (const item of data) {
       if (
-        item.parcelId === undefined || 
+        item.parcelId === undefined ||
         item.propertyNo === undefined ||
         item.headName === undefined
       ) {
@@ -807,7 +927,8 @@ exports.importHouseholds = async (req, res) => {
 
     const result = await HouseholdSurvey.bulkWrite(bulkOps);
 
-
+    // Auto-sync the household counts after import
+    await autoSyncHouseholdCounts(slumId);
 
     sendSuccess(res, {
       imported: result.upsertedCount || 0,

@@ -105,6 +105,11 @@ async function importHouseholdsFromFile(slumId, filePath) {
 
     const result = await HouseholdSurvey.bulkWrite(bulkOps);
 
+    // Auto-sync household counts after import
+    console.log('Auto-syncing household counts...');
+    const { autoSyncHouseholdCounts } = require('../src/utils/statusSyncHelper');
+    await autoSyncHouseholdCounts(slum._id.toString());
+
     console.log(`Import completed!`);
     console.log(`- Total records processed: ${validatedData.length}`);
     console.log(`- New records imported: ${result.upsertedCount || 0}`);

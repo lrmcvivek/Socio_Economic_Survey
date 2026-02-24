@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import SurveyorLayout from "@/components/SurveyorLayout";
 import DashboardStats from "@/components/DashboardStats";
 import apiService from "@/services/api";
@@ -50,6 +50,7 @@ interface Assignment {
 
 export default function SurveyorDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -67,6 +68,7 @@ export default function SurveyorDashboard() {
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showCompletionWarning, setShowCompletionWarning] = useState(false);
   const [showHouseholdSelector, setShowHouseholdSelector] = useState(false);
+  const [householdSelectorMode, setHouseholdSelectorMode] = useState<'search' | 'new'>('search');
 
   useEffect(() => {
     // Verify user is surveyor
@@ -86,6 +88,35 @@ export default function SurveyorDashboard() {
     loadAssignments();
   }, [router]);
 
+  // Re-fetch assignments when page becomes visible again (tab switching on mobile, returning from background)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadAssignments();
+      }
+    };
+
+    const handleFocus = () => {
+      loadAssignments();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Re-fetch assignments when the user navigates back to the dashboard via client-side routing
+  // This is the key fix for Next.js SPA navigation (no hard refresh needed)
+  useEffect(() => {
+    if (pathname === '/surveyor/dashboard') {
+      loadAssignments();
+    }
+  }, [pathname]);
+
   const loadAssignments = async () => {
     try {
       setLoading(true);
@@ -95,7 +126,7 @@ export default function SurveyorDashboard() {
         console.log("Assignments loaded:", response.data);
         const assignmentsData = response.data || [];
         setAssignments(assignmentsData);
-        
+
         // Load survey data for each assignment
         const surveyDataMap: Record<string, { surveyStatus?: string }> = {};
         for (const assignment of assignmentsData) {
@@ -126,7 +157,7 @@ export default function SurveyorDashboard() {
   const handleSlumSurveyClick = (assignmentId: string, slumName: string) => {
     const survey = surveyData[assignmentId];
     const surveyStatus = survey?.surveyStatus || "DRAFT";
-    
+
     setPendingSurvey({
       type: 'slum',
       assignmentId,
@@ -141,14 +172,6 @@ export default function SurveyorDashboard() {
     const assignment = assignments.find(a => a._id === assignmentId);
     const progress = assignment?.householdSurveyProgress;
 
-    if (progress) {
-      const { completed, total } = progress;
-      if (total > 0 && completed >= total) {
-        setShowCompletionWarning(true);
-        return;
-      }
-    }
-
     setPendingSurvey({
       type: 'household',
       assignmentId,
@@ -157,18 +180,36 @@ export default function SurveyorDashboard() {
       progressCompleted: progress?.completed,
       progressTotal: progress?.total
     });
+
+    if (progress) {
+      const { completed, total } = progress;
+      if (total > 0 && completed >= total) {
+        setShowCompletionWarning(true);
+        return;
+      }
+    }
+
+    setHouseholdSelectorMode('search');
+    setShowHouseholdSelector(true);
+  };
+
+  const handleAddNewHousehold = async () => {
+    // We already have the pendingSurvey state containing assignmentId and slumId since handleHouseholdSurveyClick was called first
+    // Just open the selector in 'new' mode
+    setHouseholdSelectorMode('new');
+    setShowCompletionWarning(false);
     setShowHouseholdSelector(true);
   };
 
   const confirmSurvey = () => {
     if (!pendingSurvey) return;
-    
+
     if (pendingSurvey.type === 'slum') {
       router.push(`/surveyor/slum-survey/${pendingSurvey.assignmentId}`);
     } else {
       router.push(`/surveyor/household-survey/${pendingSurvey.assignmentId}`);
     }
-    
+
     // Reset confirmation state
     setShowConfirmation(false);
     setPendingSurvey(null);
@@ -176,14 +217,14 @@ export default function SurveyorDashboard() {
 
   const previewSurvey = () => {
     if (!pendingSurvey) return;
-    
+
     if (pendingSurvey.type === 'slum') {
       router.push(`/surveyor/slum-survey/${pendingSurvey.assignmentId}`);
     } else {
       // For household surveys, we might want to show a list of households
       router.push(`/surveyor/slums/${pendingSurvey.assignmentId}`);
     }
-    
+
     // Reset confirmation state
     setShowConfirmation(false);
     setPendingSurvey(null);
@@ -191,20 +232,20 @@ export default function SurveyorDashboard() {
 
   const editSurvey = () => {
     if (!pendingSurvey) return;
-    
+
     // Show edit confirmation dialog
     setShowEditConfirm(true);
   };
 
   const confirmEditSurvey = () => {
     if (!pendingSurvey) return;
-    
+
     if (pendingSurvey.type === 'slum') {
       router.push(`/surveyor/slum-survey/${pendingSurvey.assignmentId}?edit=true`);
     } else {
       router.push(`/surveyor/household-survey/${pendingSurvey.assignmentId}`);
     }
-    
+
     // Reset confirmation states
     setShowConfirmation(false);
     setShowEditConfirm(false);
@@ -336,13 +377,12 @@ export default function SurveyorDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                      assignment.status === "COMPLETED"
-                        ? "bg-green-500/10 text-green-400 border-green-500/20"
-                        : assignment.status === "IN PROGRESS"
-                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          : "bg-slate-700/50 text-slate-400 border-slate-600"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border ${assignment.status === "COMPLETED"
+                      ? "bg-green-500/10 text-green-400 border-green-500/20"
+                      : assignment.status === "IN PROGRESS"
+                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        : "bg-slate-700/50 text-slate-400 border-slate-600"
+                      }`}
                   >
                     {assignment.status?.replace("_", " ") || "PENDING"}
                   </span>
@@ -385,8 +425,8 @@ export default function SurveyorDashboard() {
                           {(assignment.slumSurveyCompletion || 0) === 0
                             ? "Not Started"
                             : (assignment.slumSurveyCompletion || 0) < 100
-                            ? `${assignment.slumSurveyCompletion || 0}%`
-                            : "✓ Completed"}
+                              ? `${assignment.slumSurveyCompletion || 0}%`
+                              : "✓ Completed"}
                         </span>
                       </div>
                       <div className="w-full bg-slate-700 rounded-full h-2">
@@ -415,17 +455,16 @@ export default function SurveyorDashboard() {
                         <div
                           className="bg-blue-500 h-2 rounded-full transition-all"
                           style={{
-                            width: `${
-                              assignment.householdSurveyProgress?.total
-                                ? (
-                                    (assignment.householdSurveyProgress
-                                      .completed /
-                                      assignment.householdSurveyProgress
-                                        .total) *
-                                    100
-                                  ).toFixed(0)
-                                : 0
-                            }%`,
+                            width: `${assignment.householdSurveyProgress?.total
+                              ? (
+                                (assignment.householdSurveyProgress
+                                  .completed /
+                                  assignment.householdSurveyProgress
+                                    .total) *
+                                100
+                              ).toFixed(0)
+                              : 0
+                              }%`,
                           }}
                         ></div>
                       </div>
@@ -454,19 +493,19 @@ export default function SurveyorDashboard() {
                 </div>
 
                 {/* Completion Status Message */}
-                {assignment.householdSurveyProgress && 
-                 assignment.householdSurveyProgress.total > 0 && 
-                 assignment.householdSurveyProgress.completed >= assignment.householdSurveyProgress.total && (
-                  <div className="mt-4 col-span-1 md:col-span-2 text-xs text-center text-amber-300 font-medium p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                    {assignment.householdSurveyProgress.completed} of {assignment.householdSurveyProgress.total} Household Surveys are done.
-                  </div>
-                )}
+                {assignment.householdSurveyProgress &&
+                  assignment.householdSurveyProgress.total > 0 &&
+                  assignment.householdSurveyProgress.completed >= assignment.householdSurveyProgress.total && (
+                    <div className="mt-4 col-span-1 md:col-span-2 text-xs text-center text-amber-300 font-medium p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                      {assignment.householdSurveyProgress.completed} of {assignment.householdSurveyProgress.total} Household Surveys are done.
+                    </div>
+                  )}
               </div>
             </div>
           ))}
         </div>
       )}
-      
+
       {/* Survey Confirmation Dialog */}
       <SurveyConfirmationDialog
         isOpen={showConfirmation}
@@ -480,7 +519,7 @@ export default function SurveyorDashboard() {
         onPreview={previewSurvey}
         onEdit={editSurvey}
       />
-      
+
       <EditConfirmationDialog
         isOpen={showEditConfirm}
         surveyType={pendingSurvey?.type || 'slum'}
@@ -488,18 +527,22 @@ export default function SurveyorDashboard() {
         onConfirm={confirmEditSurvey}
         onCancel={cancelEditSurvey}
       />
-      
+
       <HHSCompletionWarningModal
         isOpen={showCompletionWarning}
         onClose={() => setShowCompletionWarning(false)}
+        onAddNew={handleAddNewHousehold}
+        slumId={pendingSurvey?.slumId || ''}
+        assignmentId={pendingSurvey?.assignmentId || ''}
       />
-      
+
       <HouseholdSurveySelector
         isOpen={showHouseholdSelector}
         onClose={() => setShowHouseholdSelector(false)}
         assignmentId={pendingSurvey?.assignmentId || ''}
         slumId={pendingSurvey?.slumId || ''}
         slumName={pendingSurvey?.slumName || ''}
+        initialMode={householdSelectorMode}
       />
     </SurveyorLayout>
   );
