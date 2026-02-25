@@ -95,17 +95,17 @@ const assignSlumToSurveyor = async (req, res) => {
 const getAllAssignments = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, surveyor, slum } = req.query;
-    
+
     let filter = {};
-    
+
     if (status) {
       filter.status = status;
     }
-    
+
     if (surveyor) {
       filter.surveyor = surveyor;
     }
-    
+
     if (slum) {
       filter.slum = slum;
     }
@@ -241,7 +241,7 @@ const getMyAssignments = async (req, res) => {
       if (slumSurvey) {
         slumSurveyStatus = slumSurvey.surveyStatus || 'DRAFT';
         slumSurveyCompletion = slumSurvey.completionPercentage || 0;
-        
+
         // Use the assignment's stored status which should be kept in sync
         // This ensures we use the authoritative status from the assignment record
         slumSurveyStatus = assignment.slumSurveyStatus || slumSurveyStatus;
@@ -257,7 +257,7 @@ const getMyAssignments = async (req, res) => {
       const totalHouseholds = assignment.slum?.totalHouseholds || 0;
 
       // Count only household surveys with SUBMITTED or COMPLETED status
-      const submittedHouseholdSurveys = householdSurveys.filter(hs => 
+      const submittedHouseholdSurveys = householdSurveys.filter(hs =>
         hs.surveyStatus === 'SUBMITTED' || hs.surveyStatus === 'COMPLETED'
       );
 
@@ -452,6 +452,7 @@ const updateAssignment = async (req, res) => {
 const deleteAssignment = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('[ASSIGNMENT-CONTROLLER] Delete request received for ID:', id);
 
     const assignment = await Assignment.findById(id);
     if (!assignment) {

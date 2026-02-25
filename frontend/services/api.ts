@@ -867,7 +867,9 @@ class ApiService {
 
   public async updateAssignment(assignmentId: string, assignmentData: { status?: string; surveyor?: string; slum?: string }): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/admin/assignments/${assignmentId}`, {
+      const url = `${this.baseUrl}/surveys/assignments/${assignmentId}`;
+      console.log('ApiService: Sending update assignment request', { assignmentId, url });
+      const response = await fetch(url, {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify(assignmentData),
@@ -884,7 +886,9 @@ class ApiService {
 
   public async deleteAssignment(assignmentId: string): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/admin/assignments/${assignmentId}`, {
+      const url = `${this.baseUrl}/surveys/assignments/${assignmentId}`;
+      console.log('ApiService: Sending delete assignment request', { assignmentId, url });
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });

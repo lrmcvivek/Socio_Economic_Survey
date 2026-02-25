@@ -784,8 +784,11 @@ exports.getHouseholdSurveyByParcel = async (req, res) => {
       propertyNo: parseInt(propertyNo),
     };
 
-    // If user is not admin/supervisor, restrict to their own surveys
-    if (!['ADMIN', 'SUPERVISOR'].includes(userRole)) {
+    // For searching/selecting records, we allow surveyors to see any record in the slum.
+    // The restriction to 'only own/unassigned' prevents surveyors from finding 
+    // existing records if they were imported or assigned to an admin initially.
+    // Slum-level authorization is handled by the route middleware or higher up.
+    if (!['ADMIN', 'SUPERVISOR', 'SURVEYOR'].includes(userRole)) {
       queryConditions.$or = [
         { surveyor: userId },  // Surveys assigned to current user
         { surveyor: null }     // Unassigned imported surveys

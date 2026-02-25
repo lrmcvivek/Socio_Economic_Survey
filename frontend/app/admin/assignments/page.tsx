@@ -95,13 +95,13 @@ export default function AssignmentsPage() {
           router.push("/login");
           return;
         }
-        
+
         const userData = JSON.parse(userStr);
         if (userData?.role !== "ADMIN") {
           router.push(`/${userData?.role?.toLowerCase()}/dashboard`);
           return;
         }
-        
+
         setUser(userData);
 
         // Load all data using the same API calls as Supervisor Panel
@@ -263,16 +263,20 @@ export default function AssignmentsPage() {
     if (!assignmentToDelete) return;
 
     try {
+      console.log('Confirming delete for assignment ID:', assignmentToDelete);
       const response = await apiService.deleteAssignment(assignmentToDelete);
       if (response.success) {
         setMessage("Assignment deleted successfully");
+        setError(null);
         // Refresh assignments to show updated data
         const assignmentsRes = await apiService.getAllAssignments();
         if (assignmentsRes.success) {
           setAssignments(assignmentsRes.data || []);
         }
       } else {
-        setMessage(`Error: ${response.error || "Failed to delete assignment"}`);
+        const errorMsg = response.error || "Failed to delete assignment";
+        setError(`Error: ${errorMsg}`);
+        setMessage("");
       }
     } catch (error: unknown) {
       setMessage(`Error: ${error instanceof Error ? error.message : "Failed to delete assignment"}`);
@@ -396,291 +400,300 @@ export default function AssignmentsPage() {
         )}
 
         <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary">
-            Manage Assignments
-          </h1>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-            <span className="block sm:inline">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-            >
-              <span className="text-2xl leading-none">&times;</span>
-            </button>
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-primary">
+              Manage Assignments
+            </h1>
           </div>
-        )}
 
-        {/* Create Assignment Form */}
-        <Card>
-          <h2 className="text-lg font-bold text-primary mb-4">
-            Create New Assignment
-          </h2>
-          {availableSlums.length === 0 ? (
-            <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
-              <p>
-                ✓ All slums have been assigned! Every slum is now assigned to a surveyor.
-              </p>
+          {/* Status Messages */}
+          {message && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+              <span className="block sm:inline">{message}</span>
+              <button
+                onClick={() => setMessage("")}
+                className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Select
-                label="Surveyor"
-                value={newAssignment.surveyorId}
-                onChange={(e) =>
-                  setNewAssignment({
-                    ...newAssignment,
-                    surveyorId: e.target.value,
-                  })
-                }
-                options={[...availableUsers.map((s) => ({
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              <span className="block sm:inline">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+              >
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+          )}
+
+          {/* Create Assignment Form */}
+          <Card>
+            <h2 className="text-lg font-bold text-primary mb-4">
+              Create New Assignment
+            </h2>
+            {availableSlums.length === 0 ? (
+              <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+                <p>
+                  ✓ All slums have been assigned! Every slum is now assigned to a surveyor.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Select
+                  label="Surveyor"
+                  value={newAssignment.surveyorId}
+                  onChange={(e) =>
+                    setNewAssignment({
+                      ...newAssignment,
+                      surveyorId: e.target.value,
+                    })
+                  }
+                  options={[...availableUsers.map((s) => ({
                     value: s._id,
                     label: `${s.name}`,
                   }))]
-                }
-                placeholder="Select a surveyor..."
-              />
-              <InfiniteScrollSelect
-                label="Slum"
-                value={newAssignment.slumId}
-                onChange={(value) => setNewAssignment({ ...newAssignment, slumId: value })}
-                options={availableSlums.map((s) => ({
-                  value: s._id,
-                  label: `${s.slumName} (${s.slumId})`,
-                }))}
-                placeholder="Select a slum..."
-                disabled={availableSlums.length === 0}
-              />
-              <div className="flex items-end">
-                <Button
-                  variant="primary"
-                  className="cursor-pointer"
-                  fullWidth
-                  onClick={handleCreateAssignment}
-                  disabled={!newAssignment.surveyorId || !newAssignment.slumId}
-                >
-                  Assign
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* Edit Assignment Form */}
-        {editingAssignment && (
-          <Card>
-            <h2 className="text-xl font-bold text-white mb-4">
-              Edit Assignment: {editingAssignment.surveyor?.name || 'N/A'} - {editingAssignment.slum?.slumName || 'N/A'}
-            </h2>
-            <form onSubmit={handleUpdateAssignment} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Surveyor
-                  </label>
-                  <select
-                    value={editFormData.surveyor}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, surveyor: e.target.value })
-                    }
-                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    required
+                  }
+                  placeholder="Select a surveyor..."
+                />
+                <InfiniteScrollSelect
+                  label="Slum"
+                  value={newAssignment.slumId}
+                  onChange={(value) => setNewAssignment({ ...newAssignment, slumId: value })}
+                  options={availableSlums.map((s) => ({
+                    value: s._id,
+                    label: `${s.slumName} (${s.slumId})`,
+                  }))}
+                  placeholder="Select a slum..."
+                  disabled={availableSlums.length === 0}
+                />
+                <div className="flex items-end">
+                  <Button
+                    variant="primary"
+                    className="cursor-pointer"
+                    fullWidth
+                    onClick={handleCreateAssignment}
+                    disabled={!newAssignment.surveyorId || !newAssignment.slumId}
                   >
-                    <option value="">Select a surveyor</option>
-                    {availableUsers.map((usr) => (
-                      <option key={usr._id} value={usr._id}>
-                        {usr.name} ({usr.username})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Slum (Constant)
-                  </label>
-                  <input
-                    type="text"
-                    value={`${editingAssignment?.slum?.slumName || 'N/A'}`}
-                    readOnly
-                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white"
-                  />
+                    Assign
+                  </Button>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={editFormData.status}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, status: e.target.value as "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED" })
-                    }
-                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  >
-                    <option value="PENDING">Pending</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-
-              {message && (
-                <div
-                  className={`p-4 rounded-lg text-sm ${
-                    message.includes("Error")
-                      ? "bg-red-900/30 text-red-300"
-                      : "bg-green-900/30 text-green-300"
-                  }`}
-                >
-                  {message}
-                </div>
-              )}
-
-              <div className="flex gap-4">
-                <Button type="button" onClick={() => setShowUpdateConfirm(true)} disabled={submitting} className="cursor-pointer">
-                  {submitting ? "Updating..." : "Update Assignment"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleCancelEdit}
-                  className="cursor-pointer"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
+            )}
           </Card>
-        )}
 
-        {/* Assignments List */}
-        <div>
-          <h2 className="text-xl font-bold text-white mb-4">
-            Current Assignments
-          </h2>
-          <ModernTable
-            data={assignments}
-            keyField="_id"
-            searchPlaceholder="Search assignments..."
-            columns={[
-              {
-                header: "Surveyor",
-                accessorKey: (row) => row.surveyor?.name || "Unknown",
-                sortable: true,
-                className: "font-medium text-white",
-              },
-              {
-                header: "Slum",
-                accessorKey: (row) => `${row.slum?.slumName || "Unknown"} (${row.slum?.slumId || "Unknown"})` as string,
-                sortable: true,
-              },
-              {
-                header: "Zone",
-                accessorKey: (row) => {
-                  if (row.slum?.ward) {
-                    if (typeof row.slum.ward === 'object') {
-                      return `${row.slum.ward.zone}`;
-                    } else {
-                      return "Unknown Zone";
-                    }
-                  }
-                  return "Unknown Zone";
+          {/* Edit Assignment Form */}
+          {editingAssignment && (
+            <Card>
+              <h2 className="text-xl font-bold text-white mb-4">
+                Edit Assignment: {editingAssignment.surveyor?.name || 'N/A'} - {editingAssignment.slum?.slumName || 'N/A'}
+              </h2>
+              <form onSubmit={handleUpdateAssignment} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Surveyor
+                    </label>
+                    <select
+                      value={editFormData.surveyor}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, surveyor: e.target.value })
+                      }
+                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      required
+                    >
+                      <option value="">Select a surveyor</option>
+                      {availableUsers.map((usr) => (
+                        <option key={usr._id} value={usr._id}>
+                          {usr.name} ({usr.username})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Slum (Constant)
+                    </label>
+                    <input
+                      type="text"
+                      value={`${editingAssignment?.slum?.slumName || 'N/A'}`}
+                      readOnly
+                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={editFormData.status}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, status: e.target.value as "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED" })
+                      }
+                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Internal card messages removed in favor of global messages */}
+
+                <div className="flex gap-4">
+                  <Button type="button" onClick={() => setShowUpdateConfirm(true)} disabled={submitting} className="cursor-pointer">
+                    {submitting ? "Updating..." : "Update Assignment"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCancelEdit}
+                    className="cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          )}
+
+          {/* Assignments List */}
+          <div>
+            <h2 className="text-xl font-bold text-white mb-4">
+              Current Assignments
+            </h2>
+            <ModernTable
+              data={assignments}
+              keyField="_id"
+              searchPlaceholder="Search assignments..."
+              columns={[
+                {
+                  header: "Surveyor",
+                  accessorKey: (row) => row.surveyor?.name || "Unknown",
+                  sortable: true,
+                  className: "font-medium text-white",
                 },
-                sortable: true,
-              },
-              {
-                header: "Ward",
-                accessorKey: (row) => {
-                  if (row.slum?.ward) {
-                    if (typeof row.slum.ward === 'object') {
-                      return `Ward ${row.slum.ward.number} (${row.slum.ward.name})`;
-                    } else {
-                      return "Unknown Ward";
-                    }
-                  }
-                  return "Unknown Ward";
+                {
+                  header: "Slum",
+                  accessorKey: (row) => `${row.slum?.slumName || "Unknown"} (${row.slum?.slumId || "Unknown"})` as string,
+                  sortable: true,
                 },
-                sortable: true,
-              },
-              {
-                header: "Status",
-                accessorKey: (row) => (
+                {
+                  header: "Zone",
+                  accessorKey: (row) => {
+                    if (row.slum?.ward) {
+                      if (typeof row.slum.ward === 'object') {
+                        return `${row.slum.ward.zone}`;
+                      } else {
+                        return "Unknown Zone";
+                      }
+                    }
+                    return "Unknown Zone";
+                  },
+                  sortable: true,
+                },
+                {
+                  header: "Ward",
+                  accessorKey: (row) => {
+                    if (row.slum?.ward) {
+                      if (typeof row.slum.ward === 'object') {
+                        return `Ward ${row.slum.ward.number} (${row.slum.ward.name})`;
+                      } else {
+                        return "Unknown Ward";
+                      }
+                    }
+                    return "Unknown Ward";
+                  },
+                  sortable: true,
+                },
+                {
+                  header: "Status",
+                  accessorKey: (row) => (
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        row.status === "COMPLETED"
-                          ? "bg-green-500/20 text-green-400"
-                          : row.status === "IN PROGRESS"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : "bg-yellow-500/20 text-yellow-400"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${row.status === "COMPLETED"
+                        ? "bg-green-500/20 text-green-400"
+                        : row.status === "IN PROGRESS"
+                          ? "bg-blue-500/20 text-blue-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                        }`}
                     >
                       {row.status}
                     </span>
-                ),
-              },
-              {
-                header: "Assigned",
-                accessorKey: (row) => new Date(row.createdAt).toLocaleDateString(),
-                sortable: true,
-              },
-              {
-                header: "Actions",
-                accessorKey: (row) => (
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleEditAssignment(row)}
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
-                      title="Edit"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                  ),
+                },
+                {
+                  header: "Assigned",
+                  accessorKey: (row) => new Date(row.createdAt).toLocaleDateString(),
+                  sortable: true,
+                },
+                {
+                  header: "Actions",
+                  accessorKey: (row) => (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditAssignment(row);
+                        }}
+                        className="text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                        title="Edit"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteAssignment(row._id)}
-                      className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                      title="Delete"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Delete clicked for row:', row._id);
+                          handleDeleteAssignment(row._id);
+                        }}
+                        className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                        title="Delete"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                ),
-              }
-            ]}
-          />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ),
+                }
+              ]}
+            />
+          </div>
         </div>
-      </div>
       </div>
     </SupervisorAdminLayout>
   );
