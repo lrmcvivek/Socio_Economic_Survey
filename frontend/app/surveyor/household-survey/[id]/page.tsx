@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import SurveyorLayout from "@/components/SurveyorLayout";
 import Card from "@/components/Card";
@@ -166,6 +166,9 @@ export default function HouseholdSurveyPage() {
   // Get surveyId from query parameter, fallback to assignmentId
   const surveyIdFromQuery = searchParams.get('surveyId');
   const surveyIdToUse = surveyIdFromQuery || assignmentId;
+  
+  // Detect if we're in new mode (creating a new survey) vs search mode (editing existing)
+  const isNewMode = !surveyIdFromQuery;
 
   const [slum, setSlum] = useState<{
     _id: string;
@@ -228,8 +231,68 @@ export default function HouseholdSurveyPage() {
   // Completion Modal State
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [householdProgress, setHouseholdProgress] = useState({ completed: 0, total: 0 });
+  
+  // Caching state
+  const [isCacheInitialized, setIsCacheInitialized] = useState(false);
+  const cacheKeyRef = useRef<string>("");
+  const isSubmittingRef = useRef(false);
+  const hasUnsavedChangesRef = useRef(false);
 
 
+
+  // Generate cache key based on survey ID
+  const getCacheKey = useCallback((surveyId: string) => {
+    return `household_survey_${surveyId}_cache`;
+  }, []);
+
+  // Save form data to cache
+  const saveToCache = useCallback((data: HouseholdSurveyForm) => {
+    if (!cacheKeyRef.current || isSubmittingRef.current) return;
+    
+    try {
+      const cacheData = {
+        formData: data,
+        timestamp: Date.now(),
+        version: '1.0'
+      };
+      localStorage.setItem(cacheKeyRef.current, JSON.stringify(cacheData));
+      hasUnsavedChangesRef.current = false;
+    } catch (error) {
+      console.warn('Failed to save to cache:', error);
+    }
+  }, []);
+
+  // Load form data from cache
+  const loadFromCache = useCallback((cacheKey: string) => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        // Validate cache version and timestamp (expire after 24 hours)
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (cacheData.version === '1.0' && 
+            Date.now() - cacheData.timestamp < oneDay) {
+          return cacheData.formData as HouseholdSurveyForm;
+        } else {
+          // Clear expired cache
+          localStorage.removeItem(cacheKey);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load from cache:', error);
+      localStorage.removeItem(cacheKey);
+    }
+    return null;
+  }, []);
+
+  // Clear cache
+  const clearCache = useCallback((cacheKey: string) => {
+    try {
+      localStorage.removeItem(cacheKey);
+    } catch (error) {
+      console.warn('Failed to clear cache:', error);
+    }
+  }, []);
 
   // Auto-calculate totals when male/female fields change
   useEffect(() => {
@@ -325,18 +388,72 @@ export default function HouseholdSurveyPage() {
       try {
         setLoading(true);
 
-        // Load specific household survey by ID from query params
-        const householdSurveyResponse = await apiService.getHouseholdSurvey(surveyIdToUse);
+        // Initialize cache key
+        const cacheKey = getCacheKey(surveyIdToUse);
+        cacheKeyRef.current = cacheKey;
 
+        // First, try to load from cache
+        const cachedData = loadFromCache(cacheKey);
+        
+        // Handle new mode (no surveyIdFromQuery) - prioritize cache over DB
+        if (isNewMode) {
+          console.log('[HOUSEHOLD_SURVEY] New mode detected, checking cache first');
+          
+          if (cachedData) {
+            // Restore from cache in new mode
+            console.log('[HOUSEHOLD_SURVEY] Restoring from cache in new mode');
+            setFormData(cachedData);
+            setIsCacheInitialized(true);
+            hasUnsavedChangesRef.current = false;
+            
+            // Don't fetch DB data in new mode when cache exists - prevents overwriting user data
+            setLoading(false);
+            return;
+          } else {
+            // No cache exists, initialize with empty form but fetch slum info
+            console.log('[HOUSEHOLD_SURVEY] No cache found in new mode, initializing empty form');
+            
+            // Load assignment details to get slum info
+            const assignmentResponse = await apiService.getAssignment(assignmentId);
+            if (assignmentResponse.success && assignmentResponse.data) {
+              setAssignment(assignmentResponse.data);
+              const slumId = assignmentResponse.data.slum._id;
+              
+              // Fetch slum details
+              const slumResponse = await apiService.getSlum(slumId);
+              if (slumResponse.success) {
+                const slumData = slumResponse.data;
+                setSlum(slumData);
+                
+                // Auto-fill slum details
+                setFormData(prev => ({
+                  ...prev,
+                  slumName: slumData.slumName || prev.slumName || "",
+                  ward: typeof slumData.ward === 'object' ? `${slumData.ward.number} - ${slumData.ward.name}` : slumData.ward || prev.ward || "",
+                }));
+              }
+            }
+            // Set cache as initialized so that form changes get saved to cache
+            setIsCacheInitialized(true);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Handle search mode (existing survey) - fetch DB data but prioritize cache if it exists
+        
+        // Load specific household survey by ID from query params (search mode only)
+        const householdSurveyResponse = await apiService.getHouseholdSurvey(surveyIdToUse);
+        
         if (householdSurveyResponse.success && householdSurveyResponse.data) {
           // This is an existing household survey, populate the form with its data
           const surveyData = householdSurveyResponse.data;
-
+        
           // Set slum information
           if (surveyData.slum) {
             setSlum(surveyData.slum);
           }
-
+        
           // Set assignment info if available
           if (surveyData.surveyor) {
             setAssignment({
@@ -344,26 +461,51 @@ export default function HouseholdSurveyPage() {
               slum: surveyData.slum,
             });
           }
-
-          // Set form data with the existing survey data, ensuring all fields are properly mapped
+        
+          // Set form data with the existing survey data, but prioritize cache if it exists
           setFormData(prev => {
-            const updatedData = {
-              ...prev, // Start with existing form data
-              ...surveyData, // Override with survey data
-              slumName: surveyData.slum?.slumName || prev.slumName || "",
-              ward: typeof surveyData.slum?.ward === 'object'
-                ? `${surveyData.slum.ward.number} - ${surveyData.slum.ward.name}`
-                : surveyData.slum?.ward || prev.ward || "",
-            };
-
+            let baseData;
+            
+            // If cached data exists, use it as the primary data source
+            if (cachedData) {
+              baseData = {
+                ...prev,
+                ...surveyData, // Start with DB data as base
+                slumName: surveyData.slum?.slumName || prev.slumName || "",
+                ward: typeof surveyData.slum?.ward === 'object'
+                  ? `${surveyData.slum.ward.number} - ${surveyData.slum.ward.name}`
+                  : surveyData.slum?.ward || prev.ward || "",
+              };
+              
+              // Then override with cached data to ensure user changes take priority
+              Object.assign(baseData, cachedData);
+              console.log('[HOUSEHOLD_SURVEY] Using cached data as primary, merged with DB data');
+            } else {
+              // No cached data, use DB data as is
+              baseData = {
+                ...prev,
+                ...surveyData,
+                slumName: surveyData.slum?.slumName || prev.slumName || "",
+                ward: typeof surveyData.slum?.ward === 'object'
+                  ? `${surveyData.slum.ward.number} - ${surveyData.slum.ward.name}`
+                  : surveyData.slum?.ward || prev.ward || "",
+              };
+            }
+        
             // Ensure required fields mentioned in requirements are properly displayed
             // Construct houseDoorNo as {Parcel Id}-{Property Number} if not already set
-            if (!updatedData.houseDoorNo && updatedData.parcelId !== undefined && updatedData.propertyNo !== undefined) {
-              updatedData.houseDoorNo = `${updatedData.parcelId}-${updatedData.propertyNo}`;
+            if (!baseData.houseDoorNo && baseData.parcelId !== undefined && baseData.propertyNo !== undefined) {
+              baseData.houseDoorNo = `${baseData.parcelId}-${baseData.propertyNo}`;
             }
-
-            return updatedData;
+        
+            return baseData;
           });
+          
+          // Mark cache as initialized in search mode too
+          if (!isCacheInitialized) {
+            setIsCacheInitialized(true);
+            hasUnsavedChangesRef.current = false;
+          }
         } else {
           // Check if the API call failed due to authorization error
           if (householdSurveyResponse.error && (householdSurveyResponse.error.includes('403') || householdSurveyResponse.error.includes('authorized'))) {
@@ -393,9 +535,6 @@ export default function HouseholdSurveyPage() {
               // Load households for this slum
               await loadHouseholdsForSlum(slumId);
 
-
-
-
               // Fetch initial progress
               await fetchProgress();
             }
@@ -423,7 +562,22 @@ export default function HouseholdSurveyPage() {
     };
 
     loadData();
-  }, [assignmentId, surveyIdFromQuery, router, showToast, fetchProgress, loadHouseholdsForSlum]);
+  }, [assignmentId, surveyIdFromQuery, router, showToast, fetchProgress, loadHouseholdsForSlum, getCacheKey, loadFromCache, isCacheInitialized, surveyIdToUse, isNewMode]);
+
+  // Save to cache whenever form data changes
+  useEffect(() => {
+    if (cacheKeyRef.current) { // Save to cache once cache key is established
+      // Debounce the save to avoid too frequent writes
+      const timer = setTimeout(() => {
+        saveToCache(formData);
+        hasUnsavedChangesRef.current = false;
+      }, 1000);
+      
+      hasUnsavedChangesRef.current = true;
+      
+      return () => clearTimeout(timer);
+    }
+  }, [formData, saveToCache]); //cacheKeyRef.current, 
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections((prev) => {
@@ -649,12 +803,6 @@ export default function HouseholdSurveyPage() {
       newErrors.push({
         field: "handicappedTotal",
         message: "Number of Handicapped Persons (Total) is required",
-      });
-    }
-    if (!formData.femaleEarningStatus) {
-      newErrors.push({
-        field: "femaleEarningStatus",
-        message: "If Major Earning Member is Female, Status is required",
       });
     }
     if (!formData.belowPovertyLine) {
@@ -947,6 +1095,13 @@ export default function HouseholdSurveyPage() {
       console.log('[HOUSEHOLD_SURVEY] 🚀 handleConfirmSubmit called');
       setSubmitting(true);
       setShowSubmitConfirm(false);
+      isSubmittingRef.current = true;
+
+      // Clear cache before submission since we're about to save to DB
+      if (cacheKeyRef.current) {
+        clearCache(cacheKeyRef.current);
+        console.log('[HOUSEHOLD_SURVEY] Cache cleared on submission');
+      }
 
       // Clear previous errors
       setErrors([]);
@@ -973,6 +1128,7 @@ export default function HouseholdSurveyPage() {
         // Submit the existing survey
         // Remove surveyStatus from formData as it should be controlled by backend
         const { surveyStatus, ...submitData } = formData;
+        console.log('[HOUSEHOLD_SURVEY] 🚀 Survey Status:', surveyStatus);
         console.log('[HOUSEHOLD_SURVEY] Submitting existing survey with formData (excluding surveyStatus):', submitData);
 
         console.log('[HOUSEHOLD_SURVEY] 📡 Calling API service submitHouseholdSurvey...');
@@ -1421,9 +1577,11 @@ export default function HouseholdSurveyPage() {
                           }
                           name="familyMembersTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("familyMembersTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female).</p>
                       </div>
                       <Input
                         label="12a. Number of Illiterate Adult Male Members (>14 yrs old)"
@@ -1475,9 +1633,11 @@ export default function HouseholdSurveyPage() {
                           }
                           name="illiterateAdultTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("illiterateAdultTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female).</p>
                       </div>
                       <Input
                         label="13a. Number of Children Aged 6-14 Not Attending School (Male)"
@@ -1529,9 +1689,11 @@ export default function HouseholdSurveyPage() {
                           }
                           name="childrenNotAttendingTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("childrenNotAttendingTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female).</p>
                       </div>
                       <Input
                         label="14a. Number of Handicapped Persons (Physically)"
@@ -1583,34 +1745,37 @@ export default function HouseholdSurveyPage() {
                           }
                           name="handicappedTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("handicappedTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Physically + Mentally). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Physically + Mentally).</p>
                       </div>
-                      <Select
-                        label="15. If Major Earning Member is Female, Status"
-                        value={formData.femaleEarningStatus || ""}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "femaleEarningStatus",
-                            e.target.value,
-                          )
-                        }
-                        name="femaleEarningStatus"
-                        error={getFieldError("femaleEarningStatus")}
-                        required
-                        options={[
-                          { value: "MARRIED", label: "Married" },
-                          { value: "WIDOWED", label: "Widowed" },
-                          {
-                            value: "ABANDONED_SINGLE",
-                            label: "Abandoned/Single",
-                          },
-                          { value: "DIVORCED", label: "Divorced" },
-                          { value: "UNWED_MOTHER", label: "Unwed mother" },
-                          { value: "OTHER", label: "Other" },
-                        ]}
-                      />
+                      {formData.femaleHeadStatus !== "" && (
+                        <Select
+                          label="15. If Major Earning Member is Female, Status"
+                          value={formData.femaleHeadStatus|| formData.femaleEarningStatus || ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "femaleEarningStatus",
+                              e.target.value,
+                            )
+                          }
+                          name="femaleEarningStatus"
+                          error={getFieldError("femaleEarningStatus")}
+                          options={[
+                            { value: "MARRIED", label: "Married" },
+                            { value: "WIDOWED", label: "Widowed" },
+                            {
+                              value: "ABANDONED_SINGLE",
+                              label: "Abandoned/Single",
+                            },
+                            { value: "DIVORCED", label: "Divorced" },
+                            { value: "UNWED_MOTHER", label: "Unwed mother" },
+                            { value: "OTHER", label: "Other" },
+                          ]}
+                        />
+                      )}
                       <Select
                         label="16. Is Your Family Below Poverty Line?"
                         value={formData.belowPovertyLine || ""}
@@ -1626,21 +1791,21 @@ export default function HouseholdSurveyPage() {
                           { value: "DONT_KNOW", label: "Don t know" },
                         ]}
                       />
-                      <Select
-                        label="17. If BPL, Does the Family Possess BPL Card?"
-                        value={formData.bplCard || ""}
-                        onChange={(e) =>
-                          handleInputChange("bplCard", e.target.value)
-                        }
-                        name="bplCard"
-                        error={getFieldError("bplCard")}
-                        required
-                        options={[
-                          { value: "YES", label: "Yes" },
-                          { value: "NO", label: "No" },
-                        ]}
-                      />
-                    </>
+                      {formData.belowPovertyLine === "YES" && (
+                        <Select
+                          label="17. If BPL, Does the Family Possess BPL Card?"
+                          value={formData.bplCard || ""}
+                          onChange={(e) =>
+                            handleInputChange("bplCard", e.target.value)
+                          }
+                          name="bplCard"
+                          error={getFieldError("bplCard")}
+                          options={[
+                            { value: "YES", label: "Yes" },
+                            { value: "NO", label: "No" },
+                          ]}
+                        />
+                      )}</>
                   )}
 
                   {section.id === "housing" && (
@@ -2145,72 +2310,75 @@ export default function HouseholdSurveyPage() {
                           { value: "NO", label: "No" },
                         ]}
                       />
-                      <Select
-                        label="37b. Whether Migrated From"
-                        value={formData.migratedFrom || ""}
-                        onChange={(e) =>
-                          handleInputChange("migratedFrom", e.target.value)
-                        }
-                        name="migratedFrom"
-                        error={getFieldError("migratedFrom")}
-                        required
-                        options={[
-                          {
-                            value: "RURAL_TO_URBAN",
-                            label: "Rural Area to Urban Area",
-                          },
-                          {
-                            value: "URBAN_TO_URBAN",
-                            label: "Urban Area to Urban Area",
-                          },
-                        ]}
-                      />
-                      <Select
-                        label="38. Migration Type"
-                        value={formData.migrationType || ""}
-                        onChange={(e) =>
-                          handleInputChange("migrationType", e.target.value)
-                        }
-                        name="migrationType"
-                        error={getFieldError("migrationType")}
-                        required
-                        options={[
-                          { value: "SEASONAL", label: "Seasonal" },
-                          { value: "PERMANENT", label: "Permanent" },
-                        ]}
-                      />
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-3">
-                          39. Reasons for Migration
-                        </label>
-                        <div className="space-y-2">
-                          {[
-                            { id: "UNEMPLOYMENT", label: "Unemployment" },
-                            { id: "LOW_WAGE", label: "Low wage" },
-                            { id: "DEBT", label: "Debt" },
-                            { id: "DROUGHT", label: "Drought" },
-                            { id: "CONFLICT", label: "Conflict" },
-                            { id: "EDUCATION", label: "Education" },
-                            { id: "MARRIAGE", label: "Marriage" },
-                            { id: "OTHERS", label: "Others" },
-                          ].map((reason) => (
-                            <Checkbox
-                              key={reason.id}
-                              label={reason.label}
-                              checked={(
-                                formData.migrationReasons || []
-                              ).includes(reason.id)}
-                              onChange={() =>
-                                handleCheckboxChange(
-                                  "migrationReasons",
-                                  reason.id,
-                                )
-                              }
-                            />
-                          ))}
+                      {formData.migrated === "YES" && (
+                        <Select
+                          label="37b. Whether Migrated From"
+                          value={formData.migratedFrom || ""}
+                          onChange={(e) =>
+                            handleInputChange("migratedFrom", e.target.value)
+                          }
+                          name="migratedFrom"
+                          error={getFieldError("migratedFrom")}
+                          options={[
+                            {
+                              value: "RURAL_TO_URBAN",
+                              label: "Rural Area to Urban Area",
+                            },
+                            {
+                              value: "URBAN_TO_URBAN",
+                              label: "Urban Area to Urban Area",
+                            },
+                          ]}
+                        />
+                      )}
+                      {formData.migrated === "YES" && (
+                        <Select
+                          label="38. Migration Type"
+                          value={formData.migrationType || ""}
+                          onChange={(e) =>
+                            handleInputChange("migrationType", e.target.value)
+                          }
+                          name="migrationType"
+                          error={getFieldError("migrationType")}
+                          options={[
+                            { value: "SEASONAL", label: "Seasonal" },
+                            { value: "PERMANENT", label: "Permanent" },
+                          ]}
+                        />
+                      )}
+                      {formData.migrated === "YES" && (
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-3">
+                            39. Reasons for Migration
+                          </label>
+                          <div className="space-y-2">
+                            {[
+                              { id: "UNEMPLOYMENT", label: "Unemployment" },
+                              { id: "LOW_WAGE", label: "Low wage" },
+                              { id: "DEBT", label: "Debt" },
+                              { id: "DROUGHT", label: "Drought" },
+                              { id: "CONFLICT", label: "Conflict" },
+                              { id: "EDUCATION", label: "Education" },
+                              { id: "MARRIAGE", label: "Marriage" },
+                              { id: "OTHERS", label: "Others" },
+                            ].map((reason) => (
+                              <Checkbox
+                                key={reason.id}
+                                label={reason.label}
+                                checked={(
+                                  formData.migrationReasons || []
+                                ).includes(reason.id)}
+                                onChange={() =>
+                                  handleCheckboxChange(
+                                    "migrationReasons",
+                                    reason.id,
+                                  )
+                                }
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </>
+                      )}</>
                   )}
 
                   {section.id === "income" && (
@@ -2265,9 +2433,11 @@ export default function HouseholdSurveyPage() {
                           }
                           name="earningAdultTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("earningAdultTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female).</p>
                       </div>
                       <Input
                         label="41a. Number of Earning Non-Adult Members (Male)"
@@ -2319,9 +2489,11 @@ export default function HouseholdSurveyPage() {
                           }
                           name="earningNonAdultTotal"
                           required
+                          readOnly
+                          className="bg-slate-800/50 cursor-not-allowed opacity-75"
                           error={getFieldError("earningNonAdultTotal")}
                         />
-                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female). Can be manually edited if needed.</p>
+                        <p className="text-xs text-gray-400 mt-1">Auto-calculated (Male + Female).</p>
                       </div>
                       <Input
                         label="42. Average Monthly Income of Household (in Rs.)"
@@ -2418,6 +2590,11 @@ export default function HouseholdSurveyPage() {
           message="Are you sure you want to leave this household survey? Your progress will be saved."
           onConfirm={() => {
             setShowBackConfirm(false);
+            // Clear cache when navigating back
+            if (cacheKeyRef.current) {
+              clearCache(cacheKeyRef.current);
+              console.log('[HOUSEHOLD_SURVEY] Cache cleared on back navigation');
+            }
             router.push(backDestination);
           }}
           onCancel={() => setShowBackConfirm(false)}
@@ -2464,11 +2641,13 @@ export default function HouseholdSurveyPage() {
         onClose={() => router.push("/surveyor/dashboard")}
         onSubmit={() => {
           setShowCompletionModal(false);
-          // Redirect back to the dashboard to show the HouseholdSurveySelector again
-          router.push("/surveyor/dashboard");
+          // Redirect to HouseholdSurveySelector for continuing survey
+          router.push(`/surveyor/dashboard?openSelector=true&slumId=${slum?._id || ""}&assignmentId=${assignmentId}&mode=search`);
         }}
         houseDoorNo={lastSubmittedHouseNo}
         slumName={slum?.slumName || ""}
+        slumId={slum?._id || ""}
+        assignmentId={assignmentId}
         completedCount={householdProgress.completed}
         totalCount={householdProgress.total}
       />
