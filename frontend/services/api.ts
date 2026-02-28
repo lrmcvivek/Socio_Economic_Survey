@@ -738,14 +738,31 @@ class ApiService {
   }
 
   public async deleteHouseholdSurvey(surveyId: string): Promise<ApiResponse> {
+    console.log('ApiService: Sending delete household survey request', { surveyId, url: `${this.baseUrl}/surveys/household-surveys/${surveyId}` });
     try {
       const response = await fetch(`${this.baseUrl}/surveys/household-surveys/${surveyId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
 
+      console.log('ApiService: Delete household survey response received', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
       return await this.handleResponse(response);
     } catch (error: any) {
+      console.error('ApiService: Delete household survey error caught', {
+        error,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorToString: error?.toString ? error.toString() : 'no toString',
+        errorType: typeof error,
+        rawError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
+
       return {
         success: false,
         user: undefined,
