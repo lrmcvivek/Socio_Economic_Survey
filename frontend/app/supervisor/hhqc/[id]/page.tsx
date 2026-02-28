@@ -344,7 +344,7 @@ export default function HHQCEditPage() {
     (field: string, value: string | number | undefined | string[]) => {
       setFormData((prev) => {
         // Auto-calculate totals
-        let updatedData = { ...prev, [field]: value };
+        const updatedData = { ...prev, [field]: value };
         
         if (field === "familyMembersMale" || field === "familyMembersFemale") {
           const male = field === "familyMembersMale" ? value : prev.familyMembersMale;
@@ -404,6 +404,9 @@ export default function HHQCEditPage() {
       
       if (response.success) {
         alert("Record updated successfully!");
+        console.log('Clearing selected slum from localStorage after save');
+        // Clear the selected slum from localStorage when navigating back
+        localStorage.removeItem('hhqc-selected-slum');
         router.push("/supervisor/hhqc");
       } else {
         alert("Failed to update record: " + (response.error || "Unknown error"));
@@ -417,6 +420,9 @@ export default function HHQCEditPage() {
   };
 
   const handleBack = () => {
+    console.log('Clearing selected slum from localStorage');
+    // Clear the selected slum from localStorage when navigating back
+    localStorage.removeItem('hhqc-selected-slum');
     router.push("/supervisor/hhqc");
   };
 

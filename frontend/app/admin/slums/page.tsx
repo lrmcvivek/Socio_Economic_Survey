@@ -183,7 +183,7 @@ export default function AdminSlumsPage() {
 
   if (loading) {
     return (
-      <SupervisorAdminLayout role="ADMIN" username={user?.username || user?.username}>
+      <SupervisorAdminLayout role="ADMIN" username={user?.name || user?.username}>
         <div className="flex items-center justify-center min-h-96">
           <div className="text-2xl font-semibold text-slate-400">
             Loading slums...
@@ -194,7 +194,7 @@ export default function AdminSlumsPage() {
   }
 
   return (
-    <SupervisorAdminLayout role="ADMIN" username={user?.username || user?.username}>
+    <SupervisorAdminLayout role="ADMIN" username={user?.name || user?.username}>
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex justify-between items-center">
