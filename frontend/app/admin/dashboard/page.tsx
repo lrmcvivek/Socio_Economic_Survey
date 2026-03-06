@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<StatCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [dashboardStats, setDashboardStats] = useState({
     totalUsers: 0,
@@ -88,37 +88,55 @@ export default function AdminDashboardPage() {
 
     setUser(userData);
     setLoading(false);
-    loadDashboardStats();
   }, [router]);
+
+
 
   const loadDashboardStats = async () => {
     setStatsLoading(true);
     try {
-      // Fetch users count
-      const usersResponse = await apiService.listUsers();
-      const usersData = usersResponse.data as User[] || [];
-      const usersCount = usersResponse.success && usersData ? usersData.length : 0;
-      const surveyorsCount = usersResponse.success && usersData 
-        ? usersData.filter((user: User) => user.role === 'SURVEYOR').length 
-        : 0;
-      const supervisorsCount = usersResponse.success && usersData
-        ? usersData.filter((user: User) => user.role === 'SUPERVISOR').length
-        : 0;
-
-      // Fetch slums count
-      const slumsResponse = await apiService.getAllSlums(1, 10, undefined, true); // Load all slums for count
-      const slumsData = slumsResponse.data as Slum[] || [];
-      const slumsCount = slumsResponse.success && slumsData ? slumsData.length : 0;
-
-      // Fetch assignments count
-      const assignmentsResponse = await apiService.getAllAssignments();
+      // Initialize default values
+      let usersCount = 0;
+      let surveyorsCount = 0;
+      let supervisorsCount = 0;
+      let slumsCount = 0;
       let totalAssignments = 0;
       let completedAssignmentsCount = 0;
       let activeAssignmentsCount = 0;
       let completedHouseholdsCount = 0;
       let completedSlumSurveysCount = 0;
       let inProgressSlumSurveysCount = 0;
-      let pendingAssignmentsCount = 0; // Unassigned slums
+      let pendingAssignmentsCount = 0;
+      let totalHouseholdsCount = 0;
+
+      // Fetch users count
+      const usersResponse = await apiService.listUsers();
+      const usersData = usersResponse.data as User[] || [];
+      usersCount = usersResponse.success && usersData ? usersData.length : 0;
+      surveyorsCount = usersResponse.success && usersData 
+        ? usersData.filter((user: User) => user.role === 'SURVEYOR').length 
+        : 0;
+      supervisorsCount = usersResponse.success && usersData
+        ? usersData.filter((user: User) => user.role === 'SUPERVISOR').length
+        : 0;
+
+      // Fetch slums count with a default page size to avoid potential API issues
+      const slumsResponse = await apiService.getAllSlums(1, 100, undefined, true); // Load all slums for count
+      const slumsData = slumsResponse.data as Slum[] || [];
+      slumsCount = slumsResponse.success && slumsData ? slumsData.length : 0;
+
+      // Calculate total households from slums
+      if (slumsResponse.success && slumsResponse.data) {
+        const slums = slumsResponse.data as Slum[];
+        for (const slum of slums) {
+          if (slum.totalHouseholds) {
+            totalHouseholdsCount += slum.totalHouseholds;
+          }
+        }
+      }
+
+      // Fetch assignments count
+      const assignmentsResponse = await apiService.getAllAssignments();
       
       if (assignmentsResponse.success && assignmentsResponse.data) {
         const assignments = assignmentsResponse.data as Assignment[];
@@ -180,19 +198,6 @@ export default function AdminDashboardPage() {
       
       // Calculate pending assignments (unassigned slums)
       pendingAssignmentsCount = Math.max(0, slumsCount - totalAssignments);
-
-
-      
-      // Calculate total households from slums
-      let totalHouseholdsCount = 0;
-      if (slumsResponse.success && slumsResponse.data) {
-        const slums = slumsResponse.data as Slum[];
-        for (const slum of slums) {
-          if (slum.totalHouseholds) {
-            totalHouseholdsCount += slum.totalHouseholds;
-          }
-        }
-      }
 
       setDashboardStats({
         totalUsers: usersCount,

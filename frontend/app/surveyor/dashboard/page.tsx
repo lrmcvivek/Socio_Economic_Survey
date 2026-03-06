@@ -582,7 +582,7 @@ export default function SurveyorDashboard() {
       <EditConfirmationDialog
         isOpen={showEditConfirm}
         surveyType={pendingSurvey?.type || 'slum'}
-        slumName={pendingSurvey?.slumName || ''}
+        entityIdentifier={pendingSurvey?.slumName || ''}
         onConfirm={confirmEditSurvey}
         onCancel={cancelEditSurvey}
       />
