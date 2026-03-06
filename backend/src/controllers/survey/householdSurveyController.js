@@ -555,8 +555,8 @@ exports.deleteHouseholdSurvey = async (req, res) => {
       return sendError(res, 'Can only delete DRAFT surveys', 400);
     }
 
-    // Check authorization
-    if (survey.surveyor.toString() !== userId.toString() && req.user.role === 'SURVEYOR') {
+    // Check authorization - handle case where surveyor might be undefined (e.g., imported records)
+    if (survey.surveyor && survey.surveyor.toString() !== userId.toString() && req.user.role === 'SURVEYOR') {
       return sendError(res, 'Not authorized to delete this survey', 403);
     }
 
