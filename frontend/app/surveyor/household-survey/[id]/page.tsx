@@ -154,6 +154,7 @@ const WELFARE_BENEFITS = [
   { id: "HEALTH_INSURANCE", label: "Health Insurance" },
   { id: "GENERAL_INSURANCE", label: "General Insurance" },
   { id: "OTHER", label: "Other" },
+  { id: "NONE", label: "None" },
 ];
 
 export default function HouseholdSurveyPage() {
@@ -612,6 +613,49 @@ export default function HouseholdSurveyPage() {
       const current = prev[field as keyof HouseholdSurveyForm] as string[];
       const currentArray = current || [];
 
+      // Special handling for welfareBenefits field
+      if (field === 'welfareBenefits') {
+        if (value === 'NONE') {
+          // If "None" is being checked, clear all other benefits
+          if (!currentArray.includes('NONE')) {
+            return {
+              ...prev,
+              [field]: ['NONE'],
+            };
+          } else {
+            // If "None" is being unchecked, return empty array
+            return {
+              ...prev,
+              [field]: [],
+            };
+          }
+        } else {
+          // If any other benefit is being checked, remove "NONE" if present
+          if (currentArray.includes('NONE')) {
+            return {
+              ...prev,
+              [field]: [value],
+            };
+          }
+          
+          // Normal toggle behavior for non-NONE benefits
+          if (currentArray.includes(value)) {
+            const newArray = currentArray.filter((v) => v !== value);
+            return {
+              ...prev,
+              [field]: newArray,
+            };
+          } else {
+            const newArray = [...currentArray, value];
+            return {
+              ...prev,
+              [field]: newArray,
+            };
+          }
+        }
+      }
+      
+      // Default behavior for other checkbox fields
       if (currentArray.includes(value)) {
         const newArray = currentArray.filter((v) => v !== value);
         return {

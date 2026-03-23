@@ -125,7 +125,7 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { name, role, isActive } = req.body;
+    const { name, role, isActive, password } = req.body;
 
     // Verify current user is admin
     if (req.user.role !== 'ADMIN') {
@@ -135,12 +135,20 @@ exports.updateUser = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { name, role, isActive },
-      { new: true }
-    ).select('-password');
+    // Build update object with only provided fields
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (role !== undefined) updateData.role = role;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (password !== undefined && password !== '') {
+      // Password will be hashed by the pre-save middleware
+      updateData.password = password;
+    }
 
+    // Use findByIdAndUpdate without running middleware
+    // We'll manually handle password hashing if needed
+    const user = await User.findById(userId);
+    
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -148,10 +156,23 @@ exports.updateUser = async (req, res) => {
       });
     }
 
+    // Update fields
+    if (name !== undefined) user.name = name;
+    if (role !== undefined) user.role = role;
+    if (isActive !== undefined) user.isActive = isActive;
+    if (password !== undefined && password !== '') {
+      user.password = password; // This will trigger the pre-save hook to hash it
+    }
+
+    await user.save();
+
+    // Return user without password
+    const userWithoutPassword = await User.findById(userId).select('-password');
+
     res.json({
       success: true,
       message: 'User updated successfully',
-      data: user
+      data: userWithoutPassword
     });
   } catch (error) {
     console.error('Error updating user:', error);

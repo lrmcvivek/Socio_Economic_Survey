@@ -97,7 +97,7 @@ const HOUSEHOLD_SURVEY_SECTIONS = [
     id: 'general_information',
     label: 'General Information',
     columns: [
-      'slumName', 'ward', 'houseDoorNo'
+      'slumName', 'ward', 'parcelId', 'propertyNo', 'houseDoorNo'
     ]
   },
   {
@@ -389,6 +389,8 @@ const COLUMN_LABELS: Record<string, string> = {
   // Household Survey - General Information
   slumName: 'Slum Name',
   ward: 'Location - Ward No/Name',
+  parcelId: 'Parcel ID',
+  propertyNo: 'Property Number',
   houseDoorNo: 'House/Flat/Door No.',
   
   // Household Survey - Household Details
@@ -1615,6 +1617,12 @@ export default function SupervisorReportsPage() {
     // Handle array fields
     if (Array.isArray(value)) {
       return value.join(', ');
+    }
+    
+    // Trim alphabets from parcelId (keep only numeric part)
+    if (path === 'parcelId' && typeof value === 'string') {
+      const numericPart = value.replace(/^[A-Za-z]+/, '');
+      return numericPart !== '' ? numericPart : value;
     }
     
     return value !== null && value !== undefined ? value : 'N/A';

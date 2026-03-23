@@ -501,6 +501,8 @@ module.exports = {
       fields: [
         { key: 'slumName', label: 'Slum Name' },
         { key: 'ward', label: 'Location - Ward No/Name' },
+        { key: 'parcelId', label: 'Parcel ID' },
+        { key: 'propertyNo', label: 'Property Number' },
         { key: 'houseDoorNo', label: 'House/Flat/Door No.' }
       ]
     },
