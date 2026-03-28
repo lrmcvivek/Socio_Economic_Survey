@@ -215,7 +215,7 @@ const householdSurveySchema = new mongoose.Schema({
   // Economic Status
   femaleEarningStatus: {
     type: String,
-    enum: FEMALE_HEAD_STATUS_ENUM
+    enum: { values: [...FEMALE_HEAD_STATUS_ENUM, ''], message: '{VALUE} is not a valid female earning status' }
   },
   belowPovertyLine: {
     type: String,

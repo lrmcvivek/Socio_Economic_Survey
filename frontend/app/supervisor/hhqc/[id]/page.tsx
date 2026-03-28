@@ -9,6 +9,7 @@ import Card from "@/components/Card";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import { HouseholdSurvey } from "@/types/householdSurvey";
+import SuccessModal from "@/components/SuccessModal";
 
 interface HouseholdSurveyForm {
   householdId: string;
@@ -103,6 +104,7 @@ export default function HHQCEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState<HouseholdSurveyForm>({
     householdId: "",
     houseDoorNo: "",
@@ -163,7 +165,7 @@ export default function HHQCEditPage() {
     debtOutstanding: undefined,
     notes: "",
   });
-  const [errors, setErrors] = useState<unknown[]>([]);
+  const [errors, setErrors] = useState<{field: string, message: string}[]>([]);
   const [originalData, setOriginalData] = useState<HouseholdSurvey | null>(null);
 
   // Monitor formData changes
@@ -342,6 +344,8 @@ export default function HHQCEditPage() {
 
   const handleInputChange = useCallback(
     (field: string, value: string | number | undefined | string[]) => {
+      // Clear error for the field being modified
+      setErrors((prev) => prev.filter((e) => e.field !== field));
       setFormData((prev) => {
         // Auto-calculate totals
         const updatedData = { ...prev, [field]: value };
@@ -390,8 +394,8 @@ export default function HHQCEditPage() {
   
   // Get error message for a field
   const getFieldError = (fieldName: string): string | undefined => {
-    // HHQC page doesn't have validation errors, return undefined
-    return undefined;
+    const error = errors.find((e) => e.field === fieldName);
+    return error ? error.message : undefined;
   };
   
   const handleSave = async () => {
@@ -403,13 +407,23 @@ export default function HHQCEditPage() {
       });
       
       if (response.success) {
-        alert("Record updated successfully!");
         console.log('Clearing selected slum from localStorage after save');
-        // Clear the selected slum from localStorage when navigating back
         localStorage.removeItem('hhqc-selected-slum');
-        router.push("/supervisor/hhqc");
+        setShowSuccessModal(true);
       } else {
-        alert("Failed to update record: " + (response.error || "Unknown error"));
+        if (response.error && (response.error as any).validationErrors) {
+          const validationErrs = (response.error as any).validationErrors;
+          setErrors(validationErrs);
+          const firstErrorField = validationErrs[0].field;
+          const element = document.getElementsByName(firstErrorField)[0] || document.getElementById(firstErrorField);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.focus();
+          }
+          alert("Validation failed for some fields. Please check the highlighted fields.");
+        } else {
+          alert("Failed to update record: " + (typeof response.error === 'string' ? response.error : "Unknown error"));
+        }
       }
     } catch (error: unknown) {
       console.error("Error updating survey:", error);
@@ -624,6 +638,7 @@ export default function HHQCEditPage() {
               value={formData.femaleEarningStatus || ""}
               onChange={(e) => handleInputChange("femaleEarningStatus", e.target.value)}
               name="femaleEarningStatus"
+              error={getFieldError("femaleEarningStatus")}
               options={[{ value: "MARRIED", label: "Married" }, { value: "WIDOWED", label: "Widowed" }, { value: "ABANDONED_SINGLE", label: "Abandoned/Single" }, { value: "DIVORCED", label: "Divorced" }, { value: "UNWED_MOTHER", label: "Unwed mother" }, { value: "OTHER", label: "Other" }]}
             />
             <Select
@@ -1530,6 +1545,16 @@ export default function HHQCEditPage() {
           />
         </div>
       </Card>
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title="Record Updated"
+        message="The household record has been updated successfully."
+        onClose={() => {
+          setShowSuccessModal(false);
+          router.push("/supervisor/hhqc");
+        }}
+      />
     </div>
   );
 }
