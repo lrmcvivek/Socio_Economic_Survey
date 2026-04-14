@@ -223,7 +223,7 @@ const householdSurveySchema = new mongoose.Schema({
   },
   bplCard: {
     type: String,
-    enum: BPL_CARD_ENUM
+    enum: { values: [...BPL_CARD_ENUM, '', null], message: '{VALUE} is not a valid BPL card status' }
   },
 
   // SECTION III: Housing & Infrastructure

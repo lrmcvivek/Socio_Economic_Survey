@@ -367,8 +367,8 @@ exports.submitHouseholdSurvey = async (req, res) => {
     ];
 
     enumFields.forEach(field => {
-      if (sanitizedData[field] === undefined || sanitizedData[field] === null || sanitizedData[field] === '') {
-        delete sanitizedData[field]; // Remove invalid enum values
+      if (sanitizedData[field] === undefined) {
+        delete sanitizedData[field]; // Only remove undefined values
       }
     });
 

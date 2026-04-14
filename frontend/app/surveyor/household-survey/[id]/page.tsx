@@ -55,7 +55,7 @@ interface HouseholdSurveyForm {
 
   femaleEarningStatus?: string;
   belowPovertyLine?: string;
-  bplCard?: string;
+  bplCard?: string | null;
 
   // Section III - Detailed Information
   landTenureStatus?: string;
@@ -593,16 +593,20 @@ export default function HouseholdSurveyPage() {
   }, []);
 
   const handleInputChange = useCallback(
-    (field: string, value: string | number | undefined) => {
+    (field: string, value: string | number | undefined | null) => {
       setFormData((prev) => {
         // Only update if the value actually changed to prevent unnecessary re-renders
         if (prev[field as keyof HouseholdSurveyForm] === value) {
           return prev;
         }
-        return {
-          ...prev,
-          [field]: value,
-        };
+        const updatedData = { ...prev, [field]: value };
+
+        // Clear BPL card if not below poverty line
+        if (field === "belowPovertyLine" && value !== "YES") {
+          updatedData.bplCard = null;
+        }
+
+        return updatedData;
       });
     },
     [],

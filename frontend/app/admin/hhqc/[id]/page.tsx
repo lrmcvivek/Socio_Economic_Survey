@@ -20,6 +20,9 @@ interface HouseholdSurveyForm {
   slumName?: string;
   ward?: string;
   houseDoorNo?: string;
+  // Parcel-based identification (new fields)
+  parcelId?: string;
+  propertyNo?: number;
 
   // Section II - Household Level General Information
   headName?: string;
@@ -52,7 +55,7 @@ interface HouseholdSurveyForm {
 
   femaleEarningStatus?: string;
   belowPovertyLine?: string;
-  bplCard?: string;
+  bplCard?: string | null;
 
   // Section III - Detailed Information
   landTenureStatus?: string;
@@ -111,6 +114,8 @@ export default function HHQCEditPage() {
   const [formData, setFormData] = useState<HouseholdSurveyForm>({
     householdId: "",
     houseDoorNo: "",
+    parcelId: undefined,
+    propertyNo: undefined,
     headName: "",
     fatherName: "",
     sex: "",
@@ -212,6 +217,8 @@ export default function HHQCEditPage() {
     setFormData({
       householdId: "",
       houseDoorNo: "",
+      parcelId: undefined,
+      propertyNo: undefined,
       headName: "",
       fatherName: "",
       sex: "",
@@ -288,6 +295,8 @@ export default function HHQCEditPage() {
           setFormData({
             householdId: surveyData.householdId || "",
             houseDoorNo: surveyData.houseDoorNo || "",
+            parcelId: surveyData.parcelId || undefined,
+            propertyNo: surveyData.propertyNo || undefined,
             headName: surveyData.headName || "",
             fatherName: surveyData.fatherName || "",
             sex: surveyData.sex || "",
@@ -365,7 +374,7 @@ export default function HHQCEditPage() {
   }, [params.id]);
 
   const handleInputChange = useCallback(
-    (field: string, value: string | number | undefined | string[]) => {
+    (field: string, value: string | number | undefined | string[] | null) => {
       // Clear error for the field being modified
       setErrors((prev) => prev.filter((e) => e.field !== field));
       setFormData((prev) => {
@@ -446,6 +455,10 @@ export default function HHQCEditPage() {
               : prev.earningNonAdultFemale;
           updatedData.earningNonAdultTotal =
             (Number(male) || 0) + (Number(female) || 0);
+        }
+
+        if (field === "belowPovertyLine" && value !== "YES") {
+          updatedData.bplCard = null;
         }
 
         return updatedData;
@@ -551,52 +564,6 @@ export default function HHQCEditPage() {
             </Button>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <Input
-              label="Handicapped (Physically)"
-              type="number"
-              value={formData.handicappedPhysically ?? ""}
-              onChange={(e) => handleInputChange("handicappedPhysically", e.target.value ? parseInt(e.target.value) : undefined)}
-            />
-            <Input
-              label="Handicapped (Mentally)"
-              type="number"
-              value={formData.handicappedMentally ?? ""}
-              onChange={(e) => handleInputChange("handicappedMentally", e.target.value ? parseInt(e.target.value) : undefined)}
-            />
-            <Input
-              label="Handicapped (Total)"
-              type="number"
-              value={formData.handicappedTotal ?? ""}
-              disabled
-            />
-            <Select
-              label="If Major Earning Member is Female, Status"
-              value={formData.femaleEarningStatus || ""}
-              onChange={(e) => handleInputChange("femaleEarningStatus", e.target.value)}
-              name="femaleEarningStatus"
-              error={getFieldError("femaleEarningStatus")}
-              options={[{ value: "MARRIED", label: "Married" }, { value: "WIDOWED", label: "Widowed" }, { value: "ABANDONED_SINGLE", label: "Abandoned/Single" }, { value: "DIVORCED", label: "Divorced" }, { value: "UNWED_MOTHER", label: "Unwed mother" }, { value: "OTHER", label: "Other" }]}
-            />
-            <Select
-              label="Is Family Below Poverty Line?"
-              value={formData.belowPovertyLine || ""}
-              onChange={(e) => handleInputChange("belowPovertyLine", e.target.value)}
-              name="belowPovertyLine"
-              options={[{ value: "YES", label: "Yes" }, { value: "NO", label: "No" }, { value: "DONT_KNOW", label: "Don't Know" }]}
-            />
-            {formData.belowPovertyLine === "YES" && (
-              <Select
-                label="BPL card"
-                value={formData.bplCard || ""}
-                onChange={(e) => handleInputChange("bplCard", e.target.value)}
-                name="bplCard"
-                options={[{ value: "YES", label: "Yes" }, { value: "NO", label: "No" }]}
-              />
-            )}
-        </div>
-
         <Card className="p-6">
           {/* SECTION II: Household Level General Information */}
           <div className="mb-8">
@@ -604,6 +571,31 @@ export default function HHQCEditPage() {
               Household Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <Input
+                label="Parcel ID"
+                value={formData.parcelId || ""}
+                onChange={(e) => {
+                  const newParcelId = e.target.value;
+                  handleInputChange("parcelId", newParcelId);
+                  // Auto-generate houseDoorNo if both parcelId and propertyNo exist
+                  if (newParcelId && formData.propertyNo !== undefined) {
+                    handleInputChange("houseDoorNo", `${newParcelId}-${formData.propertyNo}`);
+                  }
+                }}
+              />
+              <Input
+                label="Property Number"
+                type="number"
+                value={formData.propertyNo ?? ""}
+                onChange={(e) => {
+                  const newPropertyNo = e.target.value ? parseInt(e.target.value) : undefined;
+                  handleInputChange("propertyNo", newPropertyNo);
+                  // Auto-generate houseDoorNo if both parcelId and propertyNo exist
+                  if (formData.parcelId && newPropertyNo !== undefined) {
+                    handleInputChange("houseDoorNo", `${formData.parcelId}-${newPropertyNo}`);
+                  }
+                }}
+              />
               <Input
                 label="House/Door No."
                 value={formData.houseDoorNo || ""}
@@ -845,16 +837,18 @@ export default function HHQCEditPage() {
                   { value: "DONT_KNOW", label: "Don't Know" },
                 ]}
               />
-              <Select
-                label="BPL card"
-                value={formData.bplCard || ""}
-                onChange={(e) => handleInputChange("bplCard", e.target.value)}
-                name="bplCard"
-                options={[
-                  { value: "YES", label: "Yes" },
-                  { value: "NO", label: "No" },
-                ]}
-              />
+              {formData.belowPovertyLine === "YES" && (
+                <Select
+                  label="BPL card"
+                  value={formData.bplCard || ""}
+                  onChange={(e) => handleInputChange("bplCard", e.target.value)}
+                  name="bplCard"
+                  options={[
+                    { value: "YES", label: "Yes" },
+                    { value: "NO", label: "No" },
+                  ]}
+                />
+              )}
             </div>
           </div>
 

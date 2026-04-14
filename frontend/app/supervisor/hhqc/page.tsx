@@ -318,6 +318,18 @@ export default function HHQCPage() {
                   isLoading={loading}
                   columns={[
                     {
+                      header: "Parcel ID",
+                      accessorKey: "parcelId",
+                      sortable: true,
+                      className: "font-medium text-white",
+                    },
+                    {
+                      header: "Property No",
+                      accessorKey: "propertyNo",
+                      sortable: true,
+                      className: "font-medium text-white",
+                    },
+                    {
                       header: "Door No",
                       accessorKey: "houseDoorNo",
                       sortable: true,
@@ -327,6 +339,7 @@ export default function HHQCPage() {
                       header: "Head of\nFamily",
                       accessorKey: "headName",
                       sortable: true,
+                      className: "font-medium text-white",
                     },
                     {
                       header: "Family\nMembers",
@@ -348,6 +361,7 @@ export default function HHQCPage() {
                           : "N/A",
                       sortable: true,
                       sortAccessor: "submittedAt",
+                      className: "font-medium text-white",
                     },
                     {
                       header: "Status",
@@ -366,6 +380,7 @@ export default function HHQCPage() {
                       ),
                       sortable: true,
                       sortAccessor: "surveyStatus",
+                      className: "font-medium text-white",
                     },
                     {
                       header: "Actions",
@@ -399,6 +414,7 @@ export default function HHQCPage() {
                           </button>
                         </div>
                       ),
+                      className: "font-medium text-white",
                     },
                   ]}
                 />
