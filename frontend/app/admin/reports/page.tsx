@@ -8,6 +8,7 @@ import apiService from "@/services/api";
 import Card from "@/components/Card";
 import Button from "@/components/Button";
 import InfiniteScrollSelect from "@/components/InfiniteScrollSelect";
+import { XCircle } from "lucide-react";
 
 interface User {
   _id: string;
@@ -1489,7 +1490,7 @@ export default function AdminReportsPage() {
     if (!selectedWard || wardSlums.length === 0) return;
 
     setLoadingWardSurveys(true);
-    let failedSlums: string[] = [];
+    const failedSlums: string[] = [];
 
     try {
       const allSurveys: HouseholdSurveyData[] = [];
@@ -2402,17 +2403,45 @@ export default function AdminReportsPage() {
           <>
             {/* Slum Selection Dropdown */}
             <Card>
-              <InfiniteScrollSelect
-                label="Select Slum"
-                value={selectedSlum?._id || ""}
-                onChange={handleSlumChange}
-                options={slums.map((slum) => ({
-                  value: slum._id,
-                  label: `${slum.slumName} (${slum.slumId})`,
-                }))}
-                placeholder="Select a slum..."
-                disabled={slums.length === 0}
-              />
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <InfiniteScrollSelect
+                    label="Select Slum"
+                    value={selectedSlum?._id || ""}
+                    onChange={handleSlumChange}
+                    options={slums.map((slum) => ({
+                      value: slum._id,
+                      label: `${slum.slumName} (${slum.slumId})`,
+                    }))}
+                    placeholder="Select a slum..."
+                    disabled={slums.length === 0}
+                  />
+                </div>
+                {selectedSlum && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedSlum(null);
+                      setSlumSurvey(null);
+                      setHouseholdSurveyCount(0);
+                      setShowSlumPreview(false);
+                      setShowHouseholdPreview(false);
+                      setPreviewData([]);
+                      setHouseholdPreviewData([]);
+                    }}
+                    className="h-10.5 w-10 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+                    title="Clear selection"
+                  >
+                    <XCircle
+                      className="text-red-500"
+                      size={20}
+                      strokeWidth={2.5}
+                    />
+                  </button>
+                )}
+              </div>
               {slums.length === 0 && (
                 <p className="text-text-muted text-sm mt-2">
                   No slums found in the system.
@@ -3232,17 +3261,45 @@ export default function AdminReportsPage() {
           <>
             {/* Ward Selection Dropdown */}
             <Card>
-              <InfiniteScrollSelect
-                label="Select Ward"
-                value={selectedWard?._id || ""}
-                onChange={handleWardChange}
-                options={wards.map((ward) => ({
-                  value: ward._id,
-                  label: `${ward.number} - ${ward.name}`,
-                }))}
-                placeholder="Select a ward..."
-                disabled={wards.length === 0}
-              />
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <InfiniteScrollSelect
+                    label="Select Ward"
+                    value={selectedWard?._id || ""}
+                    onChange={handleWardChange}
+                    options={wards.map((ward) => ({
+                      value: ward._id,
+                      label: `${ward.number} - ${ward.name}`,
+                    }))}
+                    placeholder="Select a ward..."
+                    disabled={wards.length === 0}
+                  />
+                </div>
+                {selectedWard && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedWard(null);
+                      setWardSlums([]);
+                      setWardHouseholdSurveys([]);
+                      setShowHouseholdPreview(false);
+                      setHouseholdPreviewData([]);
+                      setLoadingWardSlums(false);
+                      setLoadingWardSurveys(false);
+                    }}
+                    className="h-10.5 w-10 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+                    title="Clear selection"
+                  >
+                    <XCircle
+                      className="text-red-500"
+                      size={20}
+                      strokeWidth={2.5}
+                    />
+                  </button>
+                )}
+              </div>
               {wards.length === 0 && (
                 <p className="text-text-muted text-sm mt-2">
                   No wards found in the system.

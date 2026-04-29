@@ -9,6 +9,7 @@ import ModernTable from "@/components/ModernTable";
 import Button from "@/components/Button";
 import SlumForm from "@/components/SlumForm";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
+import { useToast } from "@/components/Toast";
 
 interface Slum {
   _id: string;
@@ -47,6 +48,7 @@ interface User {
 
 export default function AdminSlumsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [slums, setSlums] = useState<Slum[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -56,7 +58,6 @@ export default function AdminSlumsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [slumToEdit, setSlumToEdit] = useState<Slum | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
   const [user, setUser] = useState<User | null>(null); // Added user state
 
   const fetchSlums = async () => {
@@ -93,13 +94,6 @@ export default function AdminSlumsPage() {
     fetchSlums();
   }, [router]);
 
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
   const handleCreateSlum = () => {
     setSelectedSlum(null);
     setIsFormOpen(true);
@@ -126,16 +120,16 @@ export default function AdminSlumsPage() {
     try {
       const response = await apiService.deleteSlum(slumToDelete._id);
       if (response.success) {
-        setSuccessMessage("Slum deleted successfully");
+        showToast("Slum deleted successfully", "success", 3000);
         setIsDeleteDialogOpen(false);
         setSlumToDelete(null);
         await fetchSlums();
       } else {
-        alert("Failed to delete slum: " + response.error);
+        showToast("Failed to delete slum: " + response.error, "error", 3000);
       }
     } catch (error) {
       console.error("Error deleting slum:", error);
-      alert("Error deleting slum");
+      showToast("Error deleting slum", "error", 3000);
     } finally {
       setDeleteLoading(false);
     }
@@ -157,7 +151,7 @@ export default function AdminSlumsPage() {
 
   const handleFormSuccess = () => {
     const action = selectedSlum ? "updated" : "created";
-    setSuccessMessage(`Slum ${action} successfully`);
+    showToast(`Slum ${action} successfully`, "success", 3000);
     fetchSlums();
   };
 
@@ -192,13 +186,6 @@ export default function AdminSlumsPage() {
             Create New Slum
           </Button>
         </div>
-
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-            {successMessage}
-          </div>
-        )}
 
         {/* Empty State and Table */}
         <ModernTable

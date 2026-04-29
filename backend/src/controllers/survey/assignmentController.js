@@ -242,10 +242,11 @@ const getMyAssignments = async (req, res) => {
       let householdSurveyProgress = { completed: 0, total: 0 };
 
       // Check Slum Survey status and completion
+      // IMPORTANT: Check for ANY slum survey for this slum, not just one by the current surveyor
+      // This ensures all surveyors see the same status when multiple surveyors are assigned to the same slum
       const slumSurvey = await SlumSurvey.findOne({
-        slum: assignment.slum._id,
-        surveyor: req.user._id
-      });
+        slum: assignment.slum._id
+      }).sort({ updatedAt: -1 }); // Get the most recently updated survey
 
       let slumSurveyCompletion = 0;
       if (slumSurvey) {

@@ -8,6 +8,7 @@ import apiService from "@/services/api";
 import Card from "@/components/Card";
 import Button from "@/components/Button";
 import InfiniteScrollSelect from "@/components/InfiniteScrollSelect";
+import { XCircle } from "lucide-react";
 
 interface User {
   _id: string;
@@ -82,6 +83,27 @@ interface SlumSurveyData {
     name: string;
     username: string;
   };
+}
+
+interface Ward {
+  _id: string;
+  number: string;
+  name: string;
+  zone: string;
+  district:
+    | {
+        _id: string;
+        name: string;
+        code: string;
+      }
+    | string;
+}
+
+interface WardSlumCard {
+  _id: string;
+  slumId: number;
+  slumName: string;
+  submittedCount: number;
 }
 
 // ============================================
@@ -1061,15 +1083,27 @@ export default function SupervisorReportsPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
-  // Report state
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"slum" | "ward">("ward");
+
+  // Report state - Slum
   const [selectedSlum, setSelectedSlum] = useState<Slum | null>(null);
   const [slums, setSlums] = useState<Slum[]>([]);
   const [slumSurvey, setSlumSurvey] = useState<SlumSurveyData | null>(null);
   const [householdSurveyCount, setHouseholdSurveyCount] = useState<number>(0);
   const [loadingSlumSurvey, setLoadingSlumSurvey] = useState(false);
   const [loadingHouseholdCount, setLoadingHouseholdCount] = useState(false);
+
+  // Report state - Ward
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [selectedWard, setSelectedWard] = useState<Ward | null>(null);
+  const [wardSlums, setWardSlums] = useState<WardSlumCard[]>([]);
+  const [loadingWardSlums, setLoadingWardSlums] = useState(false);
+  const [wardHouseholdSurveys, setWardHouseholdSurveys] = useState<any[]>([]);
+  const [loadingWardSurveys, setLoadingWardSurveys] = useState(false);
+  const [wardHouseholdCount, setWardHouseholdCount] = useState<number>(0);
   const [downloading, setDownloading] = useState<
-    "slum-excel" | "hh-excel" | null
+    "slum-excel" | "hh-excel" | "ward-excel" | null
   >(null);
 
   // Column selection state
@@ -1355,6 +1389,205 @@ export default function SupervisorReportsPage() {
     if (slum) {
       loadSlumSurveyData(slum._id);
       loadHouseholdSurveyCount(slum._id);
+    }
+  };
+
+  // Load all wards for dropdown
+  const loadWards = async () => {
+    try {
+      const response = await apiService.get("/admin/wards");
+      if (response.success && response.data) {
+        // Sort wards by number
+        const sortedWards = [...(response.data as Ward[])].sort((a, b) => {
+          const numA = parseInt(a.number) || 0;
+          const numB = parseInt(b.number) || 0;
+          return numA - numB;
+        });
+        setWards(sortedWards);
+      }
+    } catch (error) {
+      console.error("Failed to load wards:", error);
+    }
+  };
+
+  // Load slums for selected ward
+  const loadWardSlums = async (wardId: string) => {
+    if (!wardId) {
+      setWardSlums([]);
+      setWardHouseholdCount(0);
+      return;
+    }
+
+    setLoadingWardSlums(true);
+    try {
+      // Get all slums and filter by ward
+      const slumsResponse = await apiService.getAllSlums(1, 0, undefined, true);
+      if (slumsResponse.success && slumsResponse.data) {
+        const allSlums = slumsResponse.data as Slum[];
+        const wardSlumsList = allSlums.filter((slum) => {
+          if (typeof slum.ward === "object" && slum.ward !== null) {
+            return slum.ward._id === wardId;
+          }
+          return false;
+        });
+
+        // Fetch household survey count for each slum
+        const slumCards: WardSlumCard[] = [];
+        let totalCount = 0;
+
+        for (const slum of wardSlumsList) {
+          try {
+            const hhResponse = await apiService.getHouseholdSurveysBySlum(
+              slum._id,
+            );
+            const count = Array.isArray(hhResponse.data)
+              ? hhResponse.data.length
+              : 0;
+            totalCount += count;
+
+            slumCards.push({
+              _id: slum._id,
+              slumId: slum.slumId,
+              slumName: slum.slumName,
+              submittedCount: count,
+            });
+          } catch (error) {
+            console.error(
+              `Failed to load surveys for slum ${slum._id}:`,
+              error,
+            );
+            slumCards.push({
+              _id: slum._id,
+              slumId: slum.slumId,
+              slumName: slum.slumName,
+              submittedCount: 0,
+            });
+          }
+        }
+
+        setWardSlums(slumCards);
+        setWardHouseholdCount(totalCount);
+      }
+    } catch (error) {
+      console.error("Failed to load ward slums:", error);
+    } finally {
+      setLoadingWardSlums(false);
+    }
+  };
+
+  // Load household surveys for all slums in ward
+  const loadWardHouseholdSurveys = async () => {
+    if (!selectedWard || wardSlums.length === 0) return;
+
+    setLoadingWardSurveys(true);
+    const failedSlums: string[] = [];
+
+    try {
+      const allSurveys: any[] = [];
+
+      for (const slumCard of wardSlums) {
+        try {
+          const response = await apiService.getHouseholdSurveysBySlum(
+            slumCard._id,
+          );
+
+          if (response.success && Array.isArray(response.data)) {
+            // Add slum info to each survey
+            const surveysWithSlumInfo = response.data.map((survey: any) => ({
+              ...survey,
+              _slumId: slumCard.slumId,
+              _slumName: slumCard.slumName,
+            }));
+            allSurveys.push(...surveysWithSlumInfo);
+          }
+        } catch (error) {
+          console.error(
+            `Failed to load surveys for slum ${slumCard._id}:`,
+            error,
+          );
+          failedSlums.push(slumCard.slumName);
+        }
+      }
+
+      setWardHouseholdSurveys(allSurveys);
+
+      // Generate preview data (top 3 records)
+      if (allSurveys.length > 0) {
+        const previewRecords = allSurveys.slice(0, 3).map((survey) => {
+          const record: any = {};
+          selectedHouseholdColumns.forEach((col) => {
+            record[col] = getHouseholdNestedValue(survey, col);
+          });
+          return record;
+        });
+        setHouseholdPreviewData(previewRecords);
+      }
+
+      if (failedSlums.length > 0) {
+        console.log(`Failed to load data for: ${failedSlums.join(", ")}`);
+      }
+    } catch (error) {
+      console.error("Failed to load ward household surveys:", error);
+      showToast("Failed to load ward household surveys", "error");
+    } finally {
+      setLoadingWardSurveys(false);
+    }
+  };
+
+  // Handle ward selection change
+  const handleWardChange = (wardId: string) => {
+    if (!wardId) {
+      setSelectedWard(null);
+      setWardSlums([]);
+      setWardHouseholdSurveys([]);
+      setWardHouseholdCount(0);
+      setShowHouseholdPreview(false);
+      setHouseholdPreviewData([]);
+      return;
+    }
+
+    const ward = wards.find((w) => w._id === wardId) || null;
+    setSelectedWard(ward);
+
+    if (ward) {
+      loadWardSlums(ward._id);
+    }
+  };
+
+  // Download Ward Household Excel
+  const handleDownloadWardExcel = async () => {
+    if (!selectedWard) return;
+
+    // Validate column selection
+    if (selectedHouseholdColumns.length < 2) {
+      showToast(
+        "At least 2 columns must be selected to generate a report",
+        "error",
+      );
+      return;
+    }
+
+    setDownloading("ward-excel");
+    try {
+      const columnsParam = selectedHouseholdColumns.join(",");
+      const blob = await apiService.exportWardHouseholdSurveys(
+        selectedWard._id,
+        columnsParam,
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Ward_${selectedWard.number}_Household_Data_${getISTTimestamp()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast("Ward household data downloaded successfully", "success");
+    } catch (error) {
+      console.error("Failed to download ward household data:", error);
+      showToast("Failed to download ward household data", "error");
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -2065,8 +2298,33 @@ export default function SupervisorReportsPage() {
   useEffect(() => {
     if (!loading && user) {
       loadSlums();
+      loadWards();
     }
   }, [loading, user]);
+
+  // Handle tab switching - clear preview data but keep selections
+  const handleTabChange = (tab: "slum" | "ward") => {
+    setActiveTab(tab);
+    // Clear all preview states when switching tabs
+    setShowSlumPreview(false);
+    setShowHouseholdPreview(false);
+    setPreviewData([]);
+    setHouseholdPreviewData([]);
+    // Clear loading states for previews
+    setLoadingPreview(false);
+    setLoadingHouseholdPreview(false);
+  };
+
+  // Auto-show preview when ward household data is loaded
+  useEffect(() => {
+    if (
+      activeTab === "ward" &&
+      householdPreviewData.length > 0 &&
+      !loadingWardSurveys
+    ) {
+      setShowHouseholdPreview(true);
+    }
+  }, [householdPreviewData, activeTab, loadingWardSurveys]);
 
   if (loading) {
     return <LoadingSpinner fullScreen text="Loading reports..." />;
@@ -2094,174 +2352,430 @@ export default function SupervisorReportsPage() {
           </div>
         )}
 
-        {/* Slum Selection Dropdown */}
-        <Card>
-          <InfiniteScrollSelect
-            label="Select Slum"
-            value={selectedSlum?._id || ""}
-            onChange={handleSlumChange}
-            options={slums.map((slum) => ({
-              value: slum._id,
-              label: `${slum.slumName} (${slum.slumId})`,
-            }))}
-            placeholder="Select a slum..."
-            disabled={slums.length === 0}
-          />
-          {slums.length === 0 && (
-            <p className="text-text-muted text-sm mt-2">
-              No slums found in the system.
-            </p>
-          )}
-        </Card>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg">
+          <button
+            onClick={() => handleTabChange("slum")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "slum"
+                ? "bg-blue-600 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-700"
+            }`}
+          >
+            📊 Slum Reports
+          </button>
+          <button
+            onClick={() => handleTabChange("ward")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "ward"
+                ? "bg-blue-600 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-700"
+            }`}
+          >
+            🏛️ Ward Reports
+          </button>
+        </div>
 
-        {/* Show sections only when slum is selected */}
-        {selectedSlum && (
+        {/* Slum Reports Tab */}
+        {activeTab === "slum" && (
           <>
-            {/* Slum Survey Section */}
+            {/* Slum Selection Dropdown */}
             <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-text-primary flex items-center">
-                  <span className="mr-2">🏙️</span>
-                  Slum Survey
-                </h2>
-                <div className="flex items-center gap-2">
-                  {(slumSurvey?.surveyStatus === "COMPLETED" ||
-                    slumSurvey?.surveyStatus === "SUBMITTED") && (
-                    <Button
-                      onClick={handleOpenSlumColumns}
-                      variant="secondary"
-                      size="sm"
-                      className="cursor-pointer text-sm"
-                    >
-                      📋 Select Columns ({selectedSlumColumns.length}/
-                      {SLUM_ALL_COLUMNS.length})
-                    </Button>
-                  )}
-                  {loadingSlumSurvey && <LoadingSpinner size="sm" />}
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <InfiniteScrollSelect
+                    label="Select Slum"
+                    value={selectedSlum?._id || ""}
+                    onChange={handleSlumChange}
+                    options={slums.map((slum) => ({
+                      value: slum._id,
+                      label: `${slum.slumName} (${slum.slumId})`,
+                    }))}
+                    placeholder="Select a slum..."
+                    disabled={slums.length === 0}
+                  />
                 </div>
-              </div>
-
-              {/* Status Display */}
-              <div className="mb-4">
-                <p className="text-sm text-text-secondary mb-2">Status:</p>
-                {slumSurvey?.surveyStatus === "COMPLETED" ||
-                slumSurvey?.surveyStatus === "SUBMITTED" ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-900/50 text-green-300 border border-green-700">
-                    ✓ Completed
-                  </span>
-                ) : slumSurvey?.surveyStatus === "IN PROGRESS" ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-900/50 text-amber-300 border border-amber-700">
-                    ⏳ In Progress
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-900/50 text-red-300 border border-red-700">
-                    ✗ Not Started
-                  </span>
+                {selectedSlum && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedSlum(null);
+                      setSlumSurvey(null);
+                      setHouseholdSurveyCount(0);
+                      setShowSlumPreview(false);
+                      setShowHouseholdPreview(false);
+                      setPreviewData([]);
+                      setHouseholdPreviewData([]);
+                    }}
+                    className="h-10.5 w-10 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+                    title="Clear selection"
+                  >
+                    <XCircle
+                      className="text-red-500"
+                      size={20}
+                      strokeWidth={2.5}
+                    />
+                  </button>
                 )}
               </div>
-
-              {/* Show Column Selector and Download Buttons only if COMPLETED/SUBMITTED */}
-              {(slumSurvey?.surveyStatus === "COMPLETED" ||
-                slumSurvey?.surveyStatus === "SUBMITTED") && (
-                <div className="flex gap-3 flex-wrap">
-                  <Button
-                    onClick={handlePreviewSlum}
-                    disabled={loadingPreview}
-                    variant="primary"
-                    className="cursor-pointer"
-                  >
-                    {loadingPreview ? "Loading..." : "👁️ Preview"}
-                  </Button>
-                  <Button
-                    onClick={handleDownloadSlumExcel}
-                    disabled={downloading === "slum-excel"}
-                    variant="success"
-                    className="cursor-pointer"
-                  >
-                    {downloading === "slum-excel"
-                      ? "Downloading..."
-                      : "📊 Download Excel"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Edge case: No slum survey yet */}
-              {!slumSurvey && !loadingSlumSurvey && (
-                <p className="text-text-muted text-sm">
-                  Slum survey not started.
+              {slums.length === 0 && (
+                <p className="text-text-muted text-sm mt-2">
+                  No slums found in the system.
                 </p>
               )}
             </Card>
 
-            {/* Household Survey Section */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-text-primary flex items-center">
-                  <span className="mr-2">🏠</span>
-                  Household Survey
-                </h2>
-                <div className="flex items-center gap-2">
-                  {householdSurveyCount > 0 && (
-                    <Button
-                      onClick={handleOpenHouseholdColumns}
-                      variant="secondary"
-                      size="sm"
-                      className="cursor-pointer text-sm"
-                    >
-                      📋 Select Columns ({selectedHouseholdColumns.length}/
-                      {HOUSEHOLD_ALL_COLUMNS.length})
-                    </Button>
+            {/* Show sections only when slum is selected */}
+            {selectedSlum && (
+              <>
+                {/* Slum Survey Section */}
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-text-primary flex items-center">
+                      <span className="mr-2">🏙️</span>
+                      Slum Survey
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      {(slumSurvey?.surveyStatus === "COMPLETED" ||
+                        slumSurvey?.surveyStatus === "SUBMITTED") && (
+                        <Button
+                          onClick={handleOpenSlumColumns}
+                          variant="secondary"
+                          size="sm"
+                          className="cursor-pointer text-sm"
+                        >
+                          📋 Select Columns ({selectedSlumColumns.length}/
+                          {SLUM_ALL_COLUMNS.length})
+                        </Button>
+                      )}
+                      {loadingSlumSurvey && <LoadingSpinner size="sm" />}
+                    </div>
+                  </div>
+
+                  {/* Status Display */}
+                  <div className="mb-4">
+                    <p className="text-sm text-text-secondary mb-2">Status:</p>
+                    {slumSurvey?.surveyStatus === "COMPLETED" ||
+                    slumSurvey?.surveyStatus === "SUBMITTED" ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-900/50 text-green-300 border border-green-700">
+                        ✓ Completed
+                      </span>
+                    ) : slumSurvey?.surveyStatus === "IN PROGRESS" ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-900/50 text-amber-300 border border-amber-700">
+                        ⏳ In Progress
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-900/50 text-red-300 border border-red-700">
+                        ✗ Not Started
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Show Column Selector and Download Buttons only if COMPLETED/SUBMITTED */}
+                  {(slumSurvey?.surveyStatus === "COMPLETED" ||
+                    slumSurvey?.surveyStatus === "SUBMITTED") && (
+                    <div className="flex gap-3 flex-wrap">
+                      <Button
+                        onClick={handlePreviewSlum}
+                        disabled={loadingPreview}
+                        variant="primary"
+                        className="cursor-pointer"
+                      >
+                        {loadingPreview ? "Loading..." : "👁️ Preview"}
+                      </Button>
+                      <Button
+                        onClick={handleDownloadSlumExcel}
+                        disabled={downloading === "slum-excel"}
+                        variant="success"
+                        className="cursor-pointer"
+                      >
+                        {downloading === "slum-excel"
+                          ? "Downloading..."
+                          : "📊 Download Excel"}
+                      </Button>
+                    </div>
                   )}
-                  {loadingHouseholdCount && <LoadingSpinner size="sm" />}
-                </div>
-              </div>
 
-              {/* Count Display */}
-              <div className="mb-4">
-                <p className="text-sm text-text-secondary mb-2">
-                  Submitted Surveys:
-                </p>
-                <p className="text-2xl font-bold text-text-primary">
-                  {householdSurveyCount}
-                </p>
-              </div>
+                  {/* Edge case: No slum survey yet */}
+                  {!slumSurvey && !loadingSlumSurvey && (
+                    <p className="text-text-muted text-sm">
+                      Slum survey not started.
+                    </p>
+                  )}
+                </Card>
 
-              {/* Show Download Buttons only if at least 1 submitted HH survey */}
-              {householdSurveyCount > 0 && (
-                <div className="flex gap-3 flex-wrap">
-                  <Button
-                    onClick={handlePreviewHousehold}
-                    disabled={loadingHouseholdPreview}
-                    variant="primary"
-                    className="cursor-pointer"
-                  >
-                    {loadingHouseholdPreview ? "Loading..." : "👁️ Preview"}
-                  </Button>
-                  <Button
-                    onClick={handleDownloadHouseholdExcel}
-                    disabled={downloading === "hh-excel"}
-                    variant="success"
-                    className="cursor-pointer"
-                  >
-                    {downloading === "hh-excel"
-                      ? "Downloading..."
-                      : "📊 Download Excel"}
-                  </Button>
-                </div>
-              )}
+                {/* Household Survey Section */}
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-text-primary flex items-center">
+                      <span className="mr-2">🏠</span>
+                      Household Survey
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      {householdSurveyCount > 0 && (
+                        <Button
+                          onClick={handleOpenHouseholdColumns}
+                          variant="secondary"
+                          size="sm"
+                          className="cursor-pointer text-sm"
+                        >
+                          📋 Select Columns ({selectedHouseholdColumns.length}/
+                          {HOUSEHOLD_ALL_COLUMNS.length})
+                        </Button>
+                      )}
+                      {loadingHouseholdCount && <LoadingSpinner size="sm" />}
+                    </div>
+                  </div>
 
-              {/* Edge case: Zero surveys */}
-              {householdSurveyCount === 0 && !loadingHouseholdCount && (
-                <p className="text-text-muted text-sm mt-3">
-                  No household surveys submitted for this slum yet.
-                </p>
-              )}
-            </Card>
+                  {/* Count Display */}
+                  <div className="mb-4">
+                    <p className="text-sm text-text-secondary mb-2">
+                      Submitted Surveys:
+                    </p>
+                    <p className="text-2xl font-bold text-text-primary">
+                      {householdSurveyCount}
+                    </p>
+                  </div>
+
+                  {/* Show Download Buttons only if at least 1 submitted HH survey */}
+                  {householdSurveyCount > 0 && (
+                    <div className="flex gap-3 flex-wrap">
+                      <Button
+                        onClick={handlePreviewHousehold}
+                        disabled={loadingHouseholdPreview}
+                        variant="primary"
+                        className="cursor-pointer"
+                      >
+                        {loadingHouseholdPreview ? "Loading..." : "👁️ Preview"}
+                      </Button>
+                      <Button
+                        onClick={handleDownloadHouseholdExcel}
+                        disabled={downloading === "hh-excel"}
+                        variant="success"
+                        className="cursor-pointer"
+                      >
+                        {downloading === "hh-excel"
+                          ? "Downloading..."
+                          : "📊 Download Excel"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Edge case: Zero surveys */}
+                  {householdSurveyCount === 0 && !loadingHouseholdCount && (
+                    <p className="text-text-muted text-sm mt-3">
+                      No household surveys submitted for this slum yet.
+                    </p>
+                  )}
+                </Card>
+              </>
+            )}
           </>
         )}
 
-        {/* Preview Section */}
-        {(showSlumPreview || showHouseholdPreview) && (
+        {/* Ward Reports Tab */}
+        {activeTab === "ward" && (
+          <>
+            {/* Ward Selection Dropdown */}
+            <Card>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <InfiniteScrollSelect
+                    label="Select Ward"
+                    value={selectedWard?._id || ""}
+                    onChange={handleWardChange}
+                    options={wards.map((ward) => ({
+                      value: ward._id,
+                      label: `${ward.number} - ${ward.name}`,
+                    }))}
+                    placeholder="Select a ward..."
+                    disabled={wards.length === 0}
+                  />
+                </div>
+                {selectedWard && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedWard(null);
+                      setWardSlums([]);
+                      setWardHouseholdSurveys([]);
+                      setShowHouseholdPreview(false);
+                      setHouseholdPreviewData([]);
+                      setLoadingWardSlums(false);
+                      setLoadingWardSurveys(false);
+                    }}
+                    className="h-10.5 w-10 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+                    title="Clear selection"
+                  >
+                    <XCircle
+                      className="text-red-500"
+                      size={20}
+                      strokeWidth={2.5}
+                    />
+                  </button>
+                )}
+              </div>
+              {wards.length === 0 && (
+                <p className="text-text-muted text-sm mt-2">
+                  No wards found in the system.
+                </p>
+              )}
+            </Card>
+
+            {/* Show ward slum cards when ward is selected */}
+            {selectedWard && (
+              <>
+                {/* Loading State */}
+                {loadingWardSlums && (
+                  <Card>
+                    <div className="flex items-center justify-center py-8">
+                      <LoadingSpinner size="lg" text="Loading ward data..." />
+                    </div>
+                  </Card>
+                )}
+
+                {/* Ward Slum Cards & Actions */}
+                {!loadingWardSlums && wardSlums.length > 0 && (
+                  <>
+                    {/* Slum Cards Section */}
+                    <Card>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-text-primary flex items-center">
+                          <span className="mr-2">🏘️</span>
+                          Slums in Ward {selectedWard.number} -{" "}
+                          {selectedWard.name}
+                        </h2>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm text-text-secondary mb-2">
+                          Total Submitted Surveys:
+                        </p>
+                        <p className="text-2xl font-bold text-text-primary">
+                          {wardHouseholdCount}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {wardSlums.map((slumCard) => (
+                          <div
+                            key={slumCard._id}
+                            className="bg-slate-800 rounded-lg p-4 border border-slate-700 hover:border-blue-500 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-white text-sm">
+                                  {slumCard.slumName}
+                                </h4>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Slum ID: {slumCard.slumId}
+                                </p>
+                              </div>
+                              <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">
+                                {slumCard.submittedCount} surveys
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Ward Household Survey Section */}
+                    <Card>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-text-primary flex items-center">
+                          <span className="mr-2">🏠</span>
+                          Ward Household Survey
+                        </h2>
+                        <div className="flex items-center gap-2">
+                          {wardHouseholdCount > 0 && (
+                            <Button
+                              onClick={() => setShowHouseholdColumns(true)}
+                              variant="secondary"
+                              size="sm"
+                              className="cursor-pointer text-sm"
+                            >
+                              📋 Select Columns (
+                              {selectedHouseholdColumns.length}/
+                              {HOUSEHOLD_ALL_COLUMNS.length})
+                            </Button>
+                          )}
+                          {loadingWardSurveys && <LoadingSpinner size="sm" />}
+                        </div>
+                      </div>
+
+                      {/* Count Display */}
+                      <div className="mb-4">
+                        <p className="text-sm text-text-secondary mb-2">
+                          Consolidated Submitted Surveys:
+                        </p>
+                        <p className="text-2xl font-bold text-text-primary">
+                          {wardHouseholdCount}
+                        </p>
+                      </div>
+
+                      {/* Show Action Buttons only if at least 1 submitted HH survey */}
+                      {wardHouseholdCount > 0 && (
+                        <div className="flex gap-3 flex-wrap">
+                          <Button
+                            onClick={async () => {
+                              if (selectedHouseholdColumns.length < 2) {
+                                setShowHouseholdValidationError(true);
+                                return;
+                              }
+                              await loadWardHouseholdSurveys();
+                            }}
+                            disabled={loadingWardSurveys}
+                            variant="primary"
+                            className="cursor-pointer"
+                          >
+                            {loadingWardSurveys ? "Loading..." : "👁️ Preview"}
+                          </Button>
+                          <Button
+                            onClick={handleDownloadWardExcel}
+                            disabled={downloading === "ward-excel"}
+                            variant="success"
+                            className="cursor-pointer"
+                          >
+                            {downloading === "ward-excel"
+                              ? "Downloading..."
+                              : "📊 Download Excel"}
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Edge case: Zero surveys */}
+                      {wardHouseholdCount === 0 && !loadingWardSurveys && (
+                        <p className="text-text-muted text-sm mt-3">
+                          No household surveys submitted for slums in this ward
+                          yet.
+                        </p>
+                      )}
+                    </Card>
+                  </>
+                )}
+
+                {/* No Slums Found */}
+                {!loadingWardSlums && wardSlums.length === 0 && (
+                  <Card>
+                    <div className="text-center py-8">
+                      <p className="text-text-muted">
+                        No slums found in this ward.
+                      </p>
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Preview Section for Slum Tab */}
+        {activeTab === "slum" && (showSlumPreview || showHouseholdPreview) && (
           <Card className="mt-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white flex items-center">
@@ -2623,6 +3137,149 @@ export default function SupervisorReportsPage() {
             )}
           </Card>
         )}
+
+        {/* Preview Section for Ward Tab */}
+        {activeTab === "ward" &&
+          showHouseholdPreview &&
+          householdPreviewData.length > 0 && (
+            <Card className="mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-white flex items-center">
+                  <span className="mr-2">👁️</span>
+                  Report Preview
+                  {selectedWard && (
+                    <span className="ml-3 text-sm font-normal text-slate-400">
+                      (Ward {selectedWard.number} - {selectedWard.name})
+                    </span>
+                  )}
+                </h2>
+                <Button
+                  onClick={() => {
+                    setShowHouseholdPreview(false);
+                    setHouseholdPreviewData([]);
+                  }}
+                  variant="danger"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  ✕ Close Preview
+                </Button>
+              </div>
+
+              {/* Household Survey Preview */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-md font-semibold text-white">
+                    Household Survey Data
+                    <span className="ml-2 text-sm font-normal text-slate-400">
+                      (Top 3 Records from {wardHouseholdCount} total)
+                    </span>
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    {/* Multi-level headers */}
+                    <thead>
+                      {/* Row 1: Section Headers (Teal Blue) */}
+                      <tr className="bg-teal-600">
+                        {(() => {
+                          const sectionCells = [];
+                          let currentSection: string | null = null;
+                          let colSpan = 0;
+
+                          for (
+                            let i = 0;
+                            i < selectedHouseholdColumns.length;
+                            i++
+                          ) {
+                            const columnKey = selectedHouseholdColumns[i];
+                            const section =
+                              getHouseholdSectionForColumn(columnKey);
+
+                            if (section?.id !== currentSection) {
+                              if (currentSection !== null) {
+                                sectionCells.push({
+                                  label:
+                                    HOUSEHOLD_SURVEY_SECTIONS.find(
+                                      (s) => s.id === currentSection,
+                                    )?.label || "",
+                                  span: colSpan,
+                                });
+                              }
+                              currentSection = section?.id || null;
+                              colSpan = 1;
+                            } else {
+                              colSpan++;
+                            }
+
+                            if (
+                              i === selectedHouseholdColumns.length - 1 &&
+                              currentSection !== null
+                            ) {
+                              sectionCells.push({
+                                label:
+                                  HOUSEHOLD_SURVEY_SECTIONS.find(
+                                    (s) => s.id === currentSection,
+                                  )?.label || "",
+                                span: colSpan,
+                              });
+                            }
+                          }
+
+                          return sectionCells.map((cell, idx) => (
+                            <th
+                              key={idx}
+                              colSpan={cell.span}
+                              className="px-3 py-2 text-center text-white font-bold border border-slate-600 bg-teal-600"
+                              style={{ minWidth: `${cell.span * 120}px` }}
+                            >
+                              {cell.label}
+                            </th>
+                          ));
+                        })()}
+                      </tr>
+
+                      {/* Row 2: Column Labels */}
+                      <tr className="bg-cyan-100">
+                        {selectedHouseholdColumns.map((key) => (
+                          <th
+                            key={key}
+                            className="px-3 py-2 text-left text-gray-900 font-semibold border border-slate-600 bg-cyan-100"
+                            style={{
+                              textAlign: "left",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {COLUMN_LABELS[key] ||
+                              key.replace(/([A-Z])/g, " $1").trim()}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {householdPreviewData.map((row, idx) => (
+                        <tr
+                          key={idx}
+                          className="border-t border-slate-700 hover:bg-slate-800"
+                        >
+                          {selectedHouseholdColumns.map((key) => (
+                            <td
+                              key={key}
+                              className="px-4 py-2 text-slate-300 border border-slate-700"
+                            >
+                              {row[key] === null || row[key] === undefined
+                                ? ""
+                                : String(row[key])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </Card>
+          )}
 
         {/* Slum Survey Column Selection Modal */}
         {showSlumColumns && (

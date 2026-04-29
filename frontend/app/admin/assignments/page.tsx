@@ -42,18 +42,6 @@ interface Assignment {
   createdAt: string;
 }
 
-interface Surveyor {
-  _id: string;
-  username: string;
-  name: string;
-}
-
-interface Slum {
-  _id: string;
-  slumName: string;
-  slumId: number;
-}
-
 interface User {
   _id: string;
   username: string;
@@ -61,17 +49,6 @@ interface User {
   role: "ADMIN" | "SUPERVISOR" | "SURVEYOR";
   isActive: boolean;
   createdAt: string;
-}
-
-interface AssignmentFormData {
-  status: "PENDING" | "IN PROGRESS" | "COMPLETED";
-  surveyor: string;
-  slum: string;
-}
-
-interface MultiAssignmentFormData {
-  slum: string; // ID of the slum
-  surveyors: string[]; // Array of surveyor IDs
 }
 
 export default function AssignmentsPage() {
@@ -84,17 +61,17 @@ export default function AssignmentsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(
     null,
   );
-  const [isDeletingAssignment, setIsDeletingAssignment] = useState(false);
+
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
   const [selectedAssignmentForStatus, setSelectedAssignmentForStatus] =
     useState<Assignment | null>(null);
-  const [statusUpdateSuccess, setStatusUpdateSuccess] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAssignment, setIsDeletingAssignment] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,12 +125,13 @@ export default function AssignmentsPage() {
     apiService.getAllAssignments().then((res) => {
       if (res.success) {
         setAssignments((res.data as Assignment[]) || []);
-        setSuccessMessage(
+        showToast(
           selectedAssignment
             ? "Assignment updated successfully"
             : "Assignment created successfully",
+          "success",
+          3000,
         );
-        setTimeout(() => setSuccessMessage(""), 3000);
       }
     });
   };
@@ -178,8 +156,7 @@ export default function AssignmentsPage() {
     apiService.getAllAssignments().then((res) => {
       if (res.success) {
         setAssignments((res.data as Assignment[]) || []);
-        setStatusUpdateSuccess("Status updated successfully");
-        setTimeout(() => setStatusUpdateSuccess(""), 3000);
+        showToast("Status updated successfully", "success", 3000);
       }
     });
   };
@@ -200,25 +177,25 @@ export default function AssignmentsPage() {
         if (assignmentsRes.success) {
           setAssignments((assignmentsRes.data as Assignment[]) || []);
         }
-        setSuccessMessage("Assignment deleted successfully");
-        setTimeout(() => setSuccessMessage(""), 3000);
+        showToast("Assignment deleted successfully", "success", 3000);
       } else {
-        setError(response.error || "Failed to delete assignment");
+        showToast(
+          response.error || "Failed to delete assignment",
+          "error",
+          3000,
+        );
       }
     } catch (error: unknown) {
-      setError(
+      showToast(
         error instanceof Error ? error.message : "Failed to delete assignment",
+        "error",
+        3000,
       );
     } finally {
       setIsDeletingAssignment(false);
       setShowDeleteConfirm(false);
       setAssignmentToDelete(null);
     }
-  };
-
-  const cancelDeleteAssignment = () => {
-    setShowDeleteConfirm(false);
-    setAssignmentToDelete(null);
   };
 
   if (loading) {
@@ -271,20 +248,6 @@ export default function AssignmentsPage() {
               Create Assignment
             </Button>
           </div>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-              {successMessage}
-            </div>
-          )}
-
-          {/* Success Message for Status Update */}
-          {statusUpdateSuccess && (
-            <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-              {statusUpdateSuccess}
-            </div>
-          )}
 
           {/* Error Display */}
           {error && (

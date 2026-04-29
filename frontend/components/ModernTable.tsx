@@ -162,7 +162,7 @@ export default function ModernTable<T>({
   return (
     <div className="space-y-4">
       {/* Search Bar */}
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
         <input
           type="text"
@@ -172,18 +172,18 @@ export default function ModernTable<T>({
             setSearchTerm(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
+          className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 text-sm"
         />
       </div>
 
       {/* Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-950/50 border-b border-slate-800">
                 {showSerialNumber && (
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     #
                   </th>
                 )}
@@ -191,7 +191,7 @@ export default function ModernTable<T>({
                   <th
                     key={index}
                     className={cn(
-                      "px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider wrap-break-word",
+                      "px-2 sm:px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider",
                       column.sortable &&
                         "cursor-pointer hover:text-slate-200 transition-colors",
                       column.className,
@@ -214,13 +214,13 @@ export default function ModernTable<T>({
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {showSerialNumber && (
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-slate-800 rounded w-8"></div>
+                      <td className="px-2 sm:px-4 py-2.5">
+                        <div className="h-3 bg-slate-800 rounded w-6"></div>
                       </td>
                     )}
                     {columns.map((_, j) => (
-                      <td key={j} className="px-4 py-3">
-                        <div className="h-4 bg-slate-800 rounded w-3/4"></div>
+                      <td key={j} className="px-2 sm:px-4 py-2.5">
+                        <div className="h-3 bg-slate-800 rounded w-3/4"></div>
                       </td>
                     ))}
                   </tr>
@@ -240,7 +240,7 @@ export default function ModernTable<T>({
                       )}
                     >
                       {showSerialNumber && (
-                        <td className="px-6 py-4 text-sm text-slate-400 font-medium">
+                        <td className="px-2 sm:px-4 py-2.5 text-xs text-slate-400 font-medium">
                           {serialNumber}
                         </td>
                       )}
@@ -248,7 +248,7 @@ export default function ModernTable<T>({
                         <td
                           key={colIndex}
                           className={cn(
-                            "px-4 py-3 text-sm text-slate-300 align-middle wrap-break-word",
+                            "px-2 sm:px-4 py-2.5 text-xs text-slate-300 align-middle",
                             column.className,
                           )}
                         >
@@ -264,7 +264,7 @@ export default function ModernTable<T>({
                 <tr>
                   <td
                     colSpan={columns.length + (showSerialNumber ? 1 : 0)}
-                    className="px-4 py-8 text-center text-slate-500"
+                    className="px-4 py-8 text-center text-slate-500 text-sm"
                   >
                     {emptyMessage}
                   </td>
@@ -275,28 +275,28 @@ export default function ModernTable<T>({
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between bg-slate-900">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 bg-slate-900">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2">
               {/* First Page Button */}
               <button
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="First Page"
               >
-                <ChevronsLeft size={16} />
+                <ChevronsLeft size={14} className="sm:w-4 sm:h-4" />
               </button>
               {/* Previous Page Button */}
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Previous Page"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
               </button>
-              <span className="text-sm text-slate-300 font-medium">
+              <span className="text-xs sm:text-sm text-slate-300 font-medium">
                 Page {currentPage} of{" "}
                 {totalPages || Math.ceil(data.length / rowsPerPage) || 1}
               </span>
@@ -314,10 +314,10 @@ export default function ModernTable<T>({
                   currentPage ===
                   (totalPages || Math.ceil(data.length / rowsPerPage) || 1)
                 }
-                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Next Page"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} className="sm:w-4 sm:h-4" />
               </button>
               {/* Last Page Button */}
               <button
@@ -330,21 +330,23 @@ export default function ModernTable<T>({
                   currentPage ===
                   (totalPages || Math.ceil(data.length / rowsPerPage) || 1)
                 }
-                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Last Page"
               >
-                <ChevronsRight size={16} />
+                <ChevronsRight size={14} className="sm:w-4 sm:h-4" />
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Rows per page:</span>
+              <span className="text-xs sm:text-sm text-slate-500">
+                Rows per page:
+              </span>
               <select
                 value={rowsPerPage}
                 onChange={(e) => {
                   setRowsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs sm:text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               >
                 {rowsPerPageOptions.map((option) => (
                   <option key={option} value={option}>

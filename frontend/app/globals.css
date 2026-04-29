@@ -123,6 +123,35 @@ h6 {
   }
 }
 
+/* Toast Animations */
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes progress-bar {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+.animate-progress-bar {
+  animation: progress-bar linear forwards;
+}
+
 /* Table Alignment Fixes */
 .table-cell-center {
   text-align: center !important;

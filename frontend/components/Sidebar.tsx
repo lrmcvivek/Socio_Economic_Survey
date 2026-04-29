@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { useSidebar } from "@/contexts/SidebarContext";
 import {
   LogOut,
   Menu,
@@ -61,46 +60,26 @@ export default function Sidebar({ role, username }: SidebarProps) {
         ? supervisorItems
         : surveyorItems;
 
-  // Fallback state for sidebar if context fails
-  const [isSidebarOpenState, setIsSidebarOpenState] = useState(true);
-
-  let isSidebarOpen, toggleSidebar;
-  try {
-    const sidebarContext = useSidebar();
-    isSidebarOpen = sidebarContext.isSidebarOpen;
-    toggleSidebar = sidebarContext.toggleSidebar;
-  } catch (error) {
-    console.warn("Sidebar context not available, using fallback state", error);
-    isSidebarOpen = isSidebarOpenState;
-    toggleSidebar = () => setIsSidebarOpenState((prev) => !prev);
-  }
+  // Simple hover state - clean and reliable
+  const [isHovered, setIsHovered] = useState(false);
   const [mobileIsOpen, setMobileIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
-  // Determine if sidebar is collapsed (for hover logic)
-  const isSidebarCollapsed = !isSidebarOpen;
+  // Mouse event handlers
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      // Simulate a brief delay for UX smoothness if needed, or just proceed.
-      // await new Promise(resolve => setTimeout(resolve, 500));
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      // Don't remove remembered credentials - they should persist across sessions
-      // localStorage.removeItem("rememberedCredentials");
-      // localStorage.removeItem("rememberMeState");
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
-      // Fallback to traditional redirect if router fails
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      // Don't remove remembered credentials - they should persist across sessions
-      // localStorage.removeItem("rememberedCredentials");
-      // localStorage.removeItem("rememberMeState");
       window.location.href = "/login";
     }
   };
@@ -126,75 +105,75 @@ export default function Sidebar({ role, username }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Clean hover-based implementation */}
       <aside
         className={cn(
-          "hidden md:flex flex-col relative h-screen transition-all duration-300 border-r border-slate-800 bg-slate-900 shrink-0",
-          isSidebarOpen || isHovered ? "w-64" : "w-16",
+          "hidden md:flex flex-col h-screen transition-all duration-300 ease-in-out border-r border-slate-800 bg-slate-900 shrink-0 overflow-hidden",
+          isHovered ? "w-64" : "w-20",
         )}
-        onMouseEnter={() => {
-          if (isSidebarCollapsed) {
-            setIsHovered(true);
-          }
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false);
-        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* Toggle & Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
-          {isSidebarOpen || isHovered ? (
-            <span className="text-xl font-bold tracking-tight text-blue-500 mx-auto">
-              Socio-Economic Survey
+        {/* Logo Section */}
+        <div className="h-16 flex items-center justify-center border-b border-slate-800 shrink-0">
+          {isHovered ? (
+            <span className="text-lg font-bold tracking-tight text-blue-500 whitespace-nowrap transition-opacity duration-300">
+              SES System
             </span>
           ) : (
-            <span className="text-xl font-bold tracking-tight text-blue-500 mx-auto">
+            <span className="text-xl font-bold tracking-tight text-blue-500">
               SES
             </span>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-8 flex flex-col gap-2 overflow-y-auto">
+        {/* Navigation Items */}
+        <nav className="flex-1 px-2 py-6 flex flex-col gap-2 overflow-y-auto">
           {items.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center transition-colors duration-200 group relative",
-                  isSidebarOpen || isHovered
-                    ? "gap-4 px-3 py-2"
-                    : "justify-center py-3",
+                  "flex items-center rounded-lg transition-all duration-300 group relative",
+                  isHovered ? "px-4 py-3" : "px-2 py-2 justify-center",
                   isActive
-                    ? "text-white font-semibold"
-                    : "text-slate-500 hover:text-slate-300 font-medium",
+                    ? "bg-[#e97ec0] text-white font-semibold"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium",
                 )}
-                title={!isSidebarOpen && !isHovered ? item.label : undefined}
+                title={!isHovered ? item.label : undefined}
               >
                 <div
                   className={cn(
                     "p-2 rounded-lg transition-all shrink-0",
                     isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
-                      : "bg-slate-800/50 text-slate-500 group-hover:bg-slate-800 group-hover:text-slate-300",
+                      ? "bg-blue-800 text-white shadow-lg shadow-blue-900/40"
+                      : "text-slate-400 group-hover:text-slate-200",
                   )}
                 >
-                  <Icon size={20} />
+                  <Icon size={20} className="text-red-300" />
                 </div>
-                {(isSidebarOpen || isHovered) && (
-                  <span className="whitespace-nowrap">{item.label}</span>
-                )}
+
+                {/* Label with smooth transition */}
+                <span
+                  className={cn(
+                    "font-medium ml-3 transition-all duration-300 whitespace-nowrap",
+                    isHovered ? "opacity-100 inline-block" : "opacity-0 hidden",
+                  )}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer/User */}
-        <div className="p-4 border-t border-slate-800">
-          {isSidebarOpen || isHovered ? (
+        {/* Footer/User Section */}
+        <div className="p-4 border-t border-slate-800 shrink-0">
+          {isHovered ? (
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-900 shrink-0">
                 {role.charAt(0)}
@@ -209,7 +188,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
               </div>
               <button
                 onClick={handleLogoutClick}
-                className="text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                className="text-slate-500 hover:text-red-400 transition-colors cursor-pointer shrink-0"
                 title="Logout"
               >
                 <LogOut size={16} />
@@ -227,12 +206,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Mobile Header (To be used when this component is used in a layout) */}
-      {/* Note: In the new layout structure, the header is usually in the main content area, 
-          but we provide the mobile toggle logic here or rely on the parent layout to show a toggle.
-          Based on the previous Sidebar code, it had its own mobile drawer. Let's keep that. */}
-
-      {/* Mobile Toggle Button (Fixed Position) */}
+      {/* Mobile Toggle Button */}
       <button
         onClick={() => setMobileIsOpen(!mobileIsOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 border border-slate-800 rounded-lg text-blue-500 cursor-pointer"
@@ -308,6 +282,8 @@ export default function Sidebar({ role, username }: SidebarProps) {
           </div>
         </div>
       )}
+
+      {/* Logout Dialog */}
       <LogoutConfirmationDialog
         isOpen={showLogoutDialog}
         onConfirm={handleLogoutConfirm}

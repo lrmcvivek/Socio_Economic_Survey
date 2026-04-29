@@ -6,7 +6,7 @@ import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
 import apiService from "@/services/api";
 import InfiniteScrollSelect from "@/components/InfiniteScrollSelect";
 import { HouseholdSurvey } from "@/types/householdSurvey";
-import { Edit3 as EditIcon, Trash2 as DeleteIcon } from "lucide-react";
+import { Edit3 as EditIcon, Trash2 as DeleteIcon, XCircle } from "lucide-react";
 import ConfirmationDialog from "@/components/DeleteConfirmationDialog";
 import EditConfirmationDialog from "@/components/EditConfirmationDialog";
 import { useToast } from "@/components/Toast";
@@ -135,36 +135,43 @@ export default function HHQCPage() {
     fetchData();
   }, []);
 
-  // Restore selected slum from localStorage after slums are loaded
+  // Restore selected slum from sessionStorage ONLY when returning from edit page
   useEffect(() => {
-    // Only restore on first mount if no slum is currently selected AND slums have been loaded
-    if (isFirstMount.current && !selectedSlum && slums.length > 0) {
-      const savedSlumId = localStorage.getItem("hhqc-selected-slum");
-      console.log(
-        "Restoring slum selection on first mount:",
-        savedSlumId,
-        "Current slums:",
-        slums.length,
-      );
+    // Restore if no slum is currently selected AND slums have been loaded
+    if (!selectedSlum && slums.length > 0) {
+      // Use sessionStorage instead of localStorage - only persists during navigation
+      const savedSlumId = sessionStorage.getItem("hhqc-selected-slum");
       if (savedSlumId) {
+        console.log(
+          "Restoring slum selection from sessionStorage:",
+          savedSlumId,
+        );
         // Verify the saved slum ID exists in the loaded slums
         const slumExists = slums.some((slum) => slum._id === savedSlumId);
         if (slumExists) {
           console.log("Restoring slum:", savedSlumId);
           setSelectedSlum(savedSlumId);
-          // Only clear the localStorage if we successfully restored the slum
-          localStorage.removeItem("hhqc-selected-slum");
+          // Clear sessionStorage after restoring - one-time use only
+          sessionStorage.removeItem("hhqc-selected-slum");
         } else {
           console.log(
             "Saved slum ID not found in loaded slums, clearing selection",
           );
-          localStorage.removeItem("hhqc-selected-slum");
+          sessionStorage.removeItem("hhqc-selected-slum");
         }
       }
-      // Mark that the first mount has been handled
-      isFirstMount.current = false;
     }
   }, [slums, selectedSlum]); // Depend on slums and selectedSlum
+
+  // Show success toast when returning from successful edit
+  useEffect(() => {
+    const successFlag = sessionStorage.getItem("hhqc-update-success");
+    if (successFlag === "true") {
+      showToast("Record updated successfully", "success");
+      // Clear the flag so it doesn't show again on refresh
+      sessionStorage.removeItem("hhqc-update-success");
+    }
+  }, []);
 
   // Load household surveys when slum is selected
   useEffect(() => {
@@ -244,9 +251,10 @@ export default function HHQCPage() {
 
   const confirmEditSurvey = () => {
     if (editingSurvey && selectedSlum) {
-      // Store the selected slum in localStorage before navigating
-      console.log("Saving selected slum to localStorage:", selectedSlum);
-      localStorage.setItem("hhqc-selected-slum", selectedSlum);
+      // Store the selected slum in sessionStorage (not localStorage) for temporary preservation
+      // sessionStorage clears automatically when tab/browser closes
+      console.log("Saving selected slum to sessionStorage:", selectedSlum);
+      sessionStorage.setItem("hhqc-selected-slum", selectedSlum);
       // Navigate to supervisor HHQC edit page
       router.push(`/supervisor/hhqc/${editingSurvey._id}`);
     }
@@ -296,20 +304,42 @@ export default function HHQCPage() {
 
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
           <div className="mb-6">
-            <InfiniteScrollSelect
-              label="Select Slum"
-              value={selectedSlum}
-              onChange={(value) => setSelectedSlum(value)}
-              options={slums.map((slum) => ({
-                value: slum._id,
-                label: `${slum.slumName} (${slum.slumId})`,
-              }))}
-              placeholder={
-                slumsLoading ? "Loading slums..." : "Select a slum..."
-              }
-              disabled={slumsLoading}
-              loading={slumsLoading}
-            />
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <InfiniteScrollSelect
+                  label="Select Slum"
+                  value={selectedSlum}
+                  onChange={(value) => setSelectedSlum(value)}
+                  options={slums.map((slum) => ({
+                    value: slum._id,
+                    label: `${slum.slumName} (${slum.slumId})`,
+                  }))}
+                  placeholder={
+                    slumsLoading ? "Loading slums..." : "Select a slum..."
+                  }
+                  disabled={slumsLoading}
+                  loading={slumsLoading}
+                />
+              </div>
+              {selectedSlum && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedSlum("");
+                  }}
+                  className="h-10.5 w-10 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+                  title="Clear selection"
+                >
+                  <XCircle
+                    className="text-red-500"
+                    size={20}
+                    strokeWidth={2.5}
+                  />
+                </button>
+              )}
+            </div>
           </div>
 
           {selectedSlum && (

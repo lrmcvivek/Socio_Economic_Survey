@@ -33,9 +33,9 @@ export default function HHSCompletionWarningModal({
         </div>
 
         <p className="text-slate-400 mb-6 leading-relaxed">
-          All household surveys have been completed for this slum. If you've
-          found a new household that wasn't previously recorded, you can add it
-          directly.
+          All household surveys have been completed for this slum. If
+          you&apos;ve found a new household that wasn&apos;t previously
+          recorded, you can add it directly.
         </p>
 
         <div className="flex gap-3">

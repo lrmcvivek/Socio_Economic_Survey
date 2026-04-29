@@ -1,7 +1,6 @@
 "use client";
 
 import React, { ReactNode } from "react";
-import { SidebarProvider } from "@/contexts/SidebarContext";
 import Sidebar from "@/components/Sidebar";
 
 interface SupervisorAdminLayoutProps {
@@ -16,11 +15,9 @@ export default function SupervisorAdminLayout({
   username,
 }: SupervisorAdminLayoutProps) {
   return (
-    <SidebarProvider>
-      <LayoutContent role={role} username={username}>
-        {children}
-      </LayoutContent>
-    </SidebarProvider>
+    <LayoutContent role={role} username={username}>
+      {children}
+    </LayoutContent>
   );
 }
 

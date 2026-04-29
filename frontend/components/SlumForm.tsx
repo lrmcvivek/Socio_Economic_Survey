@@ -1,23 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
-import Select from "@/components/Select";
 import apiService from "@/services/api";
-
-interface State {
-  _id: string;
-  name: string;
-  code: string;
-}
-
-interface District {
-  _id: string;
-  name: string;
-  code: string;
-  state: string;
-}
 
 interface Slum {
   _id?: string;
@@ -234,7 +220,7 @@ export default function SlumForm({
       } else {
         setError(response.error || "Failed to save slum");
       }
-    } catch (err) {
+    } catch {
       setError("Error saving slum");
     } finally {
       setLoading(false);
