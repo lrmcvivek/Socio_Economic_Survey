@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Button from "@/components/Button";
 
 interface BackNavigationDialogProps {
@@ -44,10 +44,10 @@ export default function BackNavigationDialog({
           >
             {loading ? "Leaving..." : "Leave Survey"}
           </Button>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             size="md"
-            onClick={onCancel} 
+            onClick={onCancel}
             disabled={loading}
             className="w-full sm:w-auto"
           >

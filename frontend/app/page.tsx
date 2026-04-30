@@ -25,7 +25,7 @@ export default function LandingPage() {
           <h1 className="text-xl md:text-2xl lg:text-xl font-bold text-white tracking-tight">
             Socio-Economic Survey
           </h1>
-        <div className="w-60 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mx-auto"></div>
+        <div className="w-60 h-1 bg-linear-to-r from-blue-500 to-cyan-500 rounded-full mx-auto"></div>
         </div>
         
         <p className="text-lg md:text-lg text-slate-400 max-w-lg mx-auto leading-relaxed">

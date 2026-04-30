@@ -9,7 +9,6 @@ import Card from "@/components/Card";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import { HouseholdSurvey } from "@/types/householdSurvey";
-import SuccessModal from "@/components/SuccessModal";
 import SupervisorAdminLayout from "@/components/SupervisorAdminLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -110,7 +109,6 @@ export default function HHQCEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState<HouseholdSurveyForm>({
     householdId: "",
     houseDoorNo: "",
@@ -485,8 +483,10 @@ export default function HHQCEditPage() {
       );
 
       if (response.success) {
-        // Do NOT clear hhqc-selected-slum here — we want the list page to restore the slum selection
-        setShowSuccessModal(true);
+        // Store success flag in sessionStorage before navigating back
+        sessionStorage.setItem("hhqc-update-success", "true");
+        // Navigate back to HHQC list page
+        router.back();
       } else {
         if (response.error && (response.error as any).validationErrors) {
           const validationErrs = (response.error as any).validationErrors;
@@ -523,10 +523,10 @@ export default function HHQCEditPage() {
   };
 
   const handleBack = () => {
-    console.log("Clearing selected slum from localStorage");
-    // Clear the selected slum from localStorage when navigating back
-    localStorage.removeItem("hhqc-selected-slum");
-    router.push("/admin/hhqc");
+    // Don't clear localStorage - preserve the selected slum for when user returns to HHQC page
+    // This allows the HHQC page to restore the previous state
+    console.log("Navigating back to HHQC page, preserving selected slum");
+    router.back();
   };
 
   if (loading || !dataLoaded) {
@@ -570,7 +570,7 @@ export default function HHQCEditPage() {
               Household Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <Input
+              <Input
                 label="Parcel ID"
                 value={formData.parcelId || ""}
                 onChange={(e) => {
@@ -578,7 +578,10 @@ export default function HHQCEditPage() {
                   handleInputChange("parcelId", newParcelId);
                   // Auto-generate houseDoorNo if both parcelId and propertyNo exist
                   if (newParcelId && formData.propertyNo !== undefined) {
-                    handleInputChange("houseDoorNo", `${newParcelId}-${formData.propertyNo}`);
+                    handleInputChange(
+                      "houseDoorNo",
+                      `${newParcelId}-${formData.propertyNo}`,
+                    );
                   }
                 }}
               />
@@ -587,11 +590,16 @@ export default function HHQCEditPage() {
                 type="number"
                 value={formData.propertyNo ?? ""}
                 onChange={(e) => {
-                  const newPropertyNo = e.target.value ? parseInt(e.target.value) : undefined;
+                  const newPropertyNo = e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined;
                   handleInputChange("propertyNo", newPropertyNo);
                   // Auto-generate houseDoorNo if both parcelId and propertyNo exist
                   if (formData.parcelId && newPropertyNo !== undefined) {
-                    handleInputChange("houseDoorNo", `${formData.parcelId}-${newPropertyNo}`);
+                    handleInputChange(
+                      "houseDoorNo",
+                      `${formData.parcelId}-${newPropertyNo}`,
+                    );
                   }
                 }}
               />
@@ -2031,16 +2039,6 @@ export default function HHQCEditPage() {
             />
           </div>
         </Card>
-
-        <SuccessModal
-          isOpen={showSuccessModal}
-          title="Record Updated"
-          message="The household record has been updated successfully."
-          onClose={() => {
-            setShowSuccessModal(false);
-            router.push("/admin/hhqc");
-          }}
-        />
       </div>
     </SupervisorAdminLayout>
   );

@@ -9,6 +9,7 @@ import ModernTable from "@/components/ModernTable";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SlumForm from "@/components/SlumForm";
 import EditConfirmationDialog from "@/components/EditConfirmationDialog";
+import { useToast } from "@/components/Toast";
 
 interface User {
   _id: string;
@@ -45,6 +46,7 @@ interface Slum {
 
 export default function SupervisorSlumsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [slums, setSlums] = useState<Slum[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -52,7 +54,6 @@ export default function SupervisorSlumsPage() {
   const [selectedSlum, setSelectedSlum] = useState<Slum | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [slumToEdit, setSlumToEdit] = useState<Slum | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const fetchSlums = async () => {
     console.log("SupervisorSlumsPage: Starting fetchSlums");
@@ -96,13 +97,6 @@ export default function SupervisorSlumsPage() {
     fetchSlums();
   }, [router]); // Include router in dependency array
 
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
   const handleEditSlum = (slum: Slum) => {
     console.log(
       "SupervisorSlumsPage: Opening edit confirmation for slum",
@@ -137,7 +131,7 @@ export default function SupervisorSlumsPage() {
       selectedSlum,
     });
     const action = selectedSlum ? "updated" : "created";
-    setSuccessMessage(`Slum ${action} successfully`);
+    showToast(`Slum ${action} successfully`, "success", 3000);
     setTimeout(() => {
       console.log("SupervisorSlumsPage: Fetching slums after", action);
       fetchSlums();
@@ -170,13 +164,6 @@ export default function SupervisorSlumsPage() {
           </div>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-            {successMessage}
-          </div>
-        )}
-
         <ModernTable
           data={slums}
           keyField="_id"
@@ -204,6 +191,12 @@ export default function SupervisorSlumsPage() {
                 return "N/A";
               },
               sortable: true,
+              sortAccessor: (row) => {
+                if (typeof row.ward === "object" && row.ward !== null) {
+                  return row.ward.zone || "N/A";
+                }
+                return "N/A";
+              },
               className: "min-w-[100px]",
             },
             {
@@ -215,6 +208,12 @@ export default function SupervisorSlumsPage() {
                 return row.ward?.toString() || "N/A";
               },
               sortable: true,
+              sortAccessor: (row) => {
+                if (typeof row.ward === "object" && row.ward !== null) {
+                  return `${row.ward.number} - ${row.ward.name}`;
+                }
+                return row.ward?.toString() || "N/A";
+              },
               className: "min-w-[120px]",
             },
             {
@@ -227,7 +226,7 @@ export default function SupervisorSlumsPage() {
               header: "Type",
               accessorKey: (row) => (
                 <span
-                  className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                  className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                     row.slumType === "NOTIFIED"
                       ? "bg-green-500/20 text-green-400"
                       : "bg-yellow-500/20 text-yellow-400"
@@ -236,6 +235,8 @@ export default function SupervisorSlumsPage() {
                   {row.slumType.replace("_", " ")}
                 </span>
               ),
+              sortable: true,
+              sortAccessor: (row) => row.slumType,
               className: "whitespace-nowrap",
             },
             {
@@ -260,11 +261,14 @@ export default function SupervisorSlumsPage() {
               header: "House-\nholds",
               accessorKey: (row) => row.totalHouseholds?.toString() || "0",
               sortable: true,
+              sortAccessor: (row) => row.totalHouseholds || 0,
               className: "text-center font-medium tabular-nums",
             },
             {
               header: "Area\n(sq.m)",
               accessorKey: (row) => row.area?.toFixed(2) || "0",
+              sortable: true,
+              sortAccessor: (row) => row.area || 0,
               className: "text-center font-medium tabular-nums",
             },
             {
@@ -276,14 +280,14 @@ export default function SupervisorSlumsPage() {
                 >
                   <button
                     onClick={() => handleViewSlum(row)}
-                    className="p-1.5 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors"
+                    className="p-1.5 text-blue-400 hover:bg-blue-500/20 rounded-md transition-colors cursor-pointer"
                     title="View"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleEditSlum(row)}
-                    className="p-1.5 text-cyan-400 hover:bg-cyan-500/20 rounded-md transition-colors"
+                    className="p-1.5 text-cyan-400 hover:bg-cyan-500/20 rounded-md transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />

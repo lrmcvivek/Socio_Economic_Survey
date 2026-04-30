@@ -11,6 +11,7 @@ import AssignmentForm from "@/components/AssignmentForm";
 import AssignmentStatusModal from "@/components/AssignmentStatusModal";
 import ConfirmEditOpenModal from "@/components/ConfirmEditOpenModal";
 import { Plus } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface Assignment {
   _id: string;
@@ -75,6 +76,7 @@ interface User {
 
 export default function SupervisorAssignmentsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [slums, setSlums] = useState<Slum[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,6 @@ export default function SupervisorAssignmentsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(
     null,
@@ -93,7 +94,6 @@ export default function SupervisorAssignmentsPage() {
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
   const [selectedAssignmentForStatus, setSelectedAssignmentForStatus] =
     useState<Assignment | null>(null);
-  const [statusUpdateSuccess, setStatusUpdateSuccess] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,14 +147,19 @@ export default function SupervisorAssignmentsPage() {
         if (assignmentsRes.success) {
           setAssignments((assignmentsRes.data as Assignment[]) || []);
         }
-        setSuccessMessage("Assignment deleted successfully");
-        setTimeout(() => setSuccessMessage(""), 3000);
+        showToast("Assignment deleted successfully", "success", 3000);
       } else {
-        setError(response.error || "Failed to delete assignment");
+        showToast(
+          response.error || "Failed to delete assignment",
+          "error",
+          3000,
+        );
       }
     } catch (error: unknown) {
-      setError(
+      showToast(
         error instanceof Error ? error.message : "Failed to delete assignment",
+        "error",
+        3000,
       );
     } finally {
       setIsDeletingAssignment(false);
@@ -206,12 +211,13 @@ export default function SupervisorAssignmentsPage() {
     apiService.getAllAssignments().then((res) => {
       if (res.success) {
         setAssignments((res.data as Assignment[]) || []);
-        setSuccessMessage(
+        showToast(
           selectedAssignment
             ? "Assignment updated successfully"
             : "Assignment created successfully",
+          "success",
+          3000,
         );
-        setTimeout(() => setSuccessMessage(""), 3000);
       }
     });
   };
@@ -236,8 +242,7 @@ export default function SupervisorAssignmentsPage() {
     apiService.getAllAssignments().then((res) => {
       if (res.success) {
         setAssignments((res.data as Assignment[]) || []);
-        setStatusUpdateSuccess("Status updated successfully");
-        setTimeout(() => setStatusUpdateSuccess(""), 3000);
+        showToast("Status updated successfully", "success", 3000);
       }
     });
   };
@@ -295,20 +300,6 @@ export default function SupervisorAssignmentsPage() {
               Create Assignment
             </Button>
           </div>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-              {successMessage}
-            </div>
-          )}
-
-          {/* Success Message for Status Update */}
-          {statusUpdateSuccess && (
-            <div className="bg-green-500/20 border border-green-500 text-green-400 px-4 py-3 rounded-lg">
-              {statusUpdateSuccess}
-            </div>
-          )}
 
           {/* Error Display */}
           {error && (
