@@ -125,7 +125,7 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { name, role, isActive, password } = req.body;
+    const { name, username, role, isActive, password } = req.body;
 
     // Verify current user is admin
     if (req.user.role !== 'ADMIN') {
@@ -138,6 +138,7 @@ exports.updateUser = async (req, res) => {
     // Build update object with only provided fields
     const updateData = {};
     if (name !== undefined) updateData.name = name;
+    if (username !== undefined) updateData.username = username;
     if (role !== undefined) updateData.role = role;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (password !== undefined && password !== '') {
@@ -158,6 +159,7 @@ exports.updateUser = async (req, res) => {
 
     // Update fields
     if (name !== undefined) user.name = name;
+    if (username !== undefined) user.username = username;
     if (role !== undefined) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
     if (password !== undefined && password !== '') {
